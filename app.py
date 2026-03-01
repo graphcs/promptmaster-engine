@@ -277,6 +277,10 @@ if st.session_state.pm_phase == "input":
                 st.session_state.pm_audience = ex["audience"]
                 st.session_state.pm_constraints = ex["constraints"]
                 st.session_state.pm_mode = ex["mode"]
+                # Also set the widget keys directly — Streamlit text_area
+                # reads from its key, not the value param, after first render.
+                st.session_state.input_objective = ex["objective"]
+                st.session_state.input_constraints = ex["constraints"]
                 st.rerun()
 
     st.session_state.pm_objective = st.text_area(
