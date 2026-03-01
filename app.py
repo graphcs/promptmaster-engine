@@ -13,6 +13,16 @@ from promptmaster.realigner import build_realignment_prompt
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 
 load_dotenv()
+
+# Bridge Streamlit Cloud secrets to environment variables so that
+# OpenRouterClient (which reads os.getenv) works on both local and cloud.
+import os
+if not os.getenv("OPENROUTER_API_KEY"):
+    try:
+        os.environ["OPENROUTER_API_KEY"] = st.secrets["OPENROUTER_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        pass
+
 logging.basicConfig(level=logging.INFO)
 
 # ============================================================================
