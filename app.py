@@ -260,7 +260,7 @@ _EXAMPLES = [
         "objective": "Tell me about business",
         "audience": "General",
         "constraints": "",
-        "mode": "architect",
+        "mode": "critic",
     },
 ]
 
