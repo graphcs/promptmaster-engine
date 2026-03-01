@@ -137,10 +137,6 @@ def reset_session():
         st.session_state[k] = v
 
 
-def get_client() -> OpenRouterClient:
-    """Create an OpenRouterClient with the current model selection."""
-    return OpenRouterClient(model=st.session_state.pm_model)
-
 
 # ============================================================================
 # Sidebar
@@ -333,16 +329,17 @@ elif st.session_state.pm_phase == "review":
 
             with st.spinner(f"Generating + Evaluating (Iteration {iteration_num})..."):
                 try:
-                    client = get_client()
-                    iteration = run_async(run_iteration(
-                        client=client,
-                        inputs=inputs,
-                        prompt_text=st.session_state.pm_prompt_edited,
-                        system_text=st.session_state.pm_system_prompt,
-                        iteration_number=iteration_num,
-                        model=st.session_state.pm_model,
-                    ))
-                    run_async(client.close())
+                    async def _execute():
+                        async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                            return await run_iteration(
+                                client=client,
+                                inputs=inputs,
+                                prompt_text=st.session_state.pm_prompt_edited,
+                                system_text=st.session_state.pm_system_prompt,
+                                iteration_number=iteration_num,
+                                model=st.session_state.pm_model,
+                            )
+                    iteration = run_async(_execute())
 
                     st.session_state.pm_iterations.append(iteration)
                     st.session_state.pm_current_output = iteration.output
@@ -395,14 +392,15 @@ elif st.session_state.pm_phase == "output":
                     )
                     with st.spinner("Generating realignment prompt..."):
                         try:
-                            client = get_client()
-                            realignment = run_async(build_realignment_prompt(
-                                client=client,
-                                inputs=inputs,
-                                evaluation=evaluation,
-                                model=st.session_state.pm_model,
-                            ))
-                            run_async(client.close())
+                            async def _realign():
+                                async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                                    return await build_realignment_prompt(
+                                        client=client,
+                                        inputs=inputs,
+                                        evaluation=evaluation,
+                                        model=st.session_state.pm_model,
+                                    )
+                            realignment = run_async(_realign())
 
                             st.session_state.pm_realignment_prompt = realignment
                             st.session_state.pm_phase = "realign"
@@ -477,16 +475,17 @@ elif st.session_state.pm_phase == "realign":
 
             with st.spinner(f"Re-generating + Evaluating (Iteration {iteration_num})..."):
                 try:
-                    client = get_client()
-                    iteration = run_async(run_iteration(
-                        client=client,
-                        inputs=inputs,
-                        prompt_text=st.session_state.pm_realignment_prompt,
-                        system_text=st.session_state.pm_system_prompt,
-                        iteration_number=iteration_num,
-                        model=st.session_state.pm_model,
-                    ))
-                    run_async(client.close())
+                    async def _execute_realigned():
+                        async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                            return await run_iteration(
+                                client=client,
+                                inputs=inputs,
+                                prompt_text=st.session_state.pm_realignment_prompt,
+                                system_text=st.session_state.pm_system_prompt,
+                                iteration_number=iteration_num,
+                                model=st.session_state.pm_model,
+                            )
+                    iteration = run_async(_execute_realigned())
 
                     st.session_state.pm_iterations.append(iteration)
                     st.session_state.pm_current_output = iteration.output
