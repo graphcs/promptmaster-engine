@@ -226,8 +226,58 @@ if st.session_state.pm_error:
 # PHASE: INPUT
 # ============================================================================
 
+_EXAMPLES = [
+    {
+        "label": "API Design (Architect)",
+        "objective": "Design a REST API structure for a task management app with projects, tasks, subtasks, and user assignments",
+        "audience": "Technical",
+        "constraints": "Must follow RESTful conventions, support pagination, use JSON responses",
+        "mode": "architect",
+    },
+    {
+        "label": "Strategy Review (Critic)",
+        "objective": "Evaluate this product strategy: We plan to launch a social media app targeting users aged 18-25 by competing directly with Instagram on photo sharing",
+        "audience": "Executive",
+        "constraints": "Budget is $50K, team of 3 developers, 6-month timeline",
+        "mode": "critic",
+    },
+    {
+        "label": "TLS Explained (Clarity)",
+        "objective": "Explain how HTTPS/TLS handshake works including certificate validation, cipher suite negotiation, and session key derivation",
+        "audience": "Student",
+        "constraints": "No jargon, use everyday analogies, under 300 words, use numbered steps",
+        "mode": "clarity",
+    },
+    {
+        "label": "Dev Learning Plan (Coach)",
+        "objective": "I'm a junior developer feeling overwhelmed by my first production codebase. Help me create a 30-day learning plan to get productive",
+        "audience": "General",
+        "constraints": "Focus on practical steps, not theory. Include daily time commitments under 2 hours",
+        "mode": "coach",
+    },
+    {
+        "label": "Vague Input (Realignment Test)",
+        "objective": "Tell me about business",
+        "audience": "General",
+        "constraints": "",
+        "mode": "architect",
+    },
+]
+
 if st.session_state.pm_phase == "input":
     st.markdown("### Step 1: Define Your Request")
+
+    # Example quick-fill buttons
+    st.caption("Quick-fill with an example:")
+    ex_cols = st.columns(len(_EXAMPLES))
+    for col, ex in zip(ex_cols, _EXAMPLES):
+        with col:
+            if st.button(ex["label"], key=f"ex_{ex['label']}", use_container_width=True):
+                st.session_state.pm_objective = ex["objective"]
+                st.session_state.pm_audience = ex["audience"]
+                st.session_state.pm_constraints = ex["constraints"]
+                st.session_state.pm_mode = ex["mode"]
+                st.rerun()
 
     st.session_state.pm_objective = st.text_area(
         "Objective *",
