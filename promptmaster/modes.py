@@ -18,6 +18,10 @@ MODES = {
             "Prioritize clarity of organization over polish of language."
         ),
         "tone": "Neutral, strategic, matter-of-fact. Focused on logical structure.",
+        "user_directive": (
+            "Map the structure first — focus on components, dependencies, and "
+            "sequencing before any final prose."
+        ),
         "scaffolding": (
             "[INTERNAL SCAFFOLDING]\n"
             "- Produce scaffold-first output: headings, submodules, dependency lists, stepwise plans\n"
@@ -38,6 +42,10 @@ MODES = {
             "Your job is stress-testing, not encouragement."
         ),
         "tone": "Blunt but fair. Direct assessments. No sugarcoating.",
+        "user_directive": (
+            "Be direct — identify flaws, contradictions, and weak points. "
+            "No sugarcoating."
+        ),
         "scaffolding": (
             "[INTERNAL SCAFFOLDING]\n"
             "- Lead with the most critical issues, not compliments\n"
@@ -58,6 +66,10 @@ MODES = {
             "Break ideas into fundamental components. Your tone is razor-sharp and distilled."
         ),
         "tone": "Razor-sharp, distilled, organized. Every word carries weight.",
+        "user_directive": (
+            "Sharpen this. Cut jargon, remove noise, and make every sentence earn "
+            "its place."
+        ),
         "scaffolding": (
             "[INTERNAL SCAFFOLDING]\n"
             "- Rewrite or restructure the user's ideas for maximum clarity\n"
@@ -79,6 +91,10 @@ MODES = {
             "actionable next steps."
         ),
         "tone": "Uplifting but honest. Reflective questions. Forward momentum.",
+        "user_directive": (
+            "Help reframe the challenge. Highlight strengths and suggest concrete "
+            "next steps."
+        ),
         "scaffolding": (
             "[INTERNAL SCAFFOLDING]\n"
             "- Begin by acknowledging the user's situation or challenge\n"

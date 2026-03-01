@@ -26,25 +26,22 @@ def build_prompt(inputs: PMInput) -> AssembledPrompt:
         f"{mode_config['scaffolding']}"
     )
 
-    # User prompt with anchoring
-    user_prompt_parts = [
-        f"OBJECTIVE: {inputs.objective}",
-    ]
+    # User prompt: natural language with embedded anchoring
+    # Book principle (Ch5 S9 / Ch8): weave context into flowing text, not label-heavy form dumps.
+    # Three compact paragraphs: task → context → mode directive.
+    parts = [inputs.objective]
 
+    context_pieces = []
     if inputs.audience:
-        user_prompt_parts.append(f"AUDIENCE: {inputs.audience}")
-
+        context_pieces.append(f"Audience: {inputs.audience}")
     if inputs.constraints.strip():
-        user_prompt_parts.append(f"CONSTRAINTS: {inputs.constraints}")
+        context_pieces.append(f"Constraints: {inputs.constraints}")
+    if context_pieces:
+        parts.append(". ".join(context_pieces) + ".")
 
-    user_prompt_parts.extend([
-        "",
-        f"You are operating in {mode_config['display_name']} Mode.",
-        f"Deliver your response aligned with the objective above.",
-        f"Address the specified audience: {inputs.audience}.",
-    ])
+    parts.append(mode_config["user_directive"])
 
-    user_prompt = "\n".join(user_prompt_parts)
+    user_prompt = "\n\n".join(parts)
 
     return AssembledPrompt(
         system_prompt=system_prompt,

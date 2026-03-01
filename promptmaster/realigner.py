@@ -75,22 +75,28 @@ async def build_realignment_prompt(
         )
 
     # Assemble structured skeleton + LLM correction
-    parts = [
-        f"OBJECTIVE (RE-ANCHORED): {inputs.objective}",
-        f"MODE: {mode_config['display_name']} Mode — maintain this mode throughout.",
-        f"AUDIENCE: {inputs.audience}",
-    ]
-
+    # Natural language re-anchoring instead of label-heavy form
+    context_pieces = []
+    if inputs.audience:
+        context_pieces.append(f"Audience: {inputs.audience}")
     if inputs.constraints.strip():
-        parts.append(f"CONSTRAINTS: {inputs.constraints}")
+        context_pieces.append(f"Constraints: {inputs.constraints}")
+    context_line = ". ".join(context_pieces) + "." if context_pieces else ""
 
-    parts.extend([
+    parts = [
+        "The previous response fell short. Here is what needs to change:",
         "",
-        "CORRECTIVE INSTRUCTION:",
         corrective_instruction.strip(),
         "",
-        "Re-generate your response. Stay tightly aligned with the objective above. "
-        "Do not repeat the previous errors.",
-    ])
+        f"Re-approach the original task: {inputs.objective}",
+    ]
+
+    if context_line:
+        parts.append(context_line)
+
+    parts.append(
+        f"Stay in {mode_config['display_name']} Mode throughout. "
+        "Do not repeat the previous errors."
+    )
 
     return "\n".join(parts)
