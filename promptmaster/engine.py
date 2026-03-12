@@ -5,7 +5,7 @@ All state is managed by the caller (Streamlit session_state).
 """
 
 from .llm_client import OpenRouterClient
-from .schemas import PMInput, Iteration, EvaluationResult, AssembledPrompt
+from .schemas import PMInput, Iteration, EvaluationResult, AssembledPrompt, Session
 from .prompt_builder import build_prompt
 from .evaluator import evaluate_output
 from .realigner import build_realignment_prompt
@@ -94,3 +94,17 @@ def format_session_summary(inputs: PMInput, iterations: list[Iteration]) -> str:
         "=" * 60,
     ]
     return "\n".join(parts)
+
+
+def export_session_json(inputs: PMInput, iterations: list[Iteration], model: str = "") -> str:
+    """Serialize a session to JSON for export/download."""
+    session = Session(
+        objective=inputs.objective,
+        audience=inputs.audience,
+        constraints=inputs.constraints,
+        mode=inputs.mode,
+        model=model,
+        iterations=iterations,
+        finalized=True,
+    )
+    return session.model_dump_json(indent=2)

@@ -33,7 +33,7 @@ Evaluate along three dimensions. For each, assign "Low", "Medium", or "High" and
 
 1. ALIGNMENT: Does the output directly address the stated objective and audience? "High" = fully on-target. "Low" = misses the objective or addresses something else.
 
-2. DRIFT: Does the output introduce irrelevant content, speculation, or tangents NOT related to the objective? "Low" = focused and relevant. "High" = significant drift or off-topic content.
+2. DRIFT: Does the output introduce irrelevant content, speculation, or tangents NOT related to the objective? Signs of drift include: adopting a tone inconsistent with the selected mode, broadening scope beyond the objective, becoming generic or verbose, or fixating on a minor point while losing the bigger picture. "Low" = focused and relevant. "High" = significant drift or off-topic content.
 
 3. CLARITY: Is the output well-structured, unambiguous, and complete? "High" = crystal clear. "Low" = confusing, vague, or incomplete.
 

@@ -18,7 +18,7 @@ REALIGNMENT_LLM_SYSTEM = (
     "and direct. Output only the corrective instruction, nothing else."
 )
 
-REALIGNMENT_LLM_PROMPT = """The AI produced output that failed evaluation.
+REALIGNMENT_LLM_PROMPT = """The AI produced output that failed evaluation. A decisive correction is needed.
 
 ORIGINAL OBJECTIVE: {objective}
 MODE: {mode}
@@ -27,11 +27,11 @@ DRIFT SCORE: {drift_score} — {drift_explanation}
 CLARITY SCORE: {clarity_score} — {clarity_explanation}
 
 Write a 2-3 sentence corrective instruction that:
-1. Names the specific problem detected
-2. Tells the AI exactly what to fix
-3. Reinforces the original objective
+1. Opens with a clear break signal (e.g. "Stop. Reset." or "This missed the mark.")
+2. Names the specific problem detected
+3. Tells the AI exactly what to fix and how to re-anchor to the objective
 
-Be direct and specific. No meta-commentary."""
+Be direct, specific, and decisive. No meta-commentary."""
 
 
 async def build_realignment_prompt(
@@ -95,7 +95,8 @@ async def build_realignment_prompt(
         parts.append(context_line)
 
     parts.append(
-        f"Stay in {mode_config['display_name']} Mode throughout. "
+        f"Reminder: you are operating as {mode_config['display_name']}. "
+        f"Re-anchor to this persona and its tone. "
         "Do not repeat the previous errors."
     )
 

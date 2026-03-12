@@ -1,6 +1,8 @@
 """Data contracts for PromptMaster Engine."""
 
 from typing import Literal
+from datetime import datetime, timezone
+from uuid import uuid4
 from pydantic import BaseModel, Field
 
 ModeType = Literal["architect", "critic", "clarity", "coach"]
@@ -48,3 +50,16 @@ class Iteration(BaseModel):
     output: str = Field(..., description="LLM response text")
     mode: ModeType = Field(...)
     evaluation: EvaluationResult | None = Field(default=None)
+
+
+class Session(BaseModel):
+    """A complete PromptMaster session for persistence."""
+    session_id: str = Field(default_factory=lambda: uuid4().hex[:8])
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    objective: str
+    audience: str = "General"
+    constraints: str = ""
+    mode: ModeType
+    model: str = ""
+    iterations: list[Iteration] = Field(default_factory=list)
+    finalized: bool = False

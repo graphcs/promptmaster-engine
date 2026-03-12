@@ -5,12 +5,13 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 
-from promptmaster.schemas import PMInput, EvaluationResult, Iteration
+from promptmaster.schemas import PMInput, EvaluationResult, Iteration, Session
 from promptmaster.modes import MODES
 from promptmaster.prompt_builder import build_prompt
-from promptmaster.engine import run_iteration, format_session_summary
+from promptmaster.engine import run_iteration, format_session_summary, export_session_json
 from promptmaster.realigner import build_realignment_prompt
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
+from promptmaster.session_store import SessionStore
 
 load_dotenv()
 
@@ -65,6 +66,9 @@ footer {visibility: hidden !important;}
     padding: 12px;
     margin-bottom: 8px;
 }
+.trend-up { color: #6ee7b7; font-weight: 700; }
+.trend-down { color: #fca5a5; font-weight: 700; }
+.trend-same { color: #9ca3af; }
 </style>""", unsafe_allow_html=True)
 
 # ============================================================================
@@ -89,11 +93,20 @@ _defaults = {
     "pm_model": OpenRouterClient.DEFAULT_MODEL,
     "pm_show_scaffolding": False,
     "pm_models_cache": None,
+    "pm_session_saved": False,
 }
 
 for _k, _v in _defaults.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
+
+# Per-browser session store: each browser tab gets a unique key so users
+# don't see each other's sessions on shared Streamlit Cloud deployments.
+if "pm_browser_key" not in st.session_state:
+    from uuid import uuid4
+    st.session_state.pm_browser_key = uuid4().hex[:12]
+
+_store = SessionStore(subdirectory=st.session_state.pm_browser_key)
 
 
 # ============================================================================
@@ -145,6 +158,75 @@ def reset_session():
     """Reset all session state to defaults."""
     for k, v in _defaults.items():
         st.session_state[k] = v
+
+
+_SCORE_MAP = {"Low": 1, "Medium": 2, "High": 3}
+
+
+def score_trend_html(label: str, prev_score: str, curr_score: str) -> str:
+    """Return an HTML arrow indicating improvement/decline between iterations."""
+    prev = _SCORE_MAP.get(prev_score, 2)
+    curr = _SCORE_MAP.get(curr_score, 2)
+    # Drift is inverted: lower is better
+    if label.lower() == "drift":
+        delta = prev - curr  # going down = improving
+    else:
+        delta = curr - prev  # going up = improving
+    if delta > 0:
+        return '<span class="trend-up" title="Improved">&#9650;</span>'
+    elif delta < 0:
+        return '<span class="trend-down" title="Declined">&#9660;</span>'
+    return '<span class="trend-same" title="Unchanged">&#8212;</span>'
+
+
+def render_iteration_history(iterations: list[Iteration]):
+    """Render iteration history with score trend indicators."""
+    for idx, it in enumerate(iterations):
+        st.markdown(f"**Iteration {it.iteration_number}** ({it.mode.title()} Mode)")
+        if it.evaluation:
+            e = it.evaluation
+            # Build score line with optional trend arrows
+            parts = []
+            for label, dim in [("Alignment", e.alignment), ("Drift", e.drift), ("Clarity", e.clarity)]:
+                badge = score_badge_html(label, dim.score)
+                trend = ""
+                if idx > 0 and iterations[idx - 1].evaluation:
+                    prev_e = iterations[idx - 1].evaluation
+                    prev_dim = getattr(prev_e, label.lower())
+                    trend = " " + score_trend_html(label, prev_dim.score, dim.score)
+                parts.append(f"{label}: {badge}{trend}")
+            st.markdown(" | ".join(parts), unsafe_allow_html=True)
+        with st.expander(f"Output (Iteration {it.iteration_number})", expanded=False):
+            st.markdown(it.output)
+
+
+def render_comparison(iterations: list[Iteration]):
+    """Side-by-side comparison of two iterations."""
+    if len(iterations) < 2:
+        return
+    labels = [f"Iteration {it.iteration_number}" for it in iterations]
+    col1, col2 = st.columns(2)
+    with col1:
+        left_idx = st.selectbox("Left", range(len(iterations)), index=len(iterations) - 2,
+                                format_func=lambda i: labels[i], key="cmp_left")
+    with col2:
+        right_idx = st.selectbox("Right", range(len(iterations)), index=len(iterations) - 1,
+                                 format_func=lambda i: labels[i], key="cmp_right")
+
+    left, right = iterations[left_idx], iterations[right_idx]
+    col1, col2 = st.columns(2)
+    for col, it, label in [(col1, left, labels[left_idx]), (col2, right, labels[right_idx])]:
+        with col:
+            st.markdown(f"**{label}**")
+            if it.evaluation:
+                e = it.evaluation
+                for dim_label, dim in [("Alignment", e.alignment), ("Drift", e.drift), ("Clarity", e.clarity)]:
+                    st.markdown(
+                        f"{dim_label}: {score_badge_html(dim_label, dim.score)}",
+                        unsafe_allow_html=True,
+                    )
+            st.markdown("---")
+            st.markdown(it.output)
 
 
 
@@ -209,6 +291,30 @@ with st.sidebar:
     if st.button("🔄 New Session", use_container_width=True):
         reset_session()
         st.rerun()
+
+    # Session history
+    saved_sessions = _store.list_sessions()
+    if saved_sessions:
+        with st.expander(f"Session History ({len(saved_sessions)})"):
+            for s in saved_sessions:
+                obj_preview = s["objective"][:50] + ("..." if len(s["objective"]) > 50 else "")
+                st.caption(f"**{s['mode'].title()}** | {s['iterations']} iter | {obj_preview}")
+                if st.button("Load", key=f"load_{s['session_id']}", use_container_width=True):
+                    session = _store.load(s["session_id"])
+                    if session:
+                        st.session_state.pm_objective = session.objective
+                        st.session_state.pm_audience = session.audience
+                        st.session_state.pm_constraints = session.constraints
+                        st.session_state.pm_mode = session.mode
+                        st.session_state.pm_model = session.model or st.session_state.pm_model
+                        st.session_state.pm_iterations = session.iterations
+                        if session.iterations:
+                            last = session.iterations[-1]
+                            st.session_state.pm_current_output = last.output
+                            st.session_state.pm_current_eval = last.evaluation
+                        st.session_state.pm_finalized = session.finalized
+                        st.session_state.pm_phase = "summary" if session.finalized else "output"
+                        st.rerun()
 
 
 # ============================================================================
@@ -445,7 +551,7 @@ elif st.session_state.pm_phase == "output":
                 "Alignment is below Medium or Drift is above Medium."
             )
 
-            col1, col2 = st.columns([1, 1])
+            col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
                 if st.button("Generate Realignment Prompt", type="primary", use_container_width=True):
                     inputs = PMInput(
@@ -474,33 +580,44 @@ elif st.session_state.pm_phase == "output":
                             st.rerun()
 
             with col2:
+                if st.button("Refine Prompt", use_container_width=True):
+                    st.session_state.pm_phase = "input"
+                    st.rerun()
+
+            with col3:
                 if st.button("Proceed Anyway →", use_container_width=True):
                     st.session_state.pm_finalized = True
                     st.session_state.pm_phase = "summary"
                     st.rerun()
         else:
             st.success("All scores acceptable. You can finalize the session.")
-            if st.button("Finalize Session →", type="primary", use_container_width=True):
-                st.session_state.pm_finalized = True
-                st.session_state.pm_phase = "summary"
-                st.rerun()
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("Finalize Session →", type="primary", use_container_width=True):
+                    st.session_state.pm_finalized = True
+                    st.session_state.pm_phase = "summary"
+                    st.rerun()
+            with col2:
+                if st.button("Refine Prompt", use_container_width=True):
+                    st.session_state.pm_phase = "input"
+                    st.rerun()
 
-    # Iteration history
+    # Download current output
+    st.download_button(
+        "Download Current Output (.txt)",
+        data=st.session_state.pm_current_output or "",
+        file_name=f"promptmaster_iteration_{iteration_num}.txt",
+        mime="text/plain",
+    )
+
+    # Iteration history with trend indicators
     if len(st.session_state.pm_iterations) > 1:
         st.divider()
         with st.expander(f"Iteration History ({len(st.session_state.pm_iterations)} iterations)"):
-            for it in st.session_state.pm_iterations:
-                st.markdown(f"**Iteration {it.iteration_number}** ({it.mode.title()} Mode)")
-                if it.evaluation:
-                    e = it.evaluation
-                    st.markdown(
-                        f"Alignment: {score_badge_html('Alignment', e.alignment.score)} | "
-                        f"Drift: {score_badge_html('Drift', e.drift.score)} | "
-                        f"Clarity: {score_badge_html('Clarity', e.clarity.score)}",
-                        unsafe_allow_html=True,
-                    )
-                with st.expander(f"Output (Iteration {it.iteration_number})", expanded=False):
-                    st.markdown(it.output)
+            render_iteration_history(st.session_state.pm_iterations)
+
+        with st.expander("Compare Iterations"):
+            render_comparison(st.session_state.pm_iterations)
 
 
 # ============================================================================
@@ -602,26 +719,55 @@ elif st.session_state.pm_phase == "summary":
 
     st.divider()
 
-    # Copyable summary
+    # Export options
     summary_text = format_session_summary(inputs, st.session_state.pm_iterations)
-    st.markdown("**Copyable Session Summary:**")
-    st.code(summary_text, language=None)
+    json_text = export_session_json(inputs, st.session_state.pm_iterations, model=st.session_state.pm_model)
 
-    # Iteration history
+    st.markdown("**Export Session:**")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.download_button(
+            "Download Summary (.txt)",
+            data=summary_text,
+            file_name="promptmaster_session.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+    with col2:
+        st.download_button(
+            "Download Session (.json)",
+            data=json_text,
+            file_name="promptmaster_session.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+    with st.expander("Copyable Session Summary"):
+        st.code(summary_text, language=None)
+
+    # Iteration history with trends
     if len(st.session_state.pm_iterations) > 1:
         st.divider()
         st.markdown("**Iteration History:**")
-        for it in st.session_state.pm_iterations:
-            with st.expander(f"Iteration {it.iteration_number} ({it.mode.title()} Mode)"):
-                if it.evaluation:
-                    e = it.evaluation
-                    st.markdown(
-                        f"Alignment: {score_badge_html('Alignment', e.alignment.score)} | "
-                        f"Drift: {score_badge_html('Drift', e.drift.score)} | "
-                        f"Clarity: {score_badge_html('Clarity', e.clarity.score)}",
-                        unsafe_allow_html=True,
-                    )
-                st.markdown(it.output)
+        render_iteration_history(st.session_state.pm_iterations)
+
+        with st.expander("Compare Iterations"):
+            render_comparison(st.session_state.pm_iterations)
+
+    # Auto-save session
+    if not st.session_state.get("pm_session_saved"):
+        session = Session(
+            objective=inputs.objective,
+            audience=inputs.audience,
+            constraints=inputs.constraints,
+            mode=inputs.mode,
+            model=st.session_state.pm_model,
+            iterations=st.session_state.pm_iterations,
+            finalized=True,
+        )
+        _store.save(session)
+        st.session_state.pm_session_saved = True
+        st.toast("Session saved automatically.")
 
     st.divider()
     if st.button("🔄 Start New Session", type="primary", use_container_width=True):
