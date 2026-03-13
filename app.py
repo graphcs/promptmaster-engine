@@ -5,13 +5,14 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 
-from promptmaster.schemas import PMInput, EvaluationResult, Iteration, Session
+from promptmaster.schemas import PMInput, EvaluationResult, Iteration, Session, PromptTemplate
 from promptmaster.modes import MODES
 from promptmaster.prompt_builder import build_prompt
 from promptmaster.engine import run_iteration, format_session_summary, export_session_json, run_self_audit, generate_hard_reset_lessons
 from promptmaster.realigner import build_realignment_prompt
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from promptmaster.session_store import SessionStore
+from promptmaster.template_store import TemplateStore
 
 load_dotenv()
 
@@ -69,6 +70,11 @@ footer {visibility: hidden !important;}
 .trend-up { color: #6ee7b7; font-weight: 700; }
 .trend-down { color: #fca5a5; font-weight: 700; }
 .trend-same { color: #9ca3af; }
+
+/* Hide sidebar collapse button — keep sidebar always visible */
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
 </style>""", unsafe_allow_html=True)
 
 # ============================================================================
@@ -112,6 +118,7 @@ if "pm_browser_key" not in st.session_state:
     st.session_state.pm_browser_key = uuid4().hex[:12]
 
 _store = SessionStore(subdirectory=st.session_state.pm_browser_key)
+_template_store = TemplateStore()
 
 
 # ============================================================================
@@ -205,6 +212,72 @@ def render_iteration_history(iterations: list[Iteration]):
             st.markdown(it.output)
 
 
+_TIER_INFO = {
+    1: {"name": "Prompt Starter", "icon": "1", "next": "Try specifying audience, constraints, and output format to reach Tier 2."},
+    2: {"name": "Prompt Practitioner", "icon": "2", "next": "Try switching modes mid-session and iterating 2+ times to reach Tier 3."},
+    3: {"name": "Prompt Architect", "icon": "3", "next": "Run self-audits, use hard resets, and create custom modes to reach Tier 4."},
+    4: {"name": "PromptMaster", "icon": "4", "next": "You're operating at the highest level. Keep experimenting and teaching others."},
+}
+
+
+def assess_tier(sessions: list[dict], current_iterations: list, current_state: dict) -> int:
+    """Estimate the user's PromptMaster tier from their usage patterns (Ch4, Appendix A).
+
+    Scoring:
+    - Tier 1: Basic usage (few fields, no iteration)
+    - Tier 2: Uses constraints/audience/format, some iteration
+    - Tier 3: Multi-iteration, mode switching, consistent quality
+    - Tier 4: Self-audits, hard resets, custom modes, teaches patterns
+    """
+    score = 0
+
+    # Current session signals
+    has_constraints = bool(current_state.get("pm_constraints", "").strip())
+    has_format = bool(current_state.get("pm_output_format", "").strip())
+    has_audience = current_state.get("pm_audience", "General") != "General"
+    iteration_count = len(current_iterations)
+    used_custom = current_state.get("pm_mode") == "custom"
+    ran_self_audit = current_state.get("pm_self_audit") is not None
+
+    # Tier 2 signals: uses structure
+    if has_constraints:
+        score += 1
+    if has_format:
+        score += 1
+    if has_audience:
+        score += 1
+    if iteration_count >= 2:
+        score += 1
+
+    # Tier 3 signals: multi-step strategy
+    if iteration_count >= 3:
+        score += 1
+    # Mode switching (different modes across iterations)
+    modes_used = set(it.mode for it in current_iterations) if current_iterations else set()
+    if len(modes_used) > 1:
+        score += 2
+
+    # Tier 4 signals: mastery features
+    if ran_self_audit:
+        score += 2
+    if used_custom:
+        score += 1
+    # History depth (multiple saved sessions)
+    if len(sessions) >= 3:
+        score += 1
+    if len(sessions) >= 5:
+        score += 1
+
+    # Map score to tier
+    if score >= 8:
+        return 4
+    elif score >= 5:
+        return 3
+    elif score >= 2:
+        return 2
+    return 1
+
+
 def render_comparison(iterations: list[Iteration]):
     """Side-by-side comparison of two iterations."""
     if len(iterations) < 2:
@@ -292,13 +365,31 @@ with st.sidebar:
     }
     st.caption(f"Phase: {phase_labels.get(current_phase, current_phase)}")
 
+    # Tier System (Book Ch4, Appendix A)
+    saved_sessions = _store.list_sessions()
+    tier = assess_tier(
+        sessions=saved_sessions,
+        current_iterations=st.session_state.pm_iterations,
+        current_state=st.session_state,
+    )
+    tier_info = _TIER_INFO[tier]
+    tier_colors = {1: "#9ca3af", 2: "#60a5fa", 3: "#a78bfa", 4: "#fbbf24"}
+    st.markdown(
+        f'<div style="border:1px solid {tier_colors[tier]}; border-radius:8px; padding:8px 12px; margin:8px 0;">'
+        f'<span style="font-size:1.3em; font-weight:700; color:{tier_colors[tier]};">'
+        f'Tier {tier}</span> '
+        f'<span style="color:{tier_colors[tier]}; font-weight:600;">{tier_info["name"]}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption(tier_info["next"])
+
     st.divider()
     if st.button("🔄 New Session", use_container_width=True):
         reset_session()
         st.rerun()
 
-    # Session history
-    saved_sessions = _store.list_sessions()
+    # Session history (saved_sessions already fetched for tier assessment above)
     if saved_sessions:
         with st.expander(f"Session History ({len(saved_sessions)})"):
             for s in saved_sessions:
@@ -320,6 +411,35 @@ with st.sidebar:
                             st.session_state.pm_current_eval = last.evaluation
                         st.session_state.pm_finalized = session.finalized
                         st.session_state.pm_phase = "summary" if session.finalized else "output"
+                        st.rerun()
+
+    # Prompt Templates (Book Ch7 S2 — reusable prompt frameworks)
+    saved_templates = _template_store.list_templates()
+    if saved_templates:
+        with st.expander(f"Prompt Templates ({len(saved_templates)})"):
+            for t in saved_templates:
+                st.caption(f"**{t['name']}** | {t['mode'].title()} | {t['audience']}")
+                tcol1, tcol2 = st.columns([3, 1])
+                with tcol1:
+                    if st.button("Apply", key=f"tpl_load_{t['template_id']}", use_container_width=True):
+                        template = _template_store.load(t["template_id"])
+                        if template:
+                            st.session_state.pm_mode = template.mode
+                            st.session_state.pm_audience = template.audience
+                            st.session_state.pm_constraints = template.constraints
+                            st.session_state.pm_output_format = template.output_format
+                            if template.objective_hint:
+                                st.session_state.pm_objective = template.objective_hint
+                                st.session_state.input_objective = template.objective_hint
+                            if template.mode == "custom":
+                                st.session_state.pm_custom_name = template.custom_name
+                                st.session_state.pm_custom_preamble = template.custom_preamble
+                                st.session_state.pm_custom_tone = template.custom_tone
+                            st.session_state.pm_phase = "input"
+                            st.rerun()
+                with tcol2:
+                    if st.button("🗑", key=f"tpl_del_{t['template_id']}", use_container_width=True):
+                        _template_store.delete(t["template_id"])
                         st.rerun()
 
 
@@ -512,6 +632,39 @@ if st.session_state.pm_phase == "input":
     with st.expander(f"About {mode_config['display_name']} Mode"):
         st.markdown(f"**Tone:** {mode_config['tone']}")
         st.markdown(f"_{mode_config['system_preamble']}_")
+
+    # Save as Template (Book Ch7 S2 — reusable prompt frameworks)
+    with st.expander("Save as Reusable Template"):
+        tpl_name = st.text_input(
+            "Template Name",
+            placeholder="e.g. 'API Critique Setup', 'Executive Summary Framework'",
+            key="tpl_name_input",
+        )
+        tpl_hint = st.text_area(
+            "Objective Hint (optional)",
+            value=st.session_state.pm_objective,
+            placeholder="Pre-fill text for the objective field when this template is loaded",
+            height=68,
+            key="tpl_hint_input",
+        )
+        if st.button("Save Template", use_container_width=True, key="save_template_btn"):
+            if not tpl_name.strip():
+                st.error("Template name is required.")
+            else:
+                template = PromptTemplate(
+                    name=tpl_name.strip(),
+                    mode=st.session_state.pm_mode,
+                    audience=st.session_state.pm_audience,
+                    constraints=st.session_state.pm_constraints.strip(),
+                    output_format=st.session_state.pm_output_format.strip(),
+                    objective_hint=tpl_hint.strip(),
+                    custom_name=st.session_state.pm_custom_name if st.session_state.pm_mode == "custom" else "",
+                    custom_preamble=st.session_state.pm_custom_preamble if st.session_state.pm_mode == "custom" else "",
+                    custom_tone=st.session_state.pm_custom_tone if st.session_state.pm_mode == "custom" else "",
+                )
+                _template_store.save(template)
+                st.toast(f"Template '{tpl_name.strip()}' saved!")
+                st.rerun()
 
     if st.button("Assemble Prompt →", type="primary", use_container_width=True):
         if not st.session_state.pm_objective.strip():
@@ -874,6 +1027,32 @@ elif st.session_state.pm_phase == "summary":
 
     with st.expander("Copyable Session Summary"):
         st.code(summary_text, language=None)
+
+    # Save session config as reusable template
+    with st.expander("Save as Reusable Template"):
+        summary_tpl_name = st.text_input(
+            "Template Name",
+            placeholder="Name this template for reuse",
+            key="summary_tpl_name",
+        )
+        if st.button("Save Template from This Session", use_container_width=True, key="summary_save_tpl"):
+            if not summary_tpl_name.strip():
+                st.error("Template name is required.")
+            else:
+                template = PromptTemplate(
+                    name=summary_tpl_name.strip(),
+                    mode=inputs.mode,
+                    audience=inputs.audience,
+                    constraints=inputs.constraints,
+                    output_format=inputs.output_format,
+                    objective_hint=inputs.objective,
+                    custom_name=st.session_state.pm_custom_name if inputs.mode == "custom" else "",
+                    custom_preamble=st.session_state.pm_custom_preamble if inputs.mode == "custom" else "",
+                    custom_tone=st.session_state.pm_custom_tone if inputs.mode == "custom" else "",
+                )
+                _template_store.save(template)
+                st.toast(f"Template '{summary_tpl_name.strip()}' saved!")
+                st.rerun()
 
     # Iteration history with trends
     if len(st.session_state.pm_iterations) > 1:

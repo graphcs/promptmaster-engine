@@ -53,6 +53,22 @@ class Iteration(BaseModel):
     evaluation: EvaluationResult | None = Field(default=None)
 
 
+class PromptTemplate(BaseModel):
+    """A reusable prompt template (Book Ch7 S2)."""
+    template_id: str = Field(default_factory=lambda: uuid4().hex[:8])
+    name: str = Field(..., description="User-friendly template name")
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    mode: ModeType = Field(...)
+    audience: str = Field(default="General")
+    constraints: str = Field(default="")
+    output_format: str = Field(default="")
+    objective_hint: str = Field(default="", description="Optional objective template/placeholder text")
+    # Custom mode fields (only used when mode == 'custom')
+    custom_name: str = Field(default="")
+    custom_preamble: str = Field(default="")
+    custom_tone: str = Field(default="")
+
+
 class Session(BaseModel):
     """A complete PromptMaster session for persistence."""
     session_id: str = Field(default_factory=lambda: uuid4().hex[:8])
