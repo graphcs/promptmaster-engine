@@ -10,7 +10,7 @@ load_dotenv()
 # Bridge Streamlit Cloud secrets to environment variables so that
 # OpenRouterClient and Supabase client work on both local and cloud.
 import os
-for _secret_key in ("OPENROUTER_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"):
+for _secret_key in ("OPENROUTER_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "SUPABASE_SERVICE_KEY", "APP_URL"):
     if not os.getenv(_secret_key):
         try:
             os.environ[_secret_key] = st.secrets[_secret_key]

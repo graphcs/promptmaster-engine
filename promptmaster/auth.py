@@ -18,9 +18,17 @@ def _get_redirect_url() -> str:
 
 
 def _handle_oauth_callback():
-    """Check URL query params for Supabase OAuth callback."""
+    """Check URL query params for Supabase auth callback.
+
+    Handles two flows:
+    1. PKCE flow (Google OAuth): Supabase redirects with ?code= query param
+    2. Implicit flow (email confirmation): Supabase redirects with #access_token=
+       in hash fragment, converted to query params by _inject_hash_handler() JS.
+    """
     params = st.query_params
     code = params.get("code")
+    access_token = params.get("access_token")
+    refresh_token = params.get("refresh_token")
 
     if code:
         try:
@@ -41,6 +49,26 @@ def _handle_oauth_callback():
                 return True
         except Exception as e:
             logger.error(f"OAuth callback error: {e}")
+            st.query_params.clear()
+    elif access_token and refresh_token:
+        try:
+            sb = get_supabase()
+            # Implicit flow: set session directly from tokens
+            response = sb.auth.set_session(access_token, refresh_token)
+            if response and response.user:
+                st.session_state.pm_user = {
+                    "id": response.user.id,
+                    "email": response.user.email,
+                    "name": (response.user.user_metadata or {}).get(
+                        "full_name", response.user.email
+                    ),
+                    "access_token": response.session.access_token,
+                    "refresh_token": response.session.refresh_token,
+                }
+                st.query_params.clear()
+                return True
+        except Exception as e:
+            logger.error(f"Token callback error: {e}")
             st.query_params.clear()
     return False
 
@@ -83,8 +111,36 @@ def logout():
     st.session_state.pop("pm_user", None)
 
 
+def _inject_hash_handler():
+    """Inject JS that converts #access_token=... hash fragments to query params.
+
+    Supabase email confirmation redirects with tokens in the URL hash.
+    Streamlit can't read hash fragments server-side, so this JS converts
+    them to query params and reloads, allowing _handle_oauth_callback to
+    pick them up.
+    """
+    import streamlit.components.v1 as components
+    components.html(
+        """<script>
+        (function() {
+            var h = window.parent.location.hash;
+            if (h && h.indexOf('access_token') !== -1) {
+                var params = new URLSearchParams(h.substring(1));
+                window.parent.location.replace(
+                    window.parent.location.pathname + '?' + params.toString()
+                );
+            }
+        })();
+        </script>""",
+        height=0,
+    )
+
+
 def render_auth_page():
     """Render the login/signup page. Returns True if user is authenticated."""
+    # Inject JS to handle hash fragment tokens (email confirmation flow)
+    _inject_hash_handler()
+
     # Check for OAuth callback first
     if _handle_oauth_callback():
         st.rerun()
@@ -148,7 +204,10 @@ def render_auth_page():
                 redirect_url = _get_redirect_url()
                 response = sb.auth.sign_in_with_oauth({
                     "provider": "google",
-                    "options": {"redirect_to": redirect_url},
+                    "options": {
+                        "redirect_to": redirect_url,
+                        "flow_type": "pkce",
+                    },
                 })
                 if response and response.url:
                     st.markdown(
