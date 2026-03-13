@@ -210,9 +210,14 @@ def render_auth_page():
                     },
                 })
                 if response and response.url:
-                    st.markdown(
-                        f'<meta http-equiv="refresh" content="0;url={response.url}">',
-                        unsafe_allow_html=True,
+                    # Redirect the top-level window, not the Streamlit iframe.
+                    # Google OAuth blocks loading inside iframes (403),
+                    # which is why meta-refresh fails on Streamlit Cloud.
+                    import streamlit.components.v1 as components
+                    oauth_url = response.url
+                    components.html(
+                        f'<script>window.top.location.href = "{oauth_url}";</script>',
+                        height=0,
                     )
                     st.stop()
             except Exception as e:
