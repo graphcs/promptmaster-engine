@@ -198,30 +198,31 @@ def render_auth_page():
 
         st.divider()
         st.markdown("**Or sign in with:**")
-        if st.button("Continue with Google", use_container_width=True, key="google_btn"):
-            try:
-                sb = get_supabase()
-                redirect_url = _get_redirect_url()
-                response = sb.auth.sign_in_with_oauth({
-                    "provider": "google",
-                    "options": {
-                        "redirect_to": redirect_url,
-                        "flow_type": "pkce",
-                    },
-                })
-                if response and response.url:
-                    # Redirect the top-level window, not the Streamlit iframe.
-                    # Google OAuth blocks loading inside iframes (403),
-                    # which is why meta-refresh fails on Streamlit Cloud.
-                    import streamlit.components.v1 as components
-                    oauth_url = response.url
-                    components.html(
-                        f'<script>window.top.location.href = "{oauth_url}";</script>',
-                        height=0,
-                    )
-                    st.stop()
-            except Exception as e:
-                st.error(f"Google sign-in failed: {e}")
+        # Generate the Google OAuth URL and render as a direct link.
+        # components.html is sandboxed (no allow-top-navigation), and
+        # meta-refresh navigates only the iframe, so we use a styled
+        # <a target="_top"> link rendered via st.markdown instead.
+        try:
+            sb = get_supabase()
+            redirect_url = _get_redirect_url()
+            response = sb.auth.sign_in_with_oauth({
+                "provider": "google",
+                "options": {
+                    "redirect_to": redirect_url,
+                    "flow_type": "pkce",
+                },
+            })
+            if response and response.url:
+                st.markdown(
+                    f'<a href="{response.url}" target="_top" style="'
+                    f"display:inline-block;width:100%;padding:0.6em 1em;"
+                    f"background:#4285f4;color:white;border-radius:8px;"
+                    f"text-decoration:none;font-weight:600;text-align:center;"
+                    f'font-size:1em;">Continue with Google</a>',
+                    unsafe_allow_html=True,
+                )
+        except Exception as e:
+            st.error(f"Google sign-in failed: {e}")
 
     with tab_signup:
         new_name = st.text_input("Full Name", key="signup_name", placeholder="John Doe")
