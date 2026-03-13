@@ -214,7 +214,7 @@ def render_auth_page():
             })
             if response and response.url:
                 st.markdown(
-                    f'<a href="{response.url}" target="_top" style="'
+                    f'<a href="{response.url}" target="_blank" style="'
                     f"display:inline-block;width:100%;padding:0.6em 1em;"
                     f"background:#4285f4;color:white;border-radius:8px;"
                     f"text-decoration:none;font-weight:600;text-align:center;"
