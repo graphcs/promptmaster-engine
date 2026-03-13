@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from promptmaster.schemas import PMInput, EvaluationResult, Iteration, Session
 from promptmaster.modes import MODES
 from promptmaster.prompt_builder import build_prompt
-from promptmaster.engine import run_iteration, format_session_summary, export_session_json
+from promptmaster.engine import run_iteration, format_session_summary, export_session_json, run_self_audit, generate_hard_reset_lessons
 from promptmaster.realigner import build_realignment_prompt
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from promptmaster.session_store import SessionStore
@@ -79,7 +79,11 @@ _defaults = {
     "pm_objective": "",
     "pm_audience": "General",
     "pm_constraints": "",
+    "pm_output_format": "",
     "pm_mode": "architect",
+    "pm_custom_name": "",
+    "pm_custom_preamble": "",
+    "pm_custom_tone": "",
     "pm_assembled": None,
     "pm_prompt_edited": "",
     "pm_system_prompt": "",
@@ -94,6 +98,7 @@ _defaults = {
     "pm_show_scaffolding": False,
     "pm_models_cache": None,
     "pm_session_saved": False,
+    "pm_self_audit": None,
 }
 
 for _k, _v in _defaults.items():
@@ -305,6 +310,7 @@ with st.sidebar:
                         st.session_state.pm_objective = session.objective
                         st.session_state.pm_audience = session.audience
                         st.session_state.pm_constraints = session.constraints
+                        st.session_state.pm_output_format = session.output_format
                         st.session_state.pm_mode = session.mode
                         st.session_state.pm_model = session.model or st.session_state.pm_model
                         st.session_state.pm_iterations = session.iterations
@@ -362,6 +368,27 @@ _EXAMPLES = [
         "mode": "coach",
     },
     {
+        "label": "Burnout (Therapist)",
+        "objective": "I'm feeling overwhelmed and burned out at work but I don't know if I should quit or push through. Help me explore what's really going on.",
+        "audience": "General",
+        "constraints": "Focus on understanding feelings, not giving career advice yet",
+        "mode": "therapist",
+    },
+    {
+        "label": "Pitch Audit (Cold Critic)",
+        "objective": "Our startup pitch: We're building an AI-powered personal finance app that uses GPT to give investment advice to millennials. We plan to launch in 3 months with a team of 2.",
+        "audience": "Executive",
+        "constraints": "No praise. Only risks, flaws, and problems.",
+        "mode": "cold_critic",
+    },
+    {
+        "label": "Market Analysis (Analyst)",
+        "objective": "Analyze the remote work software market: key players, trends, growth drivers, and risks for a new entrant targeting small businesses",
+        "audience": "Executive",
+        "constraints": "Separate facts from assumptions. Quantify where possible.",
+        "mode": "analyst",
+    },
+    {
         "label": "Vague Input (Realignment Test)",
         "objective": "Tell me about business",
         "audience": "General",
@@ -373,21 +400,23 @@ _EXAMPLES = [
 if st.session_state.pm_phase == "input":
     st.markdown("### Step 1: Define Your Request")
 
-    # Example quick-fill buttons
+    # Example quick-fill buttons (two rows of 4)
     st.caption("Quick-fill with an example:")
-    ex_cols = st.columns(len(_EXAMPLES))
-    for col, ex in zip(ex_cols, _EXAMPLES):
-        with col:
-            if st.button(ex["label"], key=f"ex_{ex['label']}", use_container_width=True):
-                st.session_state.pm_objective = ex["objective"]
-                st.session_state.pm_audience = ex["audience"]
-                st.session_state.pm_constraints = ex["constraints"]
-                st.session_state.pm_mode = ex["mode"]
-                # Also set the widget keys directly — Streamlit text_area
-                # reads from its key, not the value param, after first render.
-                st.session_state.input_objective = ex["objective"]
-                st.session_state.input_constraints = ex["constraints"]
-                st.rerun()
+    for row_start in range(0, len(_EXAMPLES), 4):
+        row_examples = _EXAMPLES[row_start:row_start + 4]
+        ex_cols = st.columns(len(row_examples))
+        for col, ex in zip(ex_cols, row_examples):
+            with col:
+                if st.button(ex["label"], key=f"ex_{ex['label']}", use_container_width=True):
+                    st.session_state.pm_objective = ex["objective"]
+                    st.session_state.pm_audience = ex["audience"]
+                    st.session_state.pm_constraints = ex["constraints"]
+                    st.session_state.pm_mode = ex["mode"]
+                    # Also set the widget keys directly — Streamlit text_area
+                    # reads from its key, not the value param, after first render.
+                    st.session_state.input_objective = ex["objective"]
+                    st.session_state.input_constraints = ex["constraints"]
+                    st.rerun()
 
     st.session_state.pm_objective = st.text_area(
         "Objective *",
@@ -416,13 +445,67 @@ if st.session_state.pm_phase == "input":
         selected_mode_label = st.selectbox("Mode", mode_labels, index=mode_idx)
         st.session_state.pm_mode = mode_options[mode_labels.index(selected_mode_label)]
 
-    st.session_state.pm_constraints = st.text_area(
-        "Constraints (optional)",
-        value=st.session_state.pm_constraints,
-        placeholder="Any boundaries, limitations, or specific requirements.",
-        height=68,
-        key="input_constraints",
-    )
+    # Custom mode definition (Book Ch3 — create your own modes)
+    if st.session_state.pm_mode == "custom":
+        st.markdown("**Define Your Custom Mode:**")
+        cm_col1, cm_col2 = st.columns(2)
+        with cm_col1:
+            st.session_state.pm_custom_name = st.text_input(
+                "Mode Name",
+                value=st.session_state.pm_custom_name,
+                placeholder="e.g. Marketing Guru, Science Tutor, Devil's Advocate",
+                key="custom_name",
+            )
+        with cm_col2:
+            st.session_state.pm_custom_tone = st.text_input(
+                "Tone",
+                value=st.session_state.pm_custom_tone,
+                placeholder="e.g. Enthusiastic but grounded. Uses analogies.",
+                key="custom_tone",
+            )
+        st.session_state.pm_custom_preamble = st.text_area(
+            "Persona / System Preamble",
+            value=st.session_state.pm_custom_preamble,
+            placeholder="Describe who the AI should be, its mission, and how it should behave. e.g. 'You are a marketing strategist who focuses on lean, data-driven campaigns...'",
+            height=100,
+            key="custom_preamble",
+        )
+        # Inject custom mode into MODES at runtime
+        custom_name = st.session_state.pm_custom_name or "Custom"
+        custom_preamble = st.session_state.pm_custom_preamble or MODES["custom"]["system_preamble"]
+        custom_tone = st.session_state.pm_custom_tone or MODES["custom"]["tone"]
+        MODES["custom"] = {
+            "display_name": custom_name,
+            "tagline": "Your own mode — define the persona",
+            "system_preamble": custom_preamble,
+            "tone": custom_tone,
+            "user_directive": f"Follow your role as {custom_name}. Stay in character.",
+            "scaffolding": (
+                "[INTERNAL SCAFFOLDING]\n"
+                f"- You are {custom_name}. Follow the persona precisely.\n"
+                f"- Tone: {custom_tone}\n"
+                "- DRIFT CHECK: Stay true to the custom persona throughout. Do not revert to a generic AI voice\n"
+                "- ANCHOR: Re-read the objective before each section"
+            ),
+        }
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.session_state.pm_constraints = st.text_area(
+            "Constraints (optional)",
+            value=st.session_state.pm_constraints,
+            placeholder="Any boundaries, limitations, or specific requirements.",
+            height=68,
+            key="input_constraints",
+        )
+    with col2:
+        st.session_state.pm_output_format = st.text_area(
+            "Output Format (optional)",
+            value=st.session_state.pm_output_format,
+            placeholder="e.g. Bullet points, numbered list, table, 3 paragraphs, under 200 words",
+            height=68,
+            key="input_format",
+        )
 
     # Mode info expander
     mode_config = MODES[st.session_state.pm_mode]
@@ -438,6 +521,7 @@ if st.session_state.pm_phase == "input":
                 objective=st.session_state.pm_objective.strip(),
                 audience=st.session_state.pm_audience,
                 constraints=st.session_state.pm_constraints.strip(),
+                output_format=st.session_state.pm_output_format.strip(),
                 mode=st.session_state.pm_mode,
             )
             assembled = build_prompt(inputs)
@@ -493,6 +577,7 @@ elif st.session_state.pm_phase == "review":
                 objective=st.session_state.pm_objective.strip(),
                 audience=st.session_state.pm_audience,
                 constraints=st.session_state.pm_constraints.strip(),
+                output_format=st.session_state.pm_output_format.strip(),
                 mode=st.session_state.pm_mode,
             )
             iteration_num = len(st.session_state.pm_iterations) + 1
@@ -538,6 +623,21 @@ elif st.session_state.pm_phase == "output":
 
     st.divider()
 
+    # Mode switch option (book Ch3 S12, Ch8 case study)
+    mode_options = list(MODES.keys())
+    mode_labels = [f"{MODES[m]['display_name']} — {MODES[m]['tagline']}" for m in mode_options]
+    current_mode_idx = mode_options.index(st.session_state.pm_mode) if st.session_state.pm_mode in mode_options else 0
+    new_mode_label = st.selectbox(
+        "Mode for next iteration (switch mid-session)",
+        mode_labels,
+        index=current_mode_idx,
+        key="output_mode_switch",
+    )
+    new_mode = mode_options[mode_labels.index(new_mode_label)]
+    if new_mode != st.session_state.pm_mode:
+        st.session_state.pm_mode = new_mode
+        st.info(f"Mode switched to **{MODES[new_mode]['display_name']}**. This will apply to the next iteration.")
+
     # Evaluation scores
     evaluation = st.session_state.pm_current_eval
     if evaluation:
@@ -558,8 +658,12 @@ elif st.session_state.pm_phase == "output":
                         objective=st.session_state.pm_objective.strip(),
                         audience=st.session_state.pm_audience,
                         constraints=st.session_state.pm_constraints.strip(),
+                        output_format=st.session_state.pm_output_format.strip(),
                         mode=st.session_state.pm_mode,
                     )
+                    # Rebuild system prompt in case mode was switched
+                    assembled = build_prompt(inputs)
+                    st.session_state.pm_system_prompt = assembled.system_prompt
                     with st.spinner("Generating realignment prompt..."):
                         try:
                             async def _realign():
@@ -581,6 +685,18 @@ elif st.session_state.pm_phase == "output":
 
             with col2:
                 if st.button("Refine Prompt", use_container_width=True):
+                    # Rebuild assembled prompt if mode was switched
+                    inputs = PMInput(
+                        objective=st.session_state.pm_objective.strip(),
+                        audience=st.session_state.pm_audience,
+                        constraints=st.session_state.pm_constraints.strip(),
+                        output_format=st.session_state.pm_output_format.strip(),
+                        mode=st.session_state.pm_mode,
+                    )
+                    assembled = build_prompt(inputs)
+                    st.session_state.pm_assembled = assembled
+                    st.session_state.pm_prompt_edited = assembled.user_prompt
+                    st.session_state.pm_system_prompt = assembled.system_prompt
                     st.session_state.pm_phase = "input"
                     st.rerun()
 
@@ -599,6 +715,18 @@ elif st.session_state.pm_phase == "output":
                     st.rerun()
             with col2:
                 if st.button("Refine Prompt", use_container_width=True):
+                    # Rebuild assembled prompt if mode was switched
+                    inputs = PMInput(
+                        objective=st.session_state.pm_objective.strip(),
+                        audience=st.session_state.pm_audience,
+                        constraints=st.session_state.pm_constraints.strip(),
+                        output_format=st.session_state.pm_output_format.strip(),
+                        mode=st.session_state.pm_mode,
+                    )
+                    assembled = build_prompt(inputs)
+                    st.session_state.pm_assembled = assembled
+                    st.session_state.pm_prompt_edited = assembled.user_prompt
+                    st.session_state.pm_system_prompt = assembled.system_prompt
                     st.session_state.pm_phase = "input"
                     st.rerun()
 
@@ -650,6 +778,7 @@ elif st.session_state.pm_phase == "realign":
                 objective=st.session_state.pm_objective.strip(),
                 audience=st.session_state.pm_audience,
                 constraints=st.session_state.pm_constraints.strip(),
+                output_format=st.session_state.pm_output_format.strip(),
                 mode=st.session_state.pm_mode,
             )
             iteration_num = len(st.session_state.pm_iterations) + 1
@@ -692,6 +821,7 @@ elif st.session_state.pm_phase == "summary":
         objective=st.session_state.pm_objective.strip(),
         audience=st.session_state.pm_audience,
         constraints=st.session_state.pm_constraints.strip(),
+        output_format=st.session_state.pm_output_format.strip(),
         mode=st.session_state.pm_mode,
     )
 
@@ -760,6 +890,7 @@ elif st.session_state.pm_phase == "summary":
             objective=inputs.objective,
             audience=inputs.audience,
             constraints=inputs.constraints,
+            output_format=inputs.output_format,
             mode=inputs.mode,
             model=st.session_state.pm_model,
             iterations=st.session_state.pm_iterations,
@@ -769,7 +900,59 @@ elif st.session_state.pm_phase == "summary":
         st.session_state.pm_session_saved = True
         st.toast("Session saved automatically.")
 
+    # Self-Audit: Cold Critic on the entire session (Book Ch9)
     st.divider()
-    if st.button("🔄 Start New Session", type="primary", use_container_width=True):
-        reset_session()
-        st.rerun()
+    st.markdown("**Self-Audit** _(Cold Critic on your prompting strategy)_")
+    st.caption(
+        "Invoke Cold Critic Mode to ruthlessly evaluate your prompting approach — "
+        "not just the output, but your strategy, mode choices, and iteration process."
+    )
+
+    if st.session_state.pm_self_audit:
+        st.markdown(st.session_state.pm_self_audit)
+    else:
+        if st.button("Run Self-Audit", use_container_width=True):
+            with st.spinner("Running Cold Critic self-audit on your session..."):
+                try:
+                    async def _audit():
+                        async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                            return await run_self_audit(
+                                client=client,
+                                inputs=inputs,
+                                iterations=st.session_state.pm_iterations,
+                                model=st.session_state.pm_model,
+                            )
+                    st.session_state.pm_self_audit = run_async(_audit())
+                    st.rerun()
+                except Exception as e:
+                    st.session_state.pm_error = f"Self-audit error: {e}"
+                    st.rerun()
+
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔄 Start New Session", type="primary", use_container_width=True):
+            reset_session()
+            st.rerun()
+    with col2:
+        if st.button("Hard Reset (carry lessons forward)", use_container_width=True,
+                      help="Summarize lessons from this session and start fresh with them as context"):
+            with st.spinner("Summarizing lessons before reset..."):
+                try:
+                    async def _lessons():
+                        async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                            return await generate_hard_reset_lessons(
+                                client=client,
+                                inputs=inputs,
+                                iterations=st.session_state.pm_iterations,
+                                model=st.session_state.pm_model,
+                            )
+                    lessons = run_async(_lessons())
+                    prev_objective = st.session_state.pm_objective
+                    reset_session()
+                    st.session_state.pm_objective = prev_objective
+                    st.session_state.pm_constraints = f"Lessons from previous session:\n{lessons}"
+                    st.rerun()
+                except Exception as e:
+                    st.session_state.pm_error = f"Hard reset error: {e}"
+                    st.rerun()

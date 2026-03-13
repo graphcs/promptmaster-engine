@@ -23,6 +23,7 @@ EVALUATOR_PROMPT = """Evaluate the following AI-generated output against the ori
 ORIGINAL OBJECTIVE: {objective}
 TARGET AUDIENCE: {audience}
 CONSTRAINTS: {constraints}
+REQUESTED FORMAT: {output_format}
 MODE USED: {mode}
 
 --- BEGIN OUTPUT ---
@@ -66,6 +67,7 @@ async def evaluate_output(
         objective=inputs.objective,
         audience=inputs.audience,
         constraints=inputs.constraints or "(none)",
+        output_format=inputs.output_format or "(not specified)",
         mode=inputs.mode,
         output=output,
     )

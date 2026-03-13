@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from pydantic import BaseModel, Field
 
-ModeType = Literal["architect", "critic", "clarity", "coach"]
+ModeType = Literal["architect", "critic", "clarity", "coach", "therapist", "cold_critic", "analyst", "custom"]
 ScoreLevel = Literal["Low", "Medium", "High"]
 
 
@@ -14,6 +14,7 @@ class PMInput(BaseModel):
     objective: str = Field(..., description="What the user wants to accomplish")
     audience: str = Field(default="General", description="Target audience")
     constraints: str = Field(default="", description="Optional constraints")
+    output_format: str = Field(default="", description="Desired output structure (e.g. bullet points, numbered list)")
     mode: ModeType = Field(..., description="Selected operational mode")
 
 
@@ -59,6 +60,7 @@ class Session(BaseModel):
     objective: str
     audience: str = "General"
     constraints: str = ""
+    output_format: str = ""
     mode: ModeType
     model: str = ""
     iterations: list[Iteration] = Field(default_factory=list)

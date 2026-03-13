@@ -81,6 +81,8 @@ async def build_realignment_prompt(
         context_pieces.append(f"Audience: {inputs.audience}")
     if inputs.constraints.strip():
         context_pieces.append(f"Constraints: {inputs.constraints}")
+    if inputs.output_format.strip():
+        context_pieces.append(f"Format: {inputs.output_format}")
     context_line = ". ".join(context_pieces) + "." if context_pieces else ""
 
     parts = [

@@ -79,6 +79,7 @@ def format_session_summary(inputs: PMInput, iterations: list[Iteration]) -> str:
         f"Objective:   {inputs.objective}",
         f"Audience:    {inputs.audience}",
         f"Constraints: {inputs.constraints or '(none)'}",
+        f"Format:      {inputs.output_format or '(none)'}",
         f"Mode:        {inputs.mode.title()}",
         f"Iterations:  {len(iterations)}",
         "",
@@ -96,12 +97,131 @@ def format_session_summary(inputs: PMInput, iterations: list[Iteration]) -> str:
     return "\n".join(parts)
 
 
+HARD_RESET_SYSTEM = (
+    "You are a concise session summarizer. Extract the key lessons learned from "
+    "a PromptMaster session. Focus on what worked, what didn't, and what the user "
+    "should carry forward into their next session. Output only bullet points, no preamble."
+)
+
+HARD_RESET_PROMPT = """Summarize the key lessons from this session in 3-5 bullet points.
+
+OBJECTIVE: {objective}
+MODE: {mode}
+ITERATIONS: {iteration_count}
+
+{iteration_details}
+
+Extract:
+- What worked well (keep doing this)
+- What didn't work (avoid next time)
+- Key insights about the objective discovered during iteration
+- Specific constraints or refinements to carry forward
+
+Output only concise bullet points. No intro, no conclusion."""
+
+
+async def generate_hard_reset_lessons(
+    client: OpenRouterClient,
+    inputs: PMInput,
+    iterations: list[Iteration],
+    model: str | None = None,
+) -> str:
+    """Summarize lessons before a hard reset (Ch5 S13 concept)."""
+    iteration_details = []
+    for it in iterations:
+        detail = f"Iteration {it.iteration_number} (Mode: {it.mode}): "
+        if it.evaluation:
+            e = it.evaluation
+            detail += f"Alignment={e.alignment.score}, Drift={e.drift.score}, Clarity={e.clarity.score}"
+        iteration_details.append(detail)
+
+    prompt = HARD_RESET_PROMPT.format(
+        objective=inputs.objective,
+        mode=inputs.mode,
+        iteration_count=len(iterations),
+        iteration_details="\n".join(iteration_details),
+    )
+
+    content, _usage = await client.generate(
+        prompt=prompt,
+        system=HARD_RESET_SYSTEM,
+        temperature=0.3,
+        max_tokens=512,
+        model=model,
+    )
+    return content
+
+
+SELF_AUDIT_SYSTEM = (
+    "You are in Cold Critic Mode — a brutally honest self-audit tool. "
+    "Your job is to evaluate the ENTIRE prompting session: the user's strategy, "
+    "the prompts they wrote, the modes they chose, and the quality of the iterative "
+    "process. Be blunt. No praise. Only identify weaknesses, missed opportunities, "
+    "and areas for improvement in the user's prompting approach."
+)
+
+SELF_AUDIT_PROMPT = """Perform a Cold Critic self-audit of this PromptMaster session.
+
+OBJECTIVE: {objective}
+AUDIENCE: {audience}
+CONSTRAINTS: {constraints}
+ITERATIONS: {iteration_count}
+
+{iteration_details}
+
+Audit the user's prompting STRATEGY (not just the AI's output). Address:
+1. Was the mode choice appropriate for this objective? Should they have switched modes?
+2. Were the prompts specific enough, or too vague/generic?
+3. Did the iteration process improve the output, or was it spinning in circles?
+4. Were constraints and audience properly leveraged, or ignored?
+5. What specific prompting mistakes did the user make?
+6. What would a PromptMaster (Tier 4) have done differently?
+
+Be harsh. Be specific. No praise. Only problems and concrete improvements."""
+
+
+async def run_self_audit(
+    client: OpenRouterClient,
+    inputs: PMInput,
+    iterations: list[Iteration],
+    model: str | None = None,
+) -> str:
+    """Run a Cold Critic self-audit on the entire session (Ch9 concept)."""
+    iteration_details = []
+    for it in iterations:
+        detail = f"--- Iteration {it.iteration_number} (Mode: {it.mode}) ---\n"
+        detail += f"Prompt: {it.prompt_sent[:500]}{'...' if len(it.prompt_sent) > 500 else ''}\n"
+        if it.evaluation:
+            e = it.evaluation
+            detail += f"Scores: Alignment={e.alignment.score}, Drift={e.drift.score}, Clarity={e.clarity.score}\n"
+        detail += f"Output (first 300 chars): {it.output[:300]}..."
+        iteration_details.append(detail)
+
+    prompt = SELF_AUDIT_PROMPT.format(
+        objective=inputs.objective,
+        audience=inputs.audience,
+        constraints=inputs.constraints or "(none)",
+        iteration_count=len(iterations),
+        iteration_details="\n\n".join(iteration_details),
+    )
+
+    content, _usage = await client.generate(
+        prompt=prompt,
+        system=SELF_AUDIT_SYSTEM,
+        temperature=0.4,
+        max_tokens=2048,
+        model=model,
+    )
+    return content
+
+
 def export_session_json(inputs: PMInput, iterations: list[Iteration], model: str = "") -> str:
     """Serialize a session to JSON for export/download."""
     session = Session(
         objective=inputs.objective,
         audience=inputs.audience,
         constraints=inputs.constraints,
+        output_format=inputs.output_format,
         mode=inputs.mode,
         model=model,
         iterations=iterations,

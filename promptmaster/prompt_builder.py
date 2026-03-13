@@ -36,6 +36,8 @@ def build_prompt(inputs: PMInput) -> AssembledPrompt:
         context_pieces.append(f"Audience: {inputs.audience}")
     if inputs.constraints.strip():
         context_pieces.append(f"Constraints: {inputs.constraints}")
+    if inputs.output_format.strip():
+        context_pieces.append(f"Format: {inputs.output_format}")
     if context_pieces:
         parts.append(". ".join(context_pieces) + ".")
 
