@@ -17,16 +17,18 @@ def _get_redirect_url() -> str:
     return os.getenv("APP_URL", "http://localhost:8501")
 
 
-def _handle_oauth_callback():
-    """Check URL query params for Supabase auth callback.
+def _handle_auth_callback():
+    """Check URL query params for Supabase auth callbacks.
 
-    Handles two flows:
-    1. PKCE flow (Google OAuth): Supabase redirects with ?code= query param
-    2. Implicit flow (email confirmation): Supabase redirects with #access_token=
-       in hash fragment, converted to query params by _inject_hash_handler() JS.
+    Handles three flows:
+    1. PKCE flow (Google OAuth): ?code= query param
+    2. Token-hash flow (email confirmation): ?token_hash=&type= query params
+    3. Implicit flow fallback: ?access_token=&refresh_token= query params
     """
     params = st.query_params
     code = params.get("code")
+    token_hash = params.get("token_hash")
+    token_type = params.get("type")
     access_token = params.get("access_token")
     refresh_token = params.get("refresh_token")
 
@@ -36,41 +38,53 @@ def _handle_oauth_callback():
             # PKCE flow: exchange the code for a session
             response = sb.auth.exchange_code_for_session({"auth_code": code})
             if response and response.user:
-                st.session_state.pm_user = {
-                    "id": response.user.id,
-                    "email": response.user.email,
-                    "name": (response.user.user_metadata or {}).get(
-                        "full_name", response.user.email
-                    ),
-                    "access_token": response.session.access_token,
-                    "refresh_token": response.session.refresh_token,
-                }
+                _set_user_session(response)
                 st.query_params.clear()
                 return True
         except Exception as e:
             logger.error(f"OAuth callback error: {e}")
             st.query_params.clear()
+    elif token_hash and token_type:
+        try:
+            sb = get_supabase()
+            # Token-hash flow: verify email OTP and get a session
+            response = sb.auth.verify_otp({
+                "token_hash": token_hash,
+                "type": token_type,
+            })
+            if response and response.user:
+                _set_user_session(response)
+                st.query_params.clear()
+                return True
+        except Exception as e:
+            logger.error(f"Email verification error: {e}")
+            st.query_params.clear()
     elif access_token and refresh_token:
         try:
             sb = get_supabase()
-            # Implicit flow: set session directly from tokens
+            # Implicit flow fallback: set session from tokens directly
             response = sb.auth.set_session(access_token, refresh_token)
             if response and response.user:
-                st.session_state.pm_user = {
-                    "id": response.user.id,
-                    "email": response.user.email,
-                    "name": (response.user.user_metadata or {}).get(
-                        "full_name", response.user.email
-                    ),
-                    "access_token": response.session.access_token,
-                    "refresh_token": response.session.refresh_token,
-                }
+                _set_user_session(response)
                 st.query_params.clear()
                 return True
         except Exception as e:
             logger.error(f"Token callback error: {e}")
             st.query_params.clear()
     return False
+
+
+def _set_user_session(response):
+    """Store authenticated user info in Streamlit session state."""
+    st.session_state.pm_user = {
+        "id": response.user.id,
+        "email": response.user.email,
+        "name": (response.user.user_metadata or {}).get(
+            "full_name", response.user.email
+        ),
+        "access_token": response.session.access_token,
+        "refresh_token": response.session.refresh_token,
+    }
 
 
 def _restore_session() -> bool:
@@ -111,38 +125,10 @@ def logout():
     st.session_state.pop("pm_user", None)
 
 
-def _inject_hash_handler():
-    """Inject JS that converts #access_token=... hash fragments to query params.
-
-    Supabase email confirmation redirects with tokens in the URL hash.
-    Streamlit can't read hash fragments server-side, so this JS converts
-    them to query params and reloads, allowing _handle_oauth_callback to
-    pick them up.
-    """
-    import streamlit.components.v1 as components
-    components.html(
-        """<script>
-        (function() {
-            var h = window.parent.location.hash;
-            if (h && h.indexOf('access_token') !== -1) {
-                var params = new URLSearchParams(h.substring(1));
-                window.parent.location.replace(
-                    window.parent.location.pathname + '?' + params.toString()
-                );
-            }
-        })();
-        </script>""",
-        height=0,
-    )
-
-
 def render_auth_page():
     """Render the login/signup page. Returns True if user is authenticated."""
-    # Inject JS to handle hash fragment tokens (email confirmation flow)
-    _inject_hash_handler()
-
-    # Check for OAuth callback first
-    if _handle_oauth_callback():
+    # Check for auth callback (OAuth code, email token_hash, or implicit tokens)
+    if _handle_auth_callback():
         st.rerun()
 
     # Try restoring existing session
@@ -179,15 +165,7 @@ def render_auth_page():
                         "password": password,
                     })
                     if response.user:
-                        st.session_state.pm_user = {
-                            "id": response.user.id,
-                            "email": response.user.email,
-                            "name": (response.user.user_metadata or {}).get(
-                                "full_name", response.user.email
-                            ),
-                            "access_token": response.session.access_token,
-                            "refresh_token": response.session.refresh_token,
-                        }
+                        _set_user_session(response)
                         st.rerun()
                 except Exception as e:
                     error_msg = str(e)
@@ -199,9 +177,8 @@ def render_auth_page():
         st.divider()
         st.markdown("**Or sign in with:**")
         # Generate the Google OAuth URL and render as a direct link.
-        # components.html is sandboxed (no allow-top-navigation), and
-        # meta-refresh navigates only the iframe, so we use a styled
-        # <a target="_top"> link rendered via st.markdown instead.
+        # Streamlit Cloud sandboxes the app iframe (no allow-top-navigation),
+        # so we open Google OAuth in a new tab via target="_blank".
         try:
             sb = get_supabase()
             redirect_url = _get_redirect_url()
@@ -251,18 +228,12 @@ def render_auth_page():
                     if response.user:
                         if response.user.email_confirmed_at:
                             # Auto-confirmed (e.g. Supabase has email confirm disabled)
-                            st.session_state.pm_user = {
-                                "id": response.user.id,
-                                "email": response.user.email,
-                                "name": new_name.strip() or response.user.email,
-                                "access_token": response.session.access_token,
-                                "refresh_token": response.session.refresh_token,
-                            }
+                            _set_user_session(response)
                             st.rerun()
                         else:
                             st.success(
-                                "Account created! Check your email for a confirmation link, "
-                                "then come back to sign in."
+                                "Account created! Check your email for a confirmation link — "
+                                "you'll be signed in automatically."
                             )
                 except Exception as e:
                     error_msg = str(e)
