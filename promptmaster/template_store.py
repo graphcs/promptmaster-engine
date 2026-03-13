@@ -1,69 +1,96 @@
 """Reusable prompt template persistence for PromptMaster Engine.
 
-Stores templates as individual JSON files in ~/.promptmaster/templates/.
-Templates are shareable — they live outside the per-browser session scope.
+Stores templates in Supabase PostgreSQL, scoped per user via RLS.
 """
 
 import json
 import logging
-from pathlib import Path
 from .schemas import PromptTemplate
+from .db import get_supabase
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DIR = Path.home() / ".promptmaster" / "templates"
-
 
 class TemplateStore:
-    """File-based template storage."""
+    """Supabase-backed template storage, scoped per user."""
 
-    def __init__(self, directory: Path = DEFAULT_DIR):
-        self.directory = directory
-        self.directory.mkdir(parents=True, exist_ok=True)
+    def __init__(self, user_id: str, access_token: str):
+        self.user_id = user_id
+        self.access_token = access_token
 
-    def _path(self, template_id: str) -> Path:
-        return self.directory / f"{template_id}.json"
+    def _client(self):
+        sb = get_supabase()
+        sb.postgrest.auth(self.access_token)
+        return sb
 
     def save(self, template: PromptTemplate) -> None:
-        self._path(template.template_id).write_text(
-            template.model_dump_json(indent=2), encoding="utf-8"
-        )
-        logger.info(f"Template saved: {template.template_id} ({template.name})")
+        try:
+            data = {
+                "user_id": self.user_id,
+                "template_id": template.template_id,
+                "name": template.name,
+                "mode": template.mode,
+                "audience": template.audience,
+                "data": json.loads(template.model_dump_json()),
+            }
+            self._client().table("templates").upsert(
+                data, on_conflict="user_id,template_id"
+            ).execute()
+            logger.info(f"Template saved: {template.template_id} ({template.name})")
+        except Exception as e:
+            logger.error(f"Failed to save template {template.template_id}: {e}")
 
     def load(self, template_id: str) -> PromptTemplate | None:
-        path = self._path(template_id)
-        if not path.exists():
-            return None
         try:
-            return PromptTemplate.model_validate_json(path.read_text(encoding="utf-8"))
+            result = (
+                self._client()
+                .table("templates")
+                .select("data")
+                .eq("user_id", self.user_id)
+                .eq("template_id", template_id)
+                .single()
+                .execute()
+            )
+            if result.data:
+                return PromptTemplate.model_validate(result.data["data"])
         except Exception as e:
             logger.error(f"Failed to load template {template_id}: {e}")
-            return None
+        return None
 
     def list_templates(self, limit: int = 50) -> list[dict]:
         """Return summaries of saved templates, newest first."""
-        entries = []
-        for path in sorted(self.directory.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                entries.append({
-                    "template_id": data.get("template_id", path.stem),
-                    "name": data.get("name", "Untitled"),
-                    "mode": data.get("mode", ""),
-                    "audience": data.get("audience", "General"),
-                    "created_at": data.get("created_at", ""),
-                })
-            except Exception:
-                continue
-            if len(entries) >= limit:
-                break
-        return entries
+        try:
+            result = (
+                self._client()
+                .table("templates")
+                .select("template_id, name, mode, audience, created_at")
+                .eq("user_id", self.user_id)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            return [
+                {
+                    "template_id": row["template_id"],
+                    "name": row.get("name", "Untitled"),
+                    "mode": row.get("mode", ""),
+                    "audience": row.get("audience", "General"),
+                    "created_at": row.get("created_at", ""),
+                }
+                for row in (result.data or [])
+            ]
+        except Exception as e:
+            logger.error(f"Failed to list templates: {e}")
+            return []
 
     def delete(self, template_id: str) -> None:
-        path = self._path(template_id)
-        if path.exists():
-            path.unlink()
+        try:
+            self._client().table("templates").delete().eq(
+                "user_id", self.user_id
+            ).eq("template_id", template_id).execute()
             logger.info(f"Template deleted: {template_id}")
+        except Exception as e:
+            logger.error(f"Failed to delete template {template_id}: {e}")
 
     def export_json(self, template_id: str) -> str | None:
         """Export a template as a JSON string for sharing."""

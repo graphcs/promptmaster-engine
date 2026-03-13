@@ -5,6 +5,43 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 
+load_dotenv()
+
+# Bridge Streamlit Cloud secrets to environment variables so that
+# OpenRouterClient and Supabase client work on both local and cloud.
+import os
+for _secret_key in ("OPENROUTER_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"):
+    if not os.getenv(_secret_key):
+        try:
+            os.environ[_secret_key] = st.secrets[_secret_key]
+        except (KeyError, FileNotFoundError):
+            pass
+
+logging.basicConfig(level=logging.INFO)
+
+from promptmaster.auth import render_auth_page, get_current_user, logout
+
+# ============================================================================
+# Page Config — must be the very first Streamlit command
+# ============================================================================
+
+_is_authed = get_current_user() is not None
+st.set_page_config(
+    page_title="PromptMaster Engine",
+    page_icon="🎯",
+    layout="wide" if _is_authed else "centered",
+    initial_sidebar_state="expanded" if _is_authed else "collapsed",
+)
+
+# ============================================================================
+# Auth Gate
+# ============================================================================
+
+if not _is_authed:
+    if not render_auth_page():
+        st.stop()
+
+# At this point, user is authenticated
 from promptmaster.schemas import PMInput, EvaluationResult, Iteration, Session, PromptTemplate
 from promptmaster.modes import MODES
 from promptmaster.prompt_builder import build_prompt
@@ -13,30 +50,9 @@ from promptmaster.realigner import build_realignment_prompt
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from promptmaster.session_store import SessionStore
 from promptmaster.template_store import TemplateStore
+from promptmaster.db import get_supabase
 
-load_dotenv()
-
-# Bridge Streamlit Cloud secrets to environment variables so that
-# OpenRouterClient (which reads os.getenv) works on both local and cloud.
-import os
-if not os.getenv("OPENROUTER_API_KEY"):
-    try:
-        os.environ["OPENROUTER_API_KEY"] = st.secrets["OPENROUTER_API_KEY"]
-    except (KeyError, FileNotFoundError):
-        pass
-
-logging.basicConfig(level=logging.INFO)
-
-# ============================================================================
-# Page Config
-# ============================================================================
-
-st.set_page_config(
-    page_title="PromptMaster Engine",
-    page_icon="🎯",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+_current_user = get_current_user()
 
 # ============================================================================
 # CSS
@@ -111,19 +127,56 @@ for _k, _v in _defaults.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
-# Per-browser session store: each browser tab gets a unique key so users
-# don't see each other's sessions on shared Streamlit Cloud deployments.
-if "pm_browser_key" not in st.session_state:
-    from uuid import uuid4
-    st.session_state.pm_browser_key = uuid4().hex[:12]
-
-_store = SessionStore(subdirectory=st.session_state.pm_browser_key)
-_template_store = TemplateStore()
+# Per-user stores — scoped by authenticated user ID
+_store = SessionStore(user_id=_current_user["id"], access_token=_current_user["access_token"])
+_template_store = TemplateStore(user_id=_current_user["id"], access_token=_current_user["access_token"])
 
 
 # ============================================================================
 # Helpers
 # ============================================================================
+
+DAILY_ITERATION_LIMIT = 20
+
+
+def check_rate_limit() -> tuple[bool, int]:
+    """Check if the user has exceeded their daily iteration limit.
+
+    Returns (allowed, remaining).
+    """
+    try:
+        from datetime import datetime, timezone, timedelta
+        one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        sb = get_supabase()
+        sb.postgrest.auth(_current_user["access_token"])
+        result = (
+            sb.table("usage_tracking")
+            .select("id", count="exact")
+            .eq("user_id", _current_user["id"])
+            .eq("action", "iteration")
+            .gte("created_at", one_day_ago)
+            .execute()
+        )
+        used = result.count if result.count is not None else 0
+        remaining = max(0, DAILY_ITERATION_LIMIT - used)
+        return remaining > 0, remaining
+    except Exception:
+        # Fail open — don't block users if tracking is down
+        return True, DAILY_ITERATION_LIMIT
+
+
+def record_iteration():
+    """Record an iteration for rate limiting."""
+    try:
+        sb = get_supabase()
+        sb.postgrest.auth(_current_user["access_token"])
+        sb.table("usage_tracking").insert({
+            "user_id": _current_user["id"],
+            "action": "iteration",
+        }).execute()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Failed to record usage: {e}")
+
 
 def run_async(coro):
     """Run an async coroutine from Streamlit's sync context."""
@@ -315,6 +368,14 @@ def render_comparison(iterations: list[Iteration]):
 with st.sidebar:
     st.markdown("## PromptMaster Engine")
     st.caption("Structured interaction for aligned LLM outputs")
+
+    # User info + logout
+    user_name = _current_user.get("name", _current_user.get("email", "User"))
+    st.markdown(f"Signed in as **{user_name}**")
+    if st.button("Sign Out", use_container_width=True, key="logout_btn"):
+        logout()
+        st.rerun()
+
     st.divider()
 
     # Model selector
@@ -383,6 +444,10 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     st.caption(tier_info["next"])
+
+    # Daily usage
+    _, remaining = check_rate_limit()
+    st.caption(f"Iterations today: {DAILY_ITERATION_LIMIT - remaining}/{DAILY_ITERATION_LIMIT}")
 
     st.divider()
     if st.button("🔄 New Session", use_container_width=True):
@@ -726,40 +791,46 @@ elif st.session_state.pm_phase == "review":
             st.rerun()
     with col2:
         if st.button("Execute →", type="primary", use_container_width=True):
-            inputs = PMInput(
-                objective=st.session_state.pm_objective.strip(),
-                audience=st.session_state.pm_audience,
-                constraints=st.session_state.pm_constraints.strip(),
-                output_format=st.session_state.pm_output_format.strip(),
-                mode=st.session_state.pm_mode,
-            )
-            iteration_num = len(st.session_state.pm_iterations) + 1
+            allowed, remaining = check_rate_limit()
+            if not allowed:
+                st.session_state.pm_error = f"Daily limit reached ({DAILY_ITERATION_LIMIT} iterations/day). Try again tomorrow."
+                st.rerun()
+            else:
+                inputs = PMInput(
+                    objective=st.session_state.pm_objective.strip(),
+                    audience=st.session_state.pm_audience,
+                    constraints=st.session_state.pm_constraints.strip(),
+                    output_format=st.session_state.pm_output_format.strip(),
+                    mode=st.session_state.pm_mode,
+                )
+                iteration_num = len(st.session_state.pm_iterations) + 1
 
-            with st.spinner(f"Generating + Evaluating (Iteration {iteration_num})..."):
-                try:
-                    async def _execute():
-                        async with OpenRouterClient(model=st.session_state.pm_model) as client:
-                            return await run_iteration(
-                                client=client,
-                                inputs=inputs,
-                                prompt_text=st.session_state.pm_prompt_edited,
-                                system_text=st.session_state.pm_system_prompt,
-                                iteration_number=iteration_num,
-                                model=st.session_state.pm_model,
-                            )
-                    iteration = run_async(_execute())
+                with st.spinner(f"Generating + Evaluating (Iteration {iteration_num})..."):
+                    try:
+                        async def _execute():
+                            async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                                return await run_iteration(
+                                    client=client,
+                                    inputs=inputs,
+                                    prompt_text=st.session_state.pm_prompt_edited,
+                                    system_text=st.session_state.pm_system_prompt,
+                                    iteration_number=iteration_num,
+                                    model=st.session_state.pm_model,
+                                )
+                        iteration = run_async(_execute())
+                        record_iteration()
 
-                    st.session_state.pm_iterations.append(iteration)
-                    st.session_state.pm_current_output = iteration.output
-                    st.session_state.pm_current_eval = iteration.evaluation
-                    st.session_state.pm_phase = "output"
-                    st.rerun()
-                except OpenRouterError as e:
-                    st.session_state.pm_error = f"LLM Error: {e}"
-                    st.rerun()
-                except Exception as e:
-                    st.session_state.pm_error = f"Error: {e}"
-                    st.rerun()
+                        st.session_state.pm_iterations.append(iteration)
+                        st.session_state.pm_current_output = iteration.output
+                        st.session_state.pm_current_eval = iteration.evaluation
+                        st.session_state.pm_phase = "output"
+                        st.rerun()
+                    except OpenRouterError as e:
+                        st.session_state.pm_error = f"LLM Error: {e}"
+                        st.rerun()
+                    except Exception as e:
+                        st.session_state.pm_error = f"Error: {e}"
+                        st.rerun()
 
 
 # ============================================================================
@@ -927,40 +998,46 @@ elif st.session_state.pm_phase == "realign":
             st.rerun()
     with col2:
         if st.button("Execute Realignment →", type="primary", use_container_width=True):
-            inputs = PMInput(
-                objective=st.session_state.pm_objective.strip(),
-                audience=st.session_state.pm_audience,
-                constraints=st.session_state.pm_constraints.strip(),
-                output_format=st.session_state.pm_output_format.strip(),
-                mode=st.session_state.pm_mode,
-            )
-            iteration_num = len(st.session_state.pm_iterations) + 1
+            allowed, remaining = check_rate_limit()
+            if not allowed:
+                st.session_state.pm_error = f"Daily limit reached ({DAILY_ITERATION_LIMIT} iterations/day). Try again tomorrow."
+                st.rerun()
+            else:
+                inputs = PMInput(
+                    objective=st.session_state.pm_objective.strip(),
+                    audience=st.session_state.pm_audience,
+                    constraints=st.session_state.pm_constraints.strip(),
+                    output_format=st.session_state.pm_output_format.strip(),
+                    mode=st.session_state.pm_mode,
+                )
+                iteration_num = len(st.session_state.pm_iterations) + 1
 
-            with st.spinner(f"Re-generating + Evaluating (Iteration {iteration_num})..."):
-                try:
-                    async def _execute_realigned():
-                        async with OpenRouterClient(model=st.session_state.pm_model) as client:
-                            return await run_iteration(
-                                client=client,
-                                inputs=inputs,
-                                prompt_text=st.session_state.pm_realignment_prompt,
-                                system_text=st.session_state.pm_system_prompt,
-                                iteration_number=iteration_num,
-                                model=st.session_state.pm_model,
-                            )
-                    iteration = run_async(_execute_realigned())
+                with st.spinner(f"Re-generating + Evaluating (Iteration {iteration_num})..."):
+                    try:
+                        async def _execute_realigned():
+                            async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                                return await run_iteration(
+                                    client=client,
+                                    inputs=inputs,
+                                    prompt_text=st.session_state.pm_realignment_prompt,
+                                    system_text=st.session_state.pm_system_prompt,
+                                    iteration_number=iteration_num,
+                                    model=st.session_state.pm_model,
+                                )
+                        iteration = run_async(_execute_realigned())
+                        record_iteration()
 
-                    st.session_state.pm_iterations.append(iteration)
-                    st.session_state.pm_current_output = iteration.output
-                    st.session_state.pm_current_eval = iteration.evaluation
-                    st.session_state.pm_phase = "output"
-                    st.rerun()
-                except OpenRouterError as e:
-                    st.session_state.pm_error = f"LLM Error: {e}"
-                    st.rerun()
-                except Exception as e:
-                    st.session_state.pm_error = f"Error: {e}"
-                    st.rerun()
+                        st.session_state.pm_iterations.append(iteration)
+                        st.session_state.pm_current_output = iteration.output
+                        st.session_state.pm_current_eval = iteration.evaluation
+                        st.session_state.pm_phase = "output"
+                        st.rerun()
+                    except OpenRouterError as e:
+                        st.session_state.pm_error = f"LLM Error: {e}"
+                        st.rerun()
+                    except Exception as e:
+                        st.session_state.pm_error = f"Error: {e}"
+                        st.rerun()
 
 
 # ============================================================================

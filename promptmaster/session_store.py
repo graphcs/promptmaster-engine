@@ -1,67 +1,96 @@
 """Session persistence for PromptMaster Engine.
 
-Stores sessions as individual JSON files in ~/.promptmaster/sessions/.
-Ephemeral on Streamlit Cloud but functional within a deploy cycle.
+Stores sessions in Supabase PostgreSQL, scoped per user via RLS.
 """
 
 import json
 import logging
-from pathlib import Path
 from .schemas import Session
+from .db import get_supabase
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DIR = Path.home() / ".promptmaster" / "sessions"
-
 
 class SessionStore:
-    """File-based session storage, scoped per browser via subdirectory."""
+    """Supabase-backed session storage, scoped per user."""
 
-    def __init__(self, directory: Path = DEFAULT_DIR, subdirectory: str | None = None):
-        self.directory = directory / subdirectory if subdirectory else directory
-        self.directory.mkdir(parents=True, exist_ok=True)
+    def __init__(self, user_id: str, access_token: str):
+        self.user_id = user_id
+        self.access_token = access_token
 
-    def _path(self, session_id: str) -> Path:
-        return self.directory / f"{session_id}.json"
+    def _client(self):
+        sb = get_supabase()
+        sb.postgrest.auth(self.access_token)
+        return sb
 
     def save(self, session: Session) -> None:
-        self._path(session.session_id).write_text(
-            session.model_dump_json(indent=2), encoding="utf-8"
-        )
-        logger.info(f"Session saved: {session.session_id}")
+        try:
+            data = {
+                "user_id": self.user_id,
+                "session_id": session.session_id,
+                "objective": session.objective[:500],
+                "mode": session.mode,
+                "audience": session.audience,
+                "iterations": len(session.iterations),
+                "finalized": session.finalized,
+                "data": json.loads(session.model_dump_json()),
+            }
+            self._client().table("sessions").upsert(
+                data, on_conflict="user_id,session_id"
+            ).execute()
+            logger.info(f"Session saved: {session.session_id}")
+        except Exception as e:
+            logger.error(f"Failed to save session {session.session_id}: {e}")
 
     def load(self, session_id: str) -> Session | None:
-        path = self._path(session_id)
-        if not path.exists():
-            return None
         try:
-            return Session.model_validate_json(path.read_text(encoding="utf-8"))
+            result = (
+                self._client()
+                .table("sessions")
+                .select("data")
+                .eq("user_id", self.user_id)
+                .eq("session_id", session_id)
+                .single()
+                .execute()
+            )
+            if result.data:
+                return Session.model_validate(result.data["data"])
         except Exception as e:
             logger.error(f"Failed to load session {session_id}: {e}")
-            return None
+        return None
 
     def list_sessions(self, limit: int = 20) -> list[dict]:
         """Return summaries of saved sessions, newest first."""
-        entries = []
-        for path in sorted(self.directory.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                entries.append({
-                    "session_id": data.get("session_id", path.stem),
-                    "objective": data.get("objective", "")[:80],
-                    "mode": data.get("mode", ""),
-                    "iterations": len(data.get("iterations", [])),
-                    "created_at": data.get("created_at", ""),
-                    "finalized": data.get("finalized", False),
-                })
-            except Exception:
-                continue
-            if len(entries) >= limit:
-                break
-        return entries
+        try:
+            result = (
+                self._client()
+                .table("sessions")
+                .select("session_id, objective, mode, iterations, created_at, finalized")
+                .eq("user_id", self.user_id)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            return [
+                {
+                    "session_id": row["session_id"],
+                    "objective": (row.get("objective") or "")[:80],
+                    "mode": row.get("mode", ""),
+                    "iterations": row.get("iterations", 0),
+                    "created_at": row.get("created_at", ""),
+                    "finalized": row.get("finalized", False),
+                }
+                for row in (result.data or [])
+            ]
+        except Exception as e:
+            logger.error(f"Failed to list sessions: {e}")
+            return []
 
     def delete(self, session_id: str) -> None:
-        path = self._path(session_id)
-        if path.exists():
-            path.unlink()
+        try:
+            self._client().table("sessions").delete().eq(
+                "user_id", self.user_id
+            ).eq("session_id", session_id).execute()
             logger.info(f"Session deleted: {session_id}")
+        except Exception as e:
+            logger.error(f"Failed to delete session {session_id}: {e}")
