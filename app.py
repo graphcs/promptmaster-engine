@@ -58,7 +58,7 @@ from promptmaster.realigner import build_realignment_prompt
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from promptmaster.session_store import SessionStore
 from promptmaster.template_store import TemplateStore
-from promptmaster.db import get_supabase
+from promptmaster.db import get_supabase, get_supabase_admin
 
 # ============================================================================
 # CSS
@@ -150,20 +150,49 @@ DAILY_ITERATION_LIMIT = 20
 ANONYMOUS_ITERATION_LIMIT = 3
 
 
+def _get_client_ip_hash() -> str:
+    """Hash the client IP for anonymous rate limiting (privacy-safe)."""
+    import hashlib
+    try:
+        forwarded = st.context.headers.get("X-Forwarded-For", "")
+        ip = forwarded.split(",")[0].strip() if forwarded else ""
+        if not ip:
+            ip = st.context.headers.get("X-Real-Ip", "unknown")
+    except Exception:
+        ip = "unknown"
+    return hashlib.sha256(ip.encode()).hexdigest()[:16]
+
+
 def check_rate_limit() -> tuple[bool, int]:
     """Check if the user has exceeded their iteration limit.
 
     Returns (allowed, remaining).
-    - Anonymous users: 3 iterations per session (tracked in session state).
-    - Signed-in users: 20 iterations per day (tracked in Supabase).
+    - Anonymous users: 3 iterations per day (tracked by IP hash in Supabase).
+    - Signed-in users: 20 iterations per day (tracked by user ID in Supabase).
     """
+    from datetime import datetime, timezone, timedelta
+    one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+
     if not _is_authed:
-        used = st.session_state.get("pm_anon_iterations", 0)
-        remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
-        return remaining > 0, remaining
+        try:
+            ip_hash = _get_client_ip_hash()
+            sb = get_supabase_admin()
+            result = (
+                sb.table("anonymous_usage")
+                .select("id", count="exact")
+                .eq("ip_hash", ip_hash)
+                .gte("created_at", one_day_ago)
+                .execute()
+            )
+            used = result.count if result.count is not None else 0
+            remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
+            return remaining > 0, remaining
+        except Exception:
+            # Fall back to session state if Supabase is down
+            used = st.session_state.get("pm_anon_iterations", 0)
+            remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
+            return remaining > 0, remaining
     try:
-        from datetime import datetime, timezone, timedelta
-        one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         sb = get_supabase()
         sb.postgrest.auth(_current_user["access_token"])
         result = (
@@ -185,6 +214,16 @@ def check_rate_limit() -> tuple[bool, int]:
 def record_iteration():
     """Record an iteration for rate limiting."""
     if not _is_authed:
+        # Track in Supabase by IP hash (persists across reloads)
+        try:
+            ip_hash = _get_client_ip_hash()
+            sb = get_supabase_admin()
+            sb.table("anonymous_usage").insert({
+                "ip_hash": ip_hash,
+            }).execute()
+        except Exception:
+            pass
+        # Also track in session state as fallback
         st.session_state.pm_anon_iterations = st.session_state.get("pm_anon_iterations", 0) + 1
         return
     try:
@@ -471,13 +510,13 @@ with st.sidebar:
     st.caption(tier_info["next"])
 
     # Usage counter
+    _, remaining = check_rate_limit()
     if _is_authed:
-        _, remaining = check_rate_limit()
         st.caption(f"Iterations today: {DAILY_ITERATION_LIMIT - remaining}/{DAILY_ITERATION_LIMIT}")
     else:
-        anon_used = st.session_state.get("pm_anon_iterations", 0)
-        st.caption(f"Free iterations: {anon_used}/{ANONYMOUS_ITERATION_LIMIT}")
-        if anon_used >= ANONYMOUS_ITERATION_LIMIT:
+        used = ANONYMOUS_ITERATION_LIMIT - remaining
+        st.caption(f"Free iterations: {used}/{ANONYMOUS_ITERATION_LIMIT}")
+        if remaining <= 0:
             st.warning("Sign in for 20 iterations/day.")
 
     st.divider()

@@ -38,10 +38,20 @@ CREATE TABLE IF NOT EXISTS usage_tracking (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 4. Anonymous usage — rate limiting for non-signed-in users (by IP hash)
+-- Accessed via service role key only (no RLS needed)
+CREATE TABLE IF NOT EXISTS anonymous_usage (
+    id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ip_hash       TEXT NOT NULL,
+    action        TEXT NOT NULL DEFAULT 'iteration',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Indexes for fast lookups
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_templates_user_id ON templates(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_usage_user_date ON usage_tracking(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_anon_usage_ip_date ON anonymous_usage(ip_hash, created_at);
 
 -- Row Level Security — users can only access their own data
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
