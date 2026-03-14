@@ -1003,17 +1003,17 @@ elif st.session_state.pm_phase == "realign":
                     iteration = run_async(_execute_realigned())
                     record_iteration()
 
-                        st.session_state.pm_iterations.append(iteration)
-                        st.session_state.pm_current_output = iteration.output
-                        st.session_state.pm_current_eval = iteration.evaluation
-                        st.session_state.pm_phase = "output"
-                        st.rerun()
-                    except OpenRouterError as e:
-                        st.session_state.pm_error = f"LLM Error: {e}"
-                        st.rerun()
-                    except Exception as e:
-                        st.session_state.pm_error = f"Error: {e}"
-                        st.rerun()
+                    st.session_state.pm_iterations.append(iteration)
+                    st.session_state.pm_current_output = iteration.output
+                    st.session_state.pm_current_eval = iteration.evaluation
+                    st.session_state.pm_phase = "output"
+                    st.rerun()
+                except OpenRouterError as e:
+                    st.session_state.pm_error = f"LLM Error: {e}"
+                    st.rerun()
+                except Exception as e:
+                    st.session_state.pm_error = f"Error: {e}"
+                    st.rerun()
 
 
 # ============================================================================
