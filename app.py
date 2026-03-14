@@ -151,17 +151,21 @@ DAILY_ITERATION_LIMIT = 20
 ANONYMOUS_ITERATION_LIMIT = 3
 
 
-def _get_client_ip_hash() -> str:
-    """Hash the client IP for anonymous rate limiting (privacy-safe)."""
+def _get_client_fingerprint() -> str:
+    """Build a stable browser fingerprint for anonymous rate limiting.
+
+    X-Forwarded-For rotates on Streamlit Cloud (load-balancer proxy IPs change
+    per request), so we use User-Agent + Accept-Language instead — these are
+    stable per browser across reloads.
+    """
     import hashlib
     try:
-        forwarded = st.context.headers.get("X-Forwarded-For", "")
-        ip = forwarded.split(",")[0].strip() if forwarded else ""
-        if not ip:
-            ip = st.context.headers.get("X-Real-Ip", "unknown")
+        ua = st.context.headers.get("User-Agent", "")
+        lang = st.context.headers.get("Accept-Language", "")
+        fingerprint = f"{ua}|{lang}"
     except Exception:
-        ip = "unknown"
-    return hashlib.sha256(ip.encode()).hexdigest()[:16]
+        fingerprint = "unknown"
+    return hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
 
 
 def check_rate_limit() -> tuple[bool, int]:
@@ -176,17 +180,17 @@ def check_rate_limit() -> tuple[bool, int]:
 
     if not _is_authed:
         try:
-            ip_hash = _get_client_ip_hash()
+            fp = _get_client_fingerprint()
             sb = get_supabase_admin()
             result = (
                 sb.table("anonymous_usage")
                 .select("id", count="exact")
-                .eq("ip_hash", ip_hash)
+                .eq("ip_hash", fp)
                 .gte("created_at", one_day_ago)
                 .execute()
             )
             used = result.count if result.count is not None else len(result.data)
-            logger.info(f"Anon rate limit: ip_hash={ip_hash}, count={result.count}, data_len={len(result.data)}, used={used}")
+            logger.info(f"Anon rate limit: fingerprint={fp}, count={result.count}, data_len={len(result.data)}, used={used}")
             remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
             return remaining > 0, remaining
         except Exception as e:
@@ -215,12 +219,12 @@ def check_rate_limit() -> tuple[bool, int]:
 def record_iteration():
     """Record an iteration for rate limiting."""
     if not _is_authed:
-        # Track in Supabase by IP hash (persists across reloads)
+        # Track in Supabase by browser fingerprint (persists across reloads)
         try:
-            ip_hash = _get_client_ip_hash()
+            fp = _get_client_fingerprint()
             sb = get_supabase_admin()
             sb.table("anonymous_usage").insert({
-                "ip_hash": ip_hash,
+                "ip_hash": fp,
             }).execute()
         except Exception as e:
             logger.warning(f"Anonymous usage recording failed: {e}")
