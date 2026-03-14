@@ -184,7 +184,7 @@ def check_rate_limit() -> tuple[bool, int]:
                 .gte("created_at", one_day_ago)
                 .execute()
             )
-            used = result.count if result.count is not None else 0
+            used = result.count if result.count is not None else len(result.data)
             remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
             return remaining > 0, remaining
         except Exception as e:
