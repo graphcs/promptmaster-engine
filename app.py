@@ -18,6 +18,7 @@ for _secret_key in ("OPENROUTER_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "SUPAB
             pass
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from promptmaster.auth import render_auth_page, handle_auth_callback, get_current_user, logout
 
