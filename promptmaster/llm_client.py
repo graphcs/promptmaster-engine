@@ -55,7 +55,7 @@ class OpenRouterClient:
         prompt: str,
         system: str | None = None,
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = 16384,
         json_mode: bool = False,
         model: str | None = None,
     ) -> tuple[str, dict[str, int]]:
@@ -110,7 +110,7 @@ class OpenRouterClient:
         prompt: str,
         system: str | None = None,
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         model: str | None = None,
     ) -> tuple[dict, dict[str, int]]:
         """Generate a JSON response from the LLM.
@@ -188,9 +188,13 @@ class OpenRouterClient:
 
             message = choices[0].get("message") or {}
             content = message.get("content")
-            if content is None:
-                finish_reason = choices[0].get("finish_reason", "unknown")
+            finish_reason = choices[0].get("finish_reason", "unknown")
+
+            if not content:
                 raise OpenRouterError(f"No content in response (finish_reason={finish_reason!r})")
+
+            if finish_reason == "length":
+                logger.warning("Response truncated (finish_reason='length') — returning partial content")
 
             usage = data.get("usage", {})
             usage_stats = {
