@@ -187,11 +187,10 @@ def check_rate_limit() -> tuple[bool, int]:
             used = result.count if result.count is not None else 0
             remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
             return remaining > 0, remaining
-        except Exception:
-            # Fall back to session state if Supabase is down
-            used = st.session_state.get("pm_anon_iterations", 0)
-            remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
-            return remaining > 0, remaining
+        except Exception as e:
+            logger.warning(f"Anonymous rate limit check failed: {e}")
+            # Fail closed — deny anonymous users if we can't verify their usage
+            return False, 0
     try:
         sb = get_supabase()
         sb.postgrest.auth(_current_user["access_token"])
@@ -221,8 +220,8 @@ def record_iteration():
             sb.table("anonymous_usage").insert({
                 "ip_hash": ip_hash,
             }).execute()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Anonymous usage recording failed: {e}")
         # Also track in session state as fallback
         st.session_state.pm_anon_iterations = st.session_state.get("pm_anon_iterations", 0) + 1
         return
