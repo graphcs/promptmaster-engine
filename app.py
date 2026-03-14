@@ -147,15 +147,20 @@ else:
 # ============================================================================
 
 DAILY_ITERATION_LIMIT = 20
+ANONYMOUS_ITERATION_LIMIT = 3
 
 
 def check_rate_limit() -> tuple[bool, int]:
-    """Check if the user has exceeded their daily iteration limit.
+    """Check if the user has exceeded their iteration limit.
 
-    Returns (allowed, remaining). Anonymous users are not rate-limited.
+    Returns (allowed, remaining).
+    - Anonymous users: 3 iterations per session (tracked in session state).
+    - Signed-in users: 20 iterations per day (tracked in Supabase).
     """
     if not _is_authed:
-        return True, DAILY_ITERATION_LIMIT
+        used = st.session_state.get("pm_anon_iterations", 0)
+        remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
+        return remaining > 0, remaining
     try:
         from datetime import datetime, timezone, timedelta
         one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
@@ -180,6 +185,7 @@ def check_rate_limit() -> tuple[bool, int]:
 def record_iteration():
     """Record an iteration for rate limiting."""
     if not _is_authed:
+        st.session_state.pm_anon_iterations = st.session_state.get("pm_anon_iterations", 0) + 1
         return
     try:
         sb = get_supabase()
@@ -464,10 +470,15 @@ with st.sidebar:
     )
     st.caption(tier_info["next"])
 
-    # Daily usage (only for signed-in users)
+    # Usage counter
     if _is_authed:
         _, remaining = check_rate_limit()
         st.caption(f"Iterations today: {DAILY_ITERATION_LIMIT - remaining}/{DAILY_ITERATION_LIMIT}")
+    else:
+        anon_used = st.session_state.get("pm_anon_iterations", 0)
+        st.caption(f"Free iterations: {anon_used}/{ANONYMOUS_ITERATION_LIMIT}")
+        if anon_used >= ANONYMOUS_ITERATION_LIMIT:
+            st.warning("Sign in for 20 iterations/day.")
 
     st.divider()
     if st.button("🔄 New Session", use_container_width=True):
@@ -814,7 +825,11 @@ elif st.session_state.pm_phase == "review":
         if st.button("Execute →", type="primary", use_container_width=True):
             allowed, remaining = check_rate_limit()
             if not allowed:
-                st.session_state.pm_error = f"Daily limit reached ({DAILY_ITERATION_LIMIT} iterations/day). Try again tomorrow."
+                st.session_state.pm_error = (
+                        f"Limit reached ({ANONYMOUS_ITERATION_LIMIT} free iterations). Sign in for {DAILY_ITERATION_LIMIT}/day."
+                        if not _is_authed
+                        else f"Daily limit reached ({DAILY_ITERATION_LIMIT} iterations/day). Try again tomorrow."
+                    )
                 st.rerun()
             else:
                 inputs = PMInput(
@@ -1021,7 +1036,11 @@ elif st.session_state.pm_phase == "realign":
         if st.button("Execute Realignment →", type="primary", use_container_width=True):
             allowed, remaining = check_rate_limit()
             if not allowed:
-                st.session_state.pm_error = f"Daily limit reached ({DAILY_ITERATION_LIMIT} iterations/day). Try again tomorrow."
+                st.session_state.pm_error = (
+                        f"Limit reached ({ANONYMOUS_ITERATION_LIMIT} free iterations). Sign in for {DAILY_ITERATION_LIMIT}/day."
+                        if not _is_authed
+                        else f"Daily limit reached ({DAILY_ITERATION_LIMIT} iterations/day). Try again tomorrow."
+                    )
                 st.rerun()
             else:
                 inputs = PMInput(
