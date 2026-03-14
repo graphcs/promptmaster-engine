@@ -17,7 +17,7 @@ def _get_redirect_url() -> str:
     return os.getenv("APP_URL", "http://localhost:8501")
 
 
-def _handle_auth_callback():
+def handle_auth_callback():
     """Check URL query params for Supabase auth callbacks.
 
     Handles three flows:
@@ -128,7 +128,7 @@ def logout():
 def render_auth_page():
     """Render the login/signup page. Returns True if user is authenticated."""
     # Check for auth callback (OAuth code, email token_hash, or implicit tokens)
-    if _handle_auth_callback():
+    if handle_auth_callback():
         st.rerun()
 
     # Try restoring existing session

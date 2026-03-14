@@ -19,29 +19,37 @@ for _secret_key in ("OPENROUTER_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "SUPAB
 
 logging.basicConfig(level=logging.INFO)
 
-from promptmaster.auth import render_auth_page, get_current_user, logout
+from promptmaster.auth import render_auth_page, handle_auth_callback, get_current_user, logout
 
 # ============================================================================
 # Page Config — must be the very first Streamlit command
 # ============================================================================
 
-_is_authed = get_current_user() is not None
 st.set_page_config(
     page_title="PromptMaster Engine",
     page_icon="🎯",
-    layout="wide" if _is_authed else "centered",
-    initial_sidebar_state="expanded" if _is_authed else "collapsed",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 # ============================================================================
-# Auth Gate
+# Auth — optional, handles OAuth/email callbacks automatically
 # ============================================================================
 
-if not _is_authed:
-    if not render_auth_page():
+if handle_auth_callback():
+    st.rerun()
+
+_current_user = get_current_user()
+_is_authed = _current_user is not None
+
+# Show auth page if user explicitly requested sign-in
+if not _is_authed and st.session_state.get("pm_show_auth"):
+    if render_auth_page():
+        st.session_state.pop("pm_show_auth", None)
+        st.rerun()
+    else:
         st.stop()
 
-# At this point, user is authenticated
 from promptmaster.schemas import PMInput, EvaluationResult, Iteration, Session, PromptTemplate
 from promptmaster.modes import MODES
 from promptmaster.prompt_builder import build_prompt
@@ -51,8 +59,6 @@ from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from promptmaster.session_store import SessionStore
 from promptmaster.template_store import TemplateStore
 from promptmaster.db import get_supabase
-
-_current_user = get_current_user()
 
 # ============================================================================
 # CSS
@@ -127,9 +133,13 @@ for _k, _v in _defaults.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
-# Per-user stores — scoped by authenticated user ID
-_store = SessionStore(user_id=_current_user["id"], access_token=_current_user["access_token"])
-_template_store = TemplateStore(user_id=_current_user["id"], access_token=_current_user["access_token"])
+# Per-user stores — only created when signed in
+if _is_authed:
+    _store = SessionStore(user_id=_current_user["id"], access_token=_current_user["access_token"])
+    _template_store = TemplateStore(user_id=_current_user["id"], access_token=_current_user["access_token"])
+else:
+    _store = None
+    _template_store = None
 
 
 # ============================================================================
@@ -142,8 +152,10 @@ DAILY_ITERATION_LIMIT = 20
 def check_rate_limit() -> tuple[bool, int]:
     """Check if the user has exceeded their daily iteration limit.
 
-    Returns (allowed, remaining).
+    Returns (allowed, remaining). Anonymous users are not rate-limited.
     """
+    if not _is_authed:
+        return True, DAILY_ITERATION_LIMIT
     try:
         from datetime import datetime, timezone, timedelta
         one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
@@ -167,6 +179,8 @@ def check_rate_limit() -> tuple[bool, int]:
 
 def record_iteration():
     """Record an iteration for rate limiting."""
+    if not _is_authed:
+        return
     try:
         sb = get_supabase()
         sb.postgrest.auth(_current_user["access_token"])
@@ -369,12 +383,17 @@ with st.sidebar:
     st.markdown("## PromptMaster Engine")
     st.caption("Structured interaction for aligned LLM outputs")
 
-    # User info + logout
-    user_name = _current_user.get("name", _current_user.get("email", "User"))
-    st.markdown(f"Signed in as **{user_name}**")
-    if st.button("Sign Out", use_container_width=True, key="logout_btn"):
-        logout()
-        st.rerun()
+    # User info / sign-in
+    if _is_authed:
+        user_name = _current_user.get("name", _current_user.get("email", "User"))
+        st.markdown(f"Signed in as **{user_name}**")
+        if st.button("Sign Out", use_container_width=True, key="logout_btn"):
+            logout()
+            st.rerun()
+    else:
+        if st.button("Sign in to save sessions", use_container_width=True, key="show_auth_btn"):
+            st.session_state.pm_show_auth = True
+            st.rerun()
 
     st.divider()
 
@@ -427,7 +446,7 @@ with st.sidebar:
     st.caption(f"Phase: {phase_labels.get(current_phase, current_phase)}")
 
     # Tier System (Book Ch4, Appendix A)
-    saved_sessions = _store.list_sessions()
+    saved_sessions = _store.list_sessions() if _store else []
     tier = assess_tier(
         sessions=saved_sessions,
         current_iterations=st.session_state.pm_iterations,
@@ -445,9 +464,10 @@ with st.sidebar:
     )
     st.caption(tier_info["next"])
 
-    # Daily usage
-    _, remaining = check_rate_limit()
-    st.caption(f"Iterations today: {DAILY_ITERATION_LIMIT - remaining}/{DAILY_ITERATION_LIMIT}")
+    # Daily usage (only for signed-in users)
+    if _is_authed:
+        _, remaining = check_rate_limit()
+        st.caption(f"Iterations today: {DAILY_ITERATION_LIMIT - remaining}/{DAILY_ITERATION_LIMIT}")
 
     st.divider()
     if st.button("🔄 New Session", use_container_width=True):
@@ -479,7 +499,7 @@ with st.sidebar:
                         st.rerun()
 
     # Prompt Templates (Book Ch7 S2 — reusable prompt frameworks)
-    saved_templates = _template_store.list_templates()
+    saved_templates = _template_store.list_templates() if _template_store else []
     if saved_templates:
         with st.expander(f"Prompt Templates ({len(saved_templates)})"):
             for t in saved_templates:
@@ -699,37 +719,38 @@ if st.session_state.pm_phase == "input":
         st.markdown(f"_{mode_config['system_preamble']}_")
 
     # Save as Template (Book Ch7 S2 — reusable prompt frameworks)
-    with st.expander("Save as Reusable Template"):
-        tpl_name = st.text_input(
-            "Template Name",
-            placeholder="e.g. 'API Critique Setup', 'Executive Summary Framework'",
-            key="tpl_name_input",
-        )
-        tpl_hint = st.text_area(
-            "Objective Hint (optional)",
-            value=st.session_state.pm_objective,
-            placeholder="Pre-fill text for the objective field when this template is loaded",
-            height=68,
-            key="tpl_hint_input",
-        )
-        if st.button("Save Template", use_container_width=True, key="save_template_btn"):
-            if not tpl_name.strip():
-                st.error("Template name is required.")
-            else:
-                template = PromptTemplate(
-                    name=tpl_name.strip(),
-                    mode=st.session_state.pm_mode,
-                    audience=st.session_state.pm_audience,
-                    constraints=st.session_state.pm_constraints.strip(),
-                    output_format=st.session_state.pm_output_format.strip(),
-                    objective_hint=tpl_hint.strip(),
-                    custom_name=st.session_state.pm_custom_name if st.session_state.pm_mode == "custom" else "",
-                    custom_preamble=st.session_state.pm_custom_preamble if st.session_state.pm_mode == "custom" else "",
-                    custom_tone=st.session_state.pm_custom_tone if st.session_state.pm_mode == "custom" else "",
-                )
-                _template_store.save(template)
-                st.toast(f"Template '{tpl_name.strip()}' saved!")
-                st.rerun()
+    if _is_authed:
+        with st.expander("Save as Reusable Template"):
+            tpl_name = st.text_input(
+                "Template Name",
+                placeholder="e.g. 'API Critique Setup', 'Executive Summary Framework'",
+                key="tpl_name_input",
+            )
+            tpl_hint = st.text_area(
+                "Objective Hint (optional)",
+                value=st.session_state.pm_objective,
+                placeholder="Pre-fill text for the objective field when this template is loaded",
+                height=68,
+                key="tpl_hint_input",
+            )
+            if st.button("Save Template", use_container_width=True, key="save_template_btn"):
+                if not tpl_name.strip():
+                    st.error("Template name is required.")
+                else:
+                    template = PromptTemplate(
+                        name=tpl_name.strip(),
+                        mode=st.session_state.pm_mode,
+                        audience=st.session_state.pm_audience,
+                        constraints=st.session_state.pm_constraints.strip(),
+                        output_format=st.session_state.pm_output_format.strip(),
+                        objective_hint=tpl_hint.strip(),
+                        custom_name=st.session_state.pm_custom_name if st.session_state.pm_mode == "custom" else "",
+                        custom_preamble=st.session_state.pm_custom_preamble if st.session_state.pm_mode == "custom" else "",
+                        custom_tone=st.session_state.pm_custom_tone if st.session_state.pm_mode == "custom" else "",
+                    )
+                    _template_store.save(template)
+                    st.toast(f"Template '{tpl_name.strip()}' saved!")
+                    st.rerun()
 
     if st.button("Assemble Prompt →", type="primary", use_container_width=True):
         if not st.session_state.pm_objective.strip():
@@ -1106,30 +1127,31 @@ elif st.session_state.pm_phase == "summary":
         st.code(summary_text, language=None)
 
     # Save session config as reusable template
-    with st.expander("Save as Reusable Template"):
-        summary_tpl_name = st.text_input(
-            "Template Name",
-            placeholder="Name this template for reuse",
-            key="summary_tpl_name",
-        )
-        if st.button("Save Template from This Session", use_container_width=True, key="summary_save_tpl"):
-            if not summary_tpl_name.strip():
-                st.error("Template name is required.")
-            else:
-                template = PromptTemplate(
-                    name=summary_tpl_name.strip(),
-                    mode=inputs.mode,
-                    audience=inputs.audience,
-                    constraints=inputs.constraints,
-                    output_format=inputs.output_format,
-                    objective_hint=inputs.objective,
-                    custom_name=st.session_state.pm_custom_name if inputs.mode == "custom" else "",
-                    custom_preamble=st.session_state.pm_custom_preamble if inputs.mode == "custom" else "",
-                    custom_tone=st.session_state.pm_custom_tone if inputs.mode == "custom" else "",
-                )
-                _template_store.save(template)
-                st.toast(f"Template '{summary_tpl_name.strip()}' saved!")
-                st.rerun()
+    if _is_authed:
+        with st.expander("Save as Reusable Template"):
+            summary_tpl_name = st.text_input(
+                "Template Name",
+                placeholder="Name this template for reuse",
+                key="summary_tpl_name",
+            )
+            if st.button("Save Template from This Session", use_container_width=True, key="summary_save_tpl"):
+                if not summary_tpl_name.strip():
+                    st.error("Template name is required.")
+                else:
+                    template = PromptTemplate(
+                        name=summary_tpl_name.strip(),
+                        mode=inputs.mode,
+                        audience=inputs.audience,
+                        constraints=inputs.constraints,
+                        output_format=inputs.output_format,
+                        objective_hint=inputs.objective,
+                        custom_name=st.session_state.pm_custom_name if inputs.mode == "custom" else "",
+                        custom_preamble=st.session_state.pm_custom_preamble if inputs.mode == "custom" else "",
+                        custom_tone=st.session_state.pm_custom_tone if inputs.mode == "custom" else "",
+                    )
+                    _template_store.save(template)
+                    st.toast(f"Template '{summary_tpl_name.strip()}' saved!")
+                    st.rerun()
 
     # Iteration history with trends
     if len(st.session_state.pm_iterations) > 1:
@@ -1140,8 +1162,8 @@ elif st.session_state.pm_phase == "summary":
         with st.expander("Compare Iterations"):
             render_comparison(st.session_state.pm_iterations)
 
-    # Auto-save session
-    if not st.session_state.get("pm_session_saved"):
+    # Auto-save session (only for signed-in users)
+    if _is_authed and not st.session_state.get("pm_session_saved"):
         session = Session(
             objective=inputs.objective,
             audience=inputs.audience,
