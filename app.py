@@ -59,7 +59,7 @@ from promptmaster.realigner import build_realignment_prompt
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from promptmaster.session_store import SessionStore
 from promptmaster.template_store import TemplateStore
-from promptmaster.db import get_supabase, get_supabase_admin
+from promptmaster.db import get_supabase
 
 # ============================================================================
 # CSS
@@ -147,89 +147,9 @@ else:
 # Helpers
 # ============================================================================
 
-DAILY_ITERATION_LIMIT = 20
-ANONYMOUS_ITERATION_LIMIT = 3
-
-
-def _get_client_fingerprint() -> str:
-    """Build a stable browser fingerprint for anonymous rate limiting.
-
-    X-Forwarded-For rotates on Streamlit Cloud (load-balancer proxy IPs change
-    per request), so we use User-Agent + Accept-Language instead — these are
-    stable per browser across reloads.
-    """
-    import hashlib
-    try:
-        ua = st.context.headers.get("User-Agent", "")
-        lang = st.context.headers.get("Accept-Language", "")
-        fingerprint = f"{ua}|{lang}"
-    except Exception:
-        fingerprint = "unknown"
-    return hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
-
-
-def check_rate_limit() -> tuple[bool, int]:
-    """Check if the user has exceeded their iteration limit.
-
-    Returns (allowed, remaining).
-    - Anonymous users: 3 iterations per day (tracked by IP hash in Supabase).
-    - Signed-in users: 20 iterations per day (tracked by user ID in Supabase).
-    """
-    from datetime import datetime, timezone, timedelta
-    one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
-
-    if not _is_authed:
-        try:
-            fp = _get_client_fingerprint()
-            sb = get_supabase_admin()
-            result = (
-                sb.table("anonymous_usage")
-                .select("id", count="exact")
-                .eq("ip_hash", fp)
-                .gte("created_at", one_day_ago)
-                .execute()
-            )
-            used = result.count if result.count is not None else len(result.data)
-            logger.info(f"Anon rate limit: fingerprint={fp}, count={result.count}, data_len={len(result.data)}, used={used}")
-            remaining = max(0, ANONYMOUS_ITERATION_LIMIT - used)
-            return remaining > 0, remaining
-        except Exception as e:
-            logger.warning(f"Anonymous rate limit check failed: {e}")
-            # Fail closed — deny anonymous users if we can't verify their usage
-            return False, 0
-    try:
-        sb = get_supabase()
-        sb.postgrest.auth(_current_user["access_token"])
-        result = (
-            sb.table("usage_tracking")
-            .select("id", count="exact")
-            .eq("user_id", _current_user["id"])
-            .eq("action", "iteration")
-            .gte("created_at", one_day_ago)
-            .execute()
-        )
-        used = result.count if result.count is not None else 0
-        remaining = max(0, DAILY_ITERATION_LIMIT - used)
-        return remaining > 0, remaining
-    except Exception:
-        # Fail open — don't block users if tracking is down
-        return True, DAILY_ITERATION_LIMIT
-
-
 def record_iteration():
-    """Record an iteration for rate limiting."""
+    """Record an iteration for usage tracking (no rate limiting)."""
     if not _is_authed:
-        # Track in Supabase by browser fingerprint (persists across reloads)
-        try:
-            fp = _get_client_fingerprint()
-            sb = get_supabase_admin()
-            sb.table("anonymous_usage").insert({
-                "ip_hash": fp,
-            }).execute()
-        except Exception as e:
-            logger.warning(f"Anonymous usage recording failed: {e}")
-        # Also track in session state as fallback
-        st.session_state.pm_anon_iterations = st.session_state.get("pm_anon_iterations", 0) + 1
         return
     try:
         sb = get_supabase()
@@ -513,16 +433,6 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     st.caption(tier_info["next"])
-
-    # Usage counter
-    _, remaining = check_rate_limit()
-    if _is_authed:
-        st.caption(f"Iterations today: {DAILY_ITERATION_LIMIT - remaining}/{DAILY_ITERATION_LIMIT}")
-    else:
-        used = ANONYMOUS_ITERATION_LIMIT - remaining
-        st.caption(f"Free iterations: {used}/{ANONYMOUS_ITERATION_LIMIT}")
-        if remaining <= 0:
-            st.warning("Sign in for 20 iterations/day.")
 
     st.divider()
     if st.button("🔄 New Session", use_container_width=True):
@@ -867,50 +777,41 @@ elif st.session_state.pm_phase == "review":
             st.rerun()
     with col2:
         if st.button("Execute →", type="primary", use_container_width=True):
-            allowed, remaining = check_rate_limit()
-            if not allowed:
-                st.session_state.pm_error = (
-                        f"Limit reached ({ANONYMOUS_ITERATION_LIMIT} free iterations). Sign in for {DAILY_ITERATION_LIMIT}/day."
-                        if not _is_authed
-                        else f"Daily limit reached ({DAILY_ITERATION_LIMIT} iterations/day). Try again tomorrow."
-                    )
-                st.rerun()
-            else:
-                inputs = PMInput(
-                    objective=st.session_state.pm_objective.strip(),
-                    audience=st.session_state.pm_audience,
-                    constraints=st.session_state.pm_constraints.strip(),
-                    output_format=st.session_state.pm_output_format.strip(),
-                    mode=st.session_state.pm_mode,
-                )
-                iteration_num = len(st.session_state.pm_iterations) + 1
+            inputs = PMInput(
+                objective=st.session_state.pm_objective.strip(),
+                audience=st.session_state.pm_audience,
+                constraints=st.session_state.pm_constraints.strip(),
+                output_format=st.session_state.pm_output_format.strip(),
+                mode=st.session_state.pm_mode,
+            )
+            iteration_num = len(st.session_state.pm_iterations) + 1
 
-                with st.spinner(f"Generating + Evaluating (Iteration {iteration_num})..."):
-                    try:
-                        async def _execute():
-                            async with OpenRouterClient(model=st.session_state.pm_model) as client:
-                                return await run_iteration(
-                                    client=client,
-                                    inputs=inputs,
-                                    prompt_text=st.session_state.pm_prompt_edited,
-                                    system_text=st.session_state.pm_system_prompt,
-                                    iteration_number=iteration_num,
-                                    model=st.session_state.pm_model,
-                                )
-                        iteration = run_async(_execute())
-                        record_iteration()
+            with st.spinner(f"Generating + Evaluating (Iteration {iteration_num})..."):
+                try:
+                    async def _execute():
+                        async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                            return await run_iteration(
+                                client=client,
+                                inputs=inputs,
+                                prompt_text=st.session_state.pm_prompt_edited,
+                                system_text=st.session_state.pm_system_prompt,
+                                iteration_number=iteration_num,
+                                model=st.session_state.pm_model,
+                            )
+                    iteration = run_async(_execute())
+                    record_iteration()
 
-                        st.session_state.pm_iterations.append(iteration)
-                        st.session_state.pm_current_output = iteration.output
-                        st.session_state.pm_current_eval = iteration.evaluation
-                        st.session_state.pm_phase = "output"
-                        st.rerun()
-                    except OpenRouterError as e:
-                        st.session_state.pm_error = f"LLM Error: {e}"
-                        st.rerun()
-                    except Exception as e:
-                        st.session_state.pm_error = f"Error: {e}"
-                        st.rerun()
+                    st.session_state.pm_iterations.append(iteration)
+                    st.session_state.pm_current_output = iteration.output
+                    st.session_state.pm_current_eval = iteration.evaluation
+                    st.session_state.pm_phase = "output"
+                    st.rerun()
+                except OpenRouterError as e:
+                    st.session_state.pm_error = f"LLM Error: {e}"
+                    st.rerun()
+                except Exception as e:
+                    st.session_state.pm_error = f"Error: {e}"
+                    st.rerun()
 
 
 # ============================================================================
@@ -1078,38 +979,29 @@ elif st.session_state.pm_phase == "realign":
             st.rerun()
     with col2:
         if st.button("Execute Realignment →", type="primary", use_container_width=True):
-            allowed, remaining = check_rate_limit()
-            if not allowed:
-                st.session_state.pm_error = (
-                        f"Limit reached ({ANONYMOUS_ITERATION_LIMIT} free iterations). Sign in for {DAILY_ITERATION_LIMIT}/day."
-                        if not _is_authed
-                        else f"Daily limit reached ({DAILY_ITERATION_LIMIT} iterations/day). Try again tomorrow."
-                    )
-                st.rerun()
-            else:
-                inputs = PMInput(
-                    objective=st.session_state.pm_objective.strip(),
-                    audience=st.session_state.pm_audience,
-                    constraints=st.session_state.pm_constraints.strip(),
-                    output_format=st.session_state.pm_output_format.strip(),
-                    mode=st.session_state.pm_mode,
-                )
-                iteration_num = len(st.session_state.pm_iterations) + 1
+            inputs = PMInput(
+                objective=st.session_state.pm_objective.strip(),
+                audience=st.session_state.pm_audience,
+                constraints=st.session_state.pm_constraints.strip(),
+                output_format=st.session_state.pm_output_format.strip(),
+                mode=st.session_state.pm_mode,
+            )
+            iteration_num = len(st.session_state.pm_iterations) + 1
 
-                with st.spinner(f"Re-generating + Evaluating (Iteration {iteration_num})..."):
-                    try:
-                        async def _execute_realigned():
-                            async with OpenRouterClient(model=st.session_state.pm_model) as client:
-                                return await run_iteration(
-                                    client=client,
-                                    inputs=inputs,
-                                    prompt_text=st.session_state.pm_realignment_prompt,
-                                    system_text=st.session_state.pm_system_prompt,
-                                    iteration_number=iteration_num,
-                                    model=st.session_state.pm_model,
-                                )
-                        iteration = run_async(_execute_realigned())
-                        record_iteration()
+            with st.spinner(f"Re-generating + Evaluating (Iteration {iteration_num})..."):
+                try:
+                    async def _execute_realigned():
+                        async with OpenRouterClient(model=st.session_state.pm_model) as client:
+                            return await run_iteration(
+                                client=client,
+                                inputs=inputs,
+                                prompt_text=st.session_state.pm_realignment_prompt,
+                                system_text=st.session_state.pm_system_prompt,
+                                iteration_number=iteration_num,
+                                model=st.session_state.pm_model,
+                            )
+                    iteration = run_async(_execute_realigned())
+                    record_iteration()
 
                         st.session_state.pm_iterations.append(iteration)
                         st.session_state.pm_current_output = iteration.output

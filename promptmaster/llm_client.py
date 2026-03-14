@@ -32,7 +32,7 @@ class OpenRouterClient:
 
     BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
     MODELS_URL = "https://openrouter.ai/api/v1/models"
-    DEFAULT_MODEL = "anthropic/claude-sonnet-4"
+    DEFAULT_MODEL = "openai/gpt-5.4"
 
     def __init__(
         self,
