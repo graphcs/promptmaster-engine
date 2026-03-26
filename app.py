@@ -735,18 +735,19 @@ if st.session_state.pm_phase == "input":
             placeholder="Click to add common constraints",
             key="input_constraint_presets",
         )
+        # Append newly selected presets to the textarea (only add what's new)
+        prev_c = set(st.session_state.pm_constraint_presets)
+        added_c = [p for p in selected_constraints if p not in prev_c]
+        if added_c:
+            existing = st.session_state.pm_constraints.strip()
+            addition = ", ".join(added_c)
+            st.session_state.pm_constraints = (existing + ", " + addition) if existing else addition
+            st.session_state.input_constraints = st.session_state.pm_constraints
         st.session_state.pm_constraint_presets = selected_constraints
-        # Build constraint text: presets + any custom text the user typed
-        preset_text = ", ".join(selected_constraints)
-        current_custom = st.session_state.pm_constraints
-        # If the textarea only contains previous preset text, clear it for the new presets
-        if not current_custom or all(p in current_custom for p in st.session_state.get("_prev_constraint_presets", [])):
-            current_custom = ""
-        st.session_state._prev_constraint_presets = selected_constraints
-        combined_constraints = preset_text + (("\n" + current_custom) if current_custom else "")
+
         st.session_state.pm_constraints = st.text_area(
             "Constraints (optional)",
-            value=combined_constraints if selected_constraints else st.session_state.pm_constraints,
+            value=st.session_state.pm_constraints,
             placeholder="Any boundaries, limitations, or specific requirements.",
             height=68,
             key="input_constraints",
@@ -759,16 +760,19 @@ if st.session_state.pm_phase == "input":
             placeholder="Click to add output format",
             key="input_format_presets",
         )
+        # Append newly selected presets to the textarea (only add what's new)
+        prev_f = set(st.session_state.pm_format_presets)
+        added_f = [p for p in selected_formats if p not in prev_f]
+        if added_f:
+            existing_f = st.session_state.pm_output_format.strip()
+            addition_f = ", ".join(added_f)
+            st.session_state.pm_output_format = (existing_f + ", " + addition_f) if existing_f else addition_f
+            st.session_state.input_format = st.session_state.pm_output_format
         st.session_state.pm_format_presets = selected_formats
-        preset_fmt = ", ".join(selected_formats)
-        current_custom_fmt = st.session_state.pm_output_format
-        if not current_custom_fmt or all(p in current_custom_fmt for p in st.session_state.get("_prev_format_presets", [])):
-            current_custom_fmt = ""
-        st.session_state._prev_format_presets = selected_formats
-        combined_format = preset_fmt + (("\n" + current_custom_fmt) if current_custom_fmt else "")
+
         st.session_state.pm_output_format = st.text_area(
             "Output Format (optional)",
-            value=combined_format if selected_formats else st.session_state.pm_output_format,
+            value=st.session_state.pm_output_format,
             placeholder="e.g. Bullet points, numbered list, table, 3 paragraphs",
             height=68,
             key="input_format",
