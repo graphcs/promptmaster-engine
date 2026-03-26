@@ -128,6 +128,9 @@ _defaults = {
     "pm_models_cache": None,
     "pm_session_saved": False,
     "pm_self_audit": None,
+    "pm_onboarding_seen": False,
+    "pm_constraint_presets": [],
+    "pm_format_presets": [],
 }
 
 for _k, _v in _defaults.items():
@@ -147,8 +150,8 @@ else:
 # Helpers
 # ============================================================================
 
-def record_iteration():
-    """Record an iteration for usage tracking (no rate limiting)."""
+def record_usage(action: str = "iteration"):
+    """Record a usage event for telemetry."""
     if not _is_authed:
         return
     try:
@@ -156,7 +159,7 @@ def record_iteration():
         sb.postgrest.auth(_current_user["access_token"])
         sb.table("usage_tracking").insert({
             "user_id": _current_user["id"],
-            "action": "iteration",
+            "action": action,
         }).execute()
     except Exception as e:
         logging.getLogger(__name__).warning(f"Failed to record usage: {e}")
@@ -186,21 +189,31 @@ def score_badge_html(label: str, score: str) -> str:
 
 
 def render_evaluation(evaluation: EvaluationResult):
-    """Render the evaluation scorecard."""
-    st.markdown("### Evaluation Scores")
+    """Render the evaluation scorecard with drift separated."""
+    # Quality Scores — Alignment and Clarity
+    st.markdown("**Quality Scores**")
+    q_col1, q_col2 = st.columns(2)
+    with q_col1:
+        st.markdown(
+            f"**Alignment:** {score_badge_html('Alignment', evaluation.alignment.score)}",
+            unsafe_allow_html=True,
+        )
+        st.caption(evaluation.alignment.explanation)
+    with q_col2:
+        st.markdown(
+            f"**Clarity:** {score_badge_html('Clarity', evaluation.clarity.score)}",
+            unsafe_allow_html=True,
+        )
+        st.caption(evaluation.clarity.explanation)
 
-    cols = st.columns(3)
-    for col, (label, dim) in zip(cols, [
-        ("Alignment", evaluation.alignment),
-        ("Drift", evaluation.drift),
-        ("Clarity", evaluation.clarity),
-    ]):
-        with col:
-            st.markdown(
-                f"**{label}:** {score_badge_html(label, dim.score)}",
-                unsafe_allow_html=True,
-            )
-            st.caption(dim.explanation)
+    # Scope Check — Drift (separated per Sean's feedback)
+    st.markdown("**Scope Check**")
+    st.markdown(
+        f"**Drift:** {score_badge_html('Drift', evaluation.drift.score)}",
+        unsafe_allow_html=True,
+    )
+    st.caption(evaluation.drift.explanation)
+    st.caption("_Drift measures whether the output stayed focused on your objective. Low = focused. High = wandered off-topic._")
 
 
 def reset_session():
@@ -508,70 +521,124 @@ if st.session_state.pm_error:
 # PHASE: INPUT
 # ============================================================================
 
+_CONSTRAINT_PRESETS = [
+    "Keep it under 300 words",
+    "No jargon or technical language",
+    "Include concrete examples",
+    "Focus on actionable steps",
+    "List pros and cons",
+    "Avoid speculation",
+    "Use formal tone",
+    "Be concise and direct",
+]
+
+_FORMAT_PRESETS = [
+    "Bullet points",
+    "Numbered list",
+    "Short paragraphs",
+    "Table or comparison",
+    "Step-by-step guide",
+    "Executive summary",
+    "Q&A format",
+]
+
 _EXAMPLES = [
     {
-        "label": "API Design (Architect)",
-        "objective": "Design a REST API structure for a task management app with projects, tasks, subtasks, and user assignments",
-        "audience": "Technical",
-        "constraints": "Must follow RESTful conventions, support pagination, use JSON responses",
+        "label": "Architect \u2014 structured planning",
+        "objective": "Design a structured plan for launching an online course, including content outline, timeline, platform requirements, and marketing strategy",
+        "audience": "General",
+        "constraints": "Must be actionable within 90 days, budget under $5K",
         "mode": "architect",
     },
     {
-        "label": "Strategy Review (Critic)",
+        "label": "Critic \u2014 strategy review",
         "objective": "Evaluate this product strategy: We plan to launch a social media app targeting users aged 18-25 by competing directly with Instagram on photo sharing",
         "audience": "Executive",
         "constraints": "Budget is $50K, team of 3 developers, 6-month timeline",
         "mode": "critic",
     },
     {
-        "label": "TLS Explained (Clarity)",
-        "objective": "Explain how HTTPS/TLS handshake works including certificate validation, cipher suite negotiation, and session key derivation",
+        "label": "Clarity \u2014 simplify a concept",
+        "objective": "Explain how supply chain logistics work, from manufacturer to end consumer, including the role of distributors, warehouses, and last-mile delivery",
         "audience": "Student",
-        "constraints": "No jargon, use everyday analogies, under 300 words, use numbered steps",
+        "constraints": "No jargon, use everyday analogies, under 300 words",
         "mode": "clarity",
     },
     {
-        "label": "Dev Learning Plan (Coach)",
-        "objective": "I'm a junior developer feeling overwhelmed by my first production codebase. Help me create a 30-day learning plan to get productive",
+        "label": "Coach \u2014 personal roadmap",
+        "objective": "I'm starting a new management role and feeling overwhelmed. Help me create a 30-day plan to build trust with my team and get up to speed",
         "audience": "General",
         "constraints": "Focus on practical steps, not theory. Include daily time commitments under 2 hours",
         "mode": "coach",
     },
     {
-        "label": "Burnout (Therapist)",
+        "label": "Therapist \u2014 explore a dilemma",
         "objective": "I'm feeling overwhelmed and burned out at work but I don't know if I should quit or push through. Help me explore what's really going on.",
         "audience": "General",
         "constraints": "Focus on understanding feelings, not giving career advice yet",
         "mode": "therapist",
     },
     {
-        "label": "Pitch Audit (Cold Critic)",
+        "label": "Cold Critic \u2014 tear apart a pitch",
         "objective": "Our startup pitch: We're building an AI-powered personal finance app that uses GPT to give investment advice to millennials. We plan to launch in 3 months with a team of 2.",
         "audience": "Executive",
         "constraints": "No praise. Only risks, flaws, and problems.",
         "mode": "cold_critic",
     },
     {
-        "label": "Market Analysis (Analyst)",
+        "label": "Analyst \u2014 market research",
         "objective": "Analyze the remote work software market: key players, trends, growth drivers, and risks for a new entrant targeting small businesses",
         "audience": "Executive",
         "constraints": "Separate facts from assumptions. Quantify where possible.",
         "mode": "analyst",
     },
     {
-        "label": "Vague Input (Realignment Test)",
-        "objective": "Tell me about business",
+        "label": "Clarity \u2014 refine a rough idea",
+        "objective": "I have a vague idea about improving team productivity at my company, but I'm not sure where to start or what the real problem is. Help me structure this into something clear and actionable.",
         "audience": "General",
-        "constraints": "",
-        "mode": "critic",
+        "constraints": "Focus on clarifying the core problem before suggesting solutions",
+        "mode": "clarity",
     },
 ]
 
 if st.session_state.pm_phase == "input":
     st.markdown("### Step 1: Define Your Request")
+    st.caption("PromptMaster structures your request with mode locking, anchoring, and invisible scaffolding \u2014 techniques from the PromptMaster\u2122 methodology.")
+
+    # Auto-dismiss onboarding if user has saved sessions
+    if saved_sessions:
+        st.session_state.pm_onboarding_seen = True
+
+    # Onboarding panel for first-time users
+    if not st.session_state.pm_onboarding_seen:
+        with st.container():
+            st.info(
+                "**Welcome to PromptMaster Engine**\n\n"
+                "PromptMaster structures your AI interactions for better results. Here's how:\n\n"
+                "1. **Pick a mode** \u2014 choose how the AI should think (Architect, Critic, Analyst, etc.)\n"
+                "2. **Describe your objective** \u2014 what do you want the AI to produce?\n"
+                "3. **Click Assemble Prompt** \u2014 the system builds an optimized prompt, then you execute\n\n"
+                "Try an example below to see it in action, or jump straight in."
+            )
+            ob_col1, ob_col2 = st.columns(2)
+            with ob_col1:
+                if st.button("Try an example", type="primary", use_container_width=True, key="onboard_try"):
+                    ex = _EXAMPLES[0]
+                    st.session_state.pm_objective = ex["objective"]
+                    st.session_state.pm_audience = ex["audience"]
+                    st.session_state.pm_constraints = ex["constraints"]
+                    st.session_state.pm_mode = ex["mode"]
+                    st.session_state.input_objective = ex["objective"]
+                    st.session_state.input_constraints = ex["constraints"]
+                    st.session_state.pm_onboarding_seen = True
+                    st.rerun()
+            with ob_col2:
+                if st.button("Got it, let me start", use_container_width=True, key="onboard_dismiss"):
+                    st.session_state.pm_onboarding_seen = True
+                    st.rerun()
 
     # Example quick-fill buttons (two rows of 4)
-    st.caption("Quick-fill with an example:")
+    st.caption("Start with an example (click any to auto-fill):")
     for row_start in range(0, len(_EXAMPLES), 4):
         row_examples = _EXAMPLES[row_start:row_start + 4]
         ex_cols = st.columns(len(row_examples))
@@ -661,18 +728,48 @@ if st.session_state.pm_phase == "input":
 
     col1, col2 = st.columns(2)
     with col1:
+        selected_constraints = st.multiselect(
+            "Common constraints",
+            _CONSTRAINT_PRESETS,
+            default=st.session_state.pm_constraint_presets,
+            placeholder="Click to add common constraints",
+            key="input_constraint_presets",
+        )
+        st.session_state.pm_constraint_presets = selected_constraints
+        # Build constraint text: presets + any custom text the user typed
+        preset_text = ", ".join(selected_constraints)
+        current_custom = st.session_state.pm_constraints
+        # If the textarea only contains previous preset text, clear it for the new presets
+        if not current_custom or all(p in current_custom for p in st.session_state.get("_prev_constraint_presets", [])):
+            current_custom = ""
+        st.session_state._prev_constraint_presets = selected_constraints
+        combined_constraints = preset_text + (("\n" + current_custom) if current_custom else "")
         st.session_state.pm_constraints = st.text_area(
             "Constraints (optional)",
-            value=st.session_state.pm_constraints,
+            value=combined_constraints if selected_constraints else st.session_state.pm_constraints,
             placeholder="Any boundaries, limitations, or specific requirements.",
             height=68,
             key="input_constraints",
         )
     with col2:
+        selected_formats = st.multiselect(
+            "Common formats",
+            _FORMAT_PRESETS,
+            default=st.session_state.pm_format_presets,
+            placeholder="Click to add output format",
+            key="input_format_presets",
+        )
+        st.session_state.pm_format_presets = selected_formats
+        preset_fmt = ", ".join(selected_formats)
+        current_custom_fmt = st.session_state.pm_output_format
+        if not current_custom_fmt or all(p in current_custom_fmt for p in st.session_state.get("_prev_format_presets", [])):
+            current_custom_fmt = ""
+        st.session_state._prev_format_presets = selected_formats
+        combined_format = preset_fmt + (("\n" + current_custom_fmt) if current_custom_fmt else "")
         st.session_state.pm_output_format = st.text_area(
             "Output Format (optional)",
-            value=st.session_state.pm_output_format,
-            placeholder="e.g. Bullet points, numbered list, table, 3 paragraphs, under 200 words",
+            value=combined_format if selected_formats else st.session_state.pm_output_format,
+            placeholder="e.g. Bullet points, numbered list, table, 3 paragraphs",
             height=68,
             key="input_format",
         )
@@ -742,6 +839,7 @@ if st.session_state.pm_phase == "input":
 
 elif st.session_state.pm_phase == "review":
     st.markdown("### Step 2: Review & Edit Prompt")
+    st.caption("Your input has been assembled into a two-layer prompt: a system prompt that locks the AI's persona and tone, and a user prompt that anchors your objective.")
 
     assembled = st.session_state.pm_assembled
 
@@ -799,7 +897,7 @@ elif st.session_state.pm_phase == "review":
                                 model=st.session_state.pm_model,
                             )
                     iteration = run_async(_execute())
-                    record_iteration()
+                    record_usage()
 
                     st.session_state.pm_iterations.append(iteration)
                     st.session_state.pm_current_output = iteration.output
@@ -847,6 +945,20 @@ elif st.session_state.pm_phase == "output":
     evaluation = st.session_state.pm_current_eval
     if evaluation:
         render_evaluation(evaluation)
+
+        # Contextual next-step suggestions
+        from promptmaster.guidance import get_suggestions
+        suggestions = get_suggestions(
+            evaluation=evaluation,
+            has_constraints=bool(st.session_state.pm_constraints.strip()),
+            has_format=bool(st.session_state.pm_output_format.strip()),
+        )
+        if suggestions:
+            st.markdown("**Suggestions:**")
+            for s in suggestions:
+                st.markdown(f"- {s}")
+
+        st.caption("_These scores come from a separate evaluator \u2014 a second AI call that independently checks the output against your original objective, not the AI grading itself._")
 
         st.divider()
 
@@ -961,8 +1073,9 @@ elif st.session_state.pm_phase == "realign":
     st.markdown("### Step 4: Realignment")
 
     st.info(
-        "The realignment prompt re-anchors your objective and includes a "
-        "corrective instruction based on the evaluation. Edit as needed."
+        "Realignment re-anchors your objective and injects a corrective instruction "
+        "based on the evaluation. This is the core of the iterative loop \u2014 most "
+        "quality gains come from iteration 2 or 3. Edit the prompt below as needed."
     )
 
     st.session_state.pm_realignment_prompt = st.text_area(
@@ -1001,7 +1114,7 @@ elif st.session_state.pm_phase == "realign":
                                 model=st.session_state.pm_model,
                             )
                     iteration = run_async(_execute_realigned())
-                    record_iteration()
+                    record_usage("realignment")
 
                     st.session_state.pm_iterations.append(iteration)
                     st.session_state.pm_current_output = iteration.output
@@ -1131,6 +1244,7 @@ elif st.session_state.pm_phase == "summary":
         )
         _store.save(session)
         st.session_state.pm_session_saved = True
+        record_usage("session_finalize")
         st.toast("Session saved automatically.")
 
     # Self-Audit: Cold Critic on the entire session (Book Ch9)
@@ -1156,6 +1270,7 @@ elif st.session_state.pm_phase == "summary":
                                 model=st.session_state.pm_model,
                             )
                     st.session_state.pm_self_audit = run_async(_audit())
+                    record_usage("self_audit")
                     st.rerun()
                 except Exception as e:
                     st.session_state.pm_error = f"Self-audit error: {e}"
@@ -1181,6 +1296,7 @@ elif st.session_state.pm_phase == "summary":
                                 model=st.session_state.pm_model,
                             )
                     lessons = run_async(_lessons())
+                    record_usage("hard_reset")
                     prev_objective = st.session_state.pm_objective
                     reset_session()
                     st.session_state.pm_objective = prev_objective
