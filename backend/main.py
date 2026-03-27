@@ -44,3 +44,8 @@ app.add_middleware(
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+from routers.meta import router as meta_router
+
+app.include_router(meta_router)
