@@ -6,6 +6,7 @@ import { ReviewPhase } from '@/components/phases/review-phase';
 import { OutputPhase } from '@/components/phases/output-phase';
 import { RealignPhase } from '@/components/phases/realign-phase';
 import { SummaryPhase } from '@/components/phases/summary-phase';
+import { ErrorBoundary } from '@/components/shared/error-boundary';
 
 export default function SessionPage() {
   const phase = useSessionStore((s) => s.phase);
@@ -23,11 +24,13 @@ export default function SessionPage() {
         </div>
       )}
 
-      {phase === 'input' && <InputPhase />}
-      {phase === 'review' && <ReviewPhase />}
-      {phase === 'output' && <OutputPhase />}
-      {phase === 'realign' && <RealignPhase />}
-      {phase === 'summary' && <SummaryPhase />}
+      <ErrorBoundary>
+        {phase === 'input' && <InputPhase />}
+        {phase === 'review' && <ReviewPhase />}
+        {phase === 'output' && <OutputPhase />}
+        {phase === 'realign' && <RealignPhase />}
+        {phase === 'summary' && <SummaryPhase />}
+      </ErrorBoundary>
     </>
   );
 }

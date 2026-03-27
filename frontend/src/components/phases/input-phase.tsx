@@ -68,8 +68,10 @@ export function InputPhase() {
 
   return (
     <div className="space-y-5">
+      <h2 className="text-base font-semibold text-foreground">Step 1: Define Your Request</h2>
+
       {/* Structural callout */}
-      <p className="text-xs text-muted-foreground mb-4">
+      <p className="text-xs text-muted-foreground mb-4 italic">
         PromptMaster structures your request with mode locking, anchoring, and invisible scaffolding — techniques from the PromptMaster™ methodology.
       </p>
 

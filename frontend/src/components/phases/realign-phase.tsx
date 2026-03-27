@@ -67,14 +67,9 @@ export function RealignPhase() {
       <h2 className="text-base font-semibold text-foreground">Step 4: Realignment</h2>
 
       {/* Info callout */}
-      <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 px-4 py-3">
-        <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">
-          Realignment re-anchors your objective and injects a corrective instruction
-        </p>
-        <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-          The prompt below was generated to address alignment and drift issues detected in the previous iteration. You can edit it before running.
-        </p>
-      </div>
+      <p className="text-xs text-muted-foreground mb-4 italic">
+        Realignment re-anchors your objective and injects a corrective instruction based on the evaluation. This is the core of the iterative loop — most quality gains come from iteration 2 or 3.
+      </p>
 
       {/* Editable realignment prompt */}
       <Textarea

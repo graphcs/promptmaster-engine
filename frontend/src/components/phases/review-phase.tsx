@@ -65,9 +65,11 @@ export function ReviewPhase() {
 
   return (
     <div className="space-y-5">
+      <h2 className="text-base font-semibold text-foreground">Step 2: Review &amp; Edit Prompt</h2>
+
       {/* Structural callout */}
-      <p className="text-xs text-muted-foreground">
-        Your prompt has been assembled with mode locking and anchoring. Review and edit the user prompt before executing.
+      <p className="text-xs text-muted-foreground mb-4 italic">
+        Your input has been assembled into a two-layer prompt: a system prompt that locks the AI&apos;s persona and tone, and a user prompt that anchors your objective.
       </p>
 
       {/* System Prompt — collapsible */}
