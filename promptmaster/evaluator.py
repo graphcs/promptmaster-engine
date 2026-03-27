@@ -13,10 +13,9 @@ from .llm_client import OpenRouterClient
 logger = logging.getLogger(__name__)
 
 EVALUATOR_SYSTEM = (
-    "You are a strict output evaluator. You assess AI-generated content against "
-    "the user's original objective. You are harsh, objective, and never generous. "
-    "You penalize vagueness severely. When in doubt, score lower, not higher. "
-    "Return ONLY valid JSON, no other text."
+    "You are a fair but rigorous output evaluator. You assess AI-generated content against "
+    "the user's original objective. You are objective and concise. You do not inflate scores, "
+    "but you also give credit where it is earned. Return ONLY valid JSON, no other text."
 )
 
 EVALUATOR_PROMPT = """Evaluate the following AI-generated output against the original request.
@@ -33,18 +32,17 @@ MODE USED: {mode}
 
 Evaluate along three dimensions. For each, assign "Low", "Medium", or "High" and provide exactly one sentence of explanation.
 
-IMPORTANT SCORING RULES:
-- "High" should be RARE and reserved for outputs that are exceptionally well-targeted. Do not give "High" easily.
-- "Medium" means acceptable but with clear room for improvement.
-- "Low" means significant problems. Use it whenever the output fails to meet the bar.
-- If the original objective is vague, generic, or lacks specificity (e.g. "tell me about X", "help me with Y"), Alignment MUST be scored "Low" because a vague objective cannot produce a well-aligned output.
-- If constraints or format were left empty and the output is generic as a result, factor that into Drift and Clarity scores.
+SCORING GUIDELINES:
+- "High" = strong, well-targeted output that clearly meets the bar. Award it when genuinely earned.
+- "Medium" = acceptable but with clear room for improvement.
+- "Low" = significant problems — misses the objective, drifts off-topic, or is poorly structured.
+- If the original objective is vague or generic (e.g. "tell me about X"), Alignment should be scored "Low" because a vague objective cannot produce well-aligned output.
 
-1. ALIGNMENT: Does the output directly and specifically address the stated objective for the target audience? "High" = precise, fully on-target with no wasted content. "Medium" = addresses the topic but could be more targeted. "Low" = misses the objective, addresses something too broad, or the objective itself was too vague to produce aligned output.
+1. ALIGNMENT: Does the output directly address the stated objective for the target audience? "High" = on-target and substantive. "Medium" = addresses the topic but could be more targeted. "Low" = misses the objective, too broad, or the objective itself was too vague.
 
-2. DRIFT: Does the output stay tightly within the scope of the objective, or does it wander? Signs of drift include: covering topics not asked for, adopting a tone inconsistent with the selected mode, becoming generic or verbose, padding with filler content, offering unsolicited advice, or fixating on tangents. "Low" = tightly focused. "Medium" = mostly focused but with some unnecessary content. "High" = significant scope deviation or off-topic material.
+2. DRIFT: Does the output stay within the scope of the objective? Signs of drift include: covering topics not asked for, adopting a tone inconsistent with the selected mode, becoming generic or verbose, padding with filler, or fixating on tangents. "Low" = focused and relevant. "Medium" = mostly focused but with some unnecessary content. "High" = significant scope deviation or off-topic material.
 
-3. CLARITY: Is the output well-structured, unambiguous, and complete? "High" = crystal clear, precise, well-organized. "Medium" = understandable but could be tighter. "Low" = confusing, vague, poorly structured, or incomplete.
+3. CLARITY: Is the output well-structured, unambiguous, and complete? "High" = clear, well-organized, easy to follow. "Medium" = understandable but could be tighter. "Low" = confusing, vague, poorly structured, or incomplete.
 
 Return JSON in exactly this format:
 {{
