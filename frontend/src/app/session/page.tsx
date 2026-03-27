@@ -2,14 +2,10 @@
 
 import { useSessionStore } from '@/stores/session-store';
 import { InputPhase } from '@/components/phases/input-phase';
+import { ReviewPhase } from '@/components/phases/review-phase';
+import { OutputPhase } from '@/components/phases/output-phase';
 
-// Placeholder components — will be implemented in Tasks 6-7
-function ReviewPhasePlaceholder() {
-  return <div className="rounded-lg border p-8 text-center text-muted-foreground">Review Phase (Task 6)</div>;
-}
-function OutputPhasePlaceholder() {
-  return <div className="rounded-lg border p-8 text-center text-muted-foreground">Output Phase (Task 6)</div>;
-}
+// Placeholder components — will be implemented in Task 7
 function RealignPhasePlaceholder() {
   return <div className="rounded-lg border p-8 text-center text-muted-foreground">Realignment Phase (Task 7)</div>;
 }
@@ -34,8 +30,8 @@ export default function SessionPage() {
       )}
 
       {phase === 'input' && <InputPhase />}
-      {phase === 'review' && <ReviewPhasePlaceholder />}
-      {phase === 'output' && <OutputPhasePlaceholder />}
+      {phase === 'review' && <ReviewPhase />}
+      {phase === 'output' && <OutputPhase />}
       {phase === 'realign' && <RealignPhasePlaceholder />}
       {phase === 'summary' && <SummaryPhasePlaceholder />}
     </>
