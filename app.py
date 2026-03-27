@@ -736,21 +736,18 @@ if st.session_state.pm_phase == "input":
             placeholder="Click to add common constraints",
             key="input_constraint_presets",
         )
-        # Sync presets ↔ textarea: add new selections, remove deselected ones
+        # Sync presets ↔ textarea: add/remove by splitting on commas
         prev_c = set(st.session_state.pm_constraint_presets)
         curr_c = set(selected_constraints)
         added_c = curr_c - prev_c
         removed_c = prev_c - curr_c
         if added_c or removed_c:
-            text = st.session_state.pm_constraints.strip()
-            # Remove deselected presets from text
-            for r in removed_c:
-                text = text.replace(", " + r, "").replace(r + ", ", "").replace(r, "")
+            # Split into individual items, remove exact matches only
+            parts = [p.strip() for p in st.session_state.pm_constraints.split(",")]
+            parts = [p for p in parts if p and p not in removed_c]
             # Add newly selected presets
-            if added_c:
-                addition = ", ".join(added_c)
-                text = (text.strip(", ") + ", " + addition) if text.strip(", ") else addition
-            st.session_state.pm_constraints = text.strip(", ")
+            parts.extend(added_c)
+            st.session_state.pm_constraints = ", ".join(parts)
             st.session_state.input_constraints = st.session_state.pm_constraints
         st.session_state.pm_constraint_presets = selected_constraints
 
@@ -769,19 +766,16 @@ if st.session_state.pm_phase == "input":
             placeholder="Click to add output format",
             key="input_format_presets",
         )
-        # Sync presets ↔ textarea: add new selections, remove deselected ones
+        # Sync presets ↔ textarea: add/remove by splitting on commas
         prev_f = set(st.session_state.pm_format_presets)
         curr_f = set(selected_formats)
         added_f = curr_f - prev_f
         removed_f = prev_f - curr_f
         if added_f or removed_f:
-            text_f = st.session_state.pm_output_format.strip()
-            for r in removed_f:
-                text_f = text_f.replace(", " + r, "").replace(r + ", ", "").replace(r, "")
-            if added_f:
-                addition_f = ", ".join(added_f)
-                text_f = (text_f.strip(", ") + ", " + addition_f) if text_f.strip(", ") else addition_f
-            st.session_state.pm_output_format = text_f.strip(", ")
+            parts_f = [p.strip() for p in st.session_state.pm_output_format.split(",")]
+            parts_f = [p for p in parts_f if p and p not in removed_f]
+            parts_f.extend(added_f)
+            st.session_state.pm_output_format = ", ".join(parts_f)
             st.session_state.input_format = st.session_state.pm_output_format
         st.session_state.pm_format_presets = selected_formats
 
