@@ -33,6 +33,26 @@ Write a 2-3 sentence corrective instruction that:
 
 Be direct, specific, and decisive. No meta-commentary."""
 
+OBJECTIVE_REFINEMENT_SYSTEM = (
+    "You are a prompt refinement assistant. The user provided a vague or overly broad "
+    "objective. Your job is to transform it into a clear, specific, actionable objective "
+    "that preserves the user's likely intent. Output only the refined objective, nothing else."
+)
+
+OBJECTIVE_REFINEMENT_PROMPT = """The user's original objective is too vague to produce aligned output:
+
+ORIGINAL OBJECTIVE: {objective}
+AUDIENCE: {audience}
+MODE: {mode}
+
+Rewrite this as a clear, specific, actionable objective in 1-2 sentences.
+- Infer the most likely intent from the words given
+- Add specificity: what exactly should the output contain?
+- Keep it grounded in what the user probably meant
+- Match the selected mode ({mode}) in framing
+
+Output only the refined objective text, nothing else."""
+
 
 async def build_realignment_prompt(
     client: OpenRouterClient,
@@ -42,13 +62,38 @@ async def build_realignment_prompt(
 ) -> str:
     """Build a realignment prompt using the hybrid model.
 
+    If alignment is Low, this also refines the objective itself so the
+    realignment loop can actually converge instead of re-anchoring a
+    vague objective endlessly.
+
     Returns the full prompt text that the user can edit before execution.
     """
     mode_config = MODES[inputs.mode]
+    objective_to_use = inputs.objective
+
+    # If alignment is Low, the objective itself is likely the problem.
+    # Refine it into something specific before re-anchoring.
+    if evaluation.alignment.score == "Low":
+        try:
+            refined_objective, _usage = await client.generate(
+                prompt=OBJECTIVE_REFINEMENT_PROMPT.format(
+                    objective=inputs.objective,
+                    audience=inputs.audience,
+                    mode=mode_config["display_name"],
+                ),
+                system=OBJECTIVE_REFINEMENT_SYSTEM,
+                temperature=0.4,
+                max_tokens=256,
+                model=model,
+            )
+            objective_to_use = refined_objective.strip()
+            logger.info(f"Refined vague objective: '{inputs.objective}' → '{objective_to_use}'")
+        except Exception as e:
+            logger.warning(f"Objective refinement failed, using original: {e}")
 
     # Get LLM-assisted corrective instruction
     llm_prompt = REALIGNMENT_LLM_PROMPT.format(
-        objective=inputs.objective,
+        objective=objective_to_use,
         mode=mode_config["display_name"],
         alignment_score=evaluation.alignment.score,
         alignment_explanation=evaluation.alignment.explanation,
@@ -75,7 +120,6 @@ async def build_realignment_prompt(
         )
 
     # Assemble structured skeleton + LLM correction
-    # Natural language re-anchoring instead of label-heavy form
     context_pieces = []
     if inputs.audience:
         context_pieces.append(f"Audience: {inputs.audience}")
@@ -90,8 +134,14 @@ async def build_realignment_prompt(
         "",
         corrective_instruction.strip(),
         "",
-        f"Re-approach the original task: {inputs.objective}",
     ]
+
+    # Show original vs refined objective if it was refined
+    if objective_to_use != inputs.objective:
+        parts.append(f"Original request: {inputs.objective}")
+        parts.append(f"Refined objective: {objective_to_use}")
+    else:
+        parts.append(f"Re-approach the original task: {objective_to_use}")
 
     if context_line:
         parts.append(context_line)

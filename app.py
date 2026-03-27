@@ -986,14 +986,23 @@ elif st.session_state.pm_phase == "output":
         st.divider()
 
         if evaluation.needs_realignment:
-            st.warning(
-                "**Realignment recommended.** "
-                "Alignment is below Medium or Drift is above Medium."
-            )
+            # Detect if we've already tried realignment and it didn't help
+            _realignment_attempted = len(st.session_state.pm_iterations) >= 2
+            if _realignment_attempted:
+                st.warning(
+                    "**Still not aligned.** The output quality depends on your input. "
+                    "Consider going back to **Refine Prompt** to sharpen your objective, "
+                    "add constraints, or change the mode."
+                )
+            else:
+                st.warning(
+                    "**Realignment recommended.** "
+                    "Alignment is below Medium or Drift is above Medium."
+                )
 
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                if st.button("Generate Realignment Prompt", type="primary", use_container_width=True):
+                if st.button("Generate Realignment Prompt", type="primary" if not _realignment_attempted else "secondary", use_container_width=True):
                     inputs = PMInput(
                         objective=st.session_state.pm_objective.strip(),
                         audience=st.session_state.pm_audience,
@@ -1024,7 +1033,7 @@ elif st.session_state.pm_phase == "output":
                             st.rerun()
 
             with col2:
-                if st.button("Refine Prompt", use_container_width=True):
+                if st.button("Refine Prompt", type="primary" if _realignment_attempted else "secondary", use_container_width=True):
                     # Rebuild assembled prompt if mode was switched
                     inputs = PMInput(
                         objective=st.session_state.pm_objective.strip(),
