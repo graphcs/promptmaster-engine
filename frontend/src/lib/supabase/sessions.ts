@@ -1,9 +1,8 @@
 import { createClient } from './client';
 import type { Session, SessionSummary } from '@/types';
 
-const supabase = createClient();
-
 export async function listSessions(limit = 20): Promise<SessionSummary[]> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('sessions')
     .select('session_id, objective, mode, iterations, created_at, finalized')
@@ -22,6 +21,7 @@ export async function listSessions(limit = 20): Promise<SessionSummary[]> {
 }
 
 export async function loadSession(sessionId: string): Promise<Session | null> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('sessions')
     .select('data')
@@ -33,6 +33,7 @@ export async function loadSession(sessionId: string): Promise<Session | null> {
 }
 
 export async function saveSession(session: Session, userId: string): Promise<void> {
+  const supabase = createClient();
   const { error } = await supabase
     .from('sessions')
     .upsert({
@@ -50,6 +51,7 @@ export async function saveSession(session: Session, userId: string): Promise<voi
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
+  const supabase = createClient();
   const { error } = await supabase
     .from('sessions')
     .delete()

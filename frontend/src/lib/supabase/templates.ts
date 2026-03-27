@@ -1,9 +1,8 @@
 import { createClient } from './client';
 import type { PromptTemplate, TemplateSummary } from '@/types';
 
-const supabase = createClient();
-
 export async function listTemplates(limit = 50): Promise<TemplateSummary[]> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('templates')
     .select('template_id, name, mode, audience, created_at')
@@ -15,6 +14,7 @@ export async function listTemplates(limit = 50): Promise<TemplateSummary[]> {
 }
 
 export async function loadTemplate(templateId: string): Promise<PromptTemplate | null> {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('templates')
     .select('data')
@@ -26,6 +26,7 @@ export async function loadTemplate(templateId: string): Promise<PromptTemplate |
 }
 
 export async function saveTemplate(template: PromptTemplate, userId: string): Promise<void> {
+  const supabase = createClient();
   const { error } = await supabase
     .from('templates')
     .upsert({
@@ -41,6 +42,7 @@ export async function saveTemplate(template: PromptTemplate, userId: string): Pr
 }
 
 export async function deleteTemplate(templateId: string): Promise<void> {
+  const supabase = createClient();
   const { error } = await supabase
     .from('templates')
     .delete()

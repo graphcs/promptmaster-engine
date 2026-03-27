@@ -1,9 +1,8 @@
 import { createClient } from './client';
 
-const supabase = createClient();
-
 export async function recordUsage(action: string = 'iteration'): Promise<void> {
   try {
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
