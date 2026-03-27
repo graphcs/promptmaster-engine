@@ -97,3 +97,71 @@ async def api_run_iteration(
         return RunIterationResponse(iteration=iteration, suggestions=suggestions)
     except OpenRouterError as e:
         raise HTTPException(status_code=502, detail=f"LLM error: {e}")
+
+
+@router.post("/build-realignment")
+async def api_build_realignment(
+    req: RealignmentRequest,
+    client: OpenRouterClient = Depends(get_client),
+) -> RealignmentResponse:
+    """Build a realignment prompt. 1-2 LLM calls."""
+    try:
+        prompt = await build_realignment_prompt(
+            client=client,
+            inputs=req.inputs,
+            evaluation=req.evaluation,
+            model=req.model or None,
+        )
+        return RealignmentResponse(realignment_prompt=prompt)
+    except OpenRouterError as e:
+        raise HTTPException(status_code=502, detail=f"LLM error: {e}")
+
+
+@router.post("/run-self-audit")
+async def api_run_self_audit(
+    req: AuditRequest,
+    client: OpenRouterClient = Depends(get_client),
+) -> dict:
+    """Run Cold Critic self-audit. 1 LLM call."""
+    try:
+        audit = await run_self_audit(
+            client=client,
+            inputs=req.inputs,
+            iterations=req.iterations,
+            model=req.model or None,
+        )
+        return {"audit": audit}
+    except OpenRouterError as e:
+        raise HTTPException(status_code=502, detail=f"LLM error: {e}")
+
+
+@router.post("/hard-reset-lessons")
+async def api_hard_reset_lessons(
+    req: AuditRequest,
+    client: OpenRouterClient = Depends(get_client),
+) -> dict:
+    """Generate lessons before hard reset. 1 LLM call."""
+    try:
+        lessons = await generate_hard_reset_lessons(
+            client=client,
+            inputs=req.inputs,
+            iterations=req.iterations,
+            model=req.model or None,
+        )
+        return {"lessons": lessons}
+    except OpenRouterError as e:
+        raise HTTPException(status_code=502, detail=f"LLM error: {e}")
+
+
+@router.post("/format-summary")
+async def api_format_summary(req: SummaryRequest) -> dict:
+    """Generate copyable session summary text. No LLM call."""
+    summary = format_session_summary(req.inputs, req.iterations)
+    return {"summary": summary}
+
+
+@router.post("/export-session")
+async def api_export_session(req: ExportRequest) -> dict:
+    """Export session as JSON. No LLM call."""
+    json_str = export_session_json(req.inputs, req.iterations, model=req.model)
+    return {"json": json_str}
