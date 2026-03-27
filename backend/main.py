@@ -47,5 +47,7 @@ async def health():
 
 
 from routers.meta import router as meta_router
+from routers.engine import router as engine_router
 
 app.include_router(meta_router)
+app.include_router(engine_router)
