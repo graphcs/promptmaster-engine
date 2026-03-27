@@ -7,6 +7,8 @@ import { TierBadge } from '@/components/sidebar/tier-badge';
 import { ModelSelector } from '@/components/sidebar/model-selector';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { SessionList } from '@/components/sidebar/session-list';
+import { TemplateList } from '@/components/sidebar/template-list';
 import { RotateCcw, User, Zap } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -125,11 +127,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Recent Sessions
         </p>
-        {user ? (
-          <p className="text-xs text-muted-foreground">No sessions yet</p>
-        ) : (
-          <p className="text-xs text-muted-foreground">Sign in to see history</p>
-        )}
+        <SessionList onNavigate={onNavigate} />
       </div>
 
       <Separator />
@@ -139,11 +137,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Templates
         </p>
-        {user ? (
-          <p className="text-xs text-muted-foreground">No templates saved</p>
-        ) : (
-          <p className="text-xs text-muted-foreground">Sign in to see templates</p>
-        )}
+        <TemplateList onNavigate={onNavigate} />
       </div>
     </div>
   );
