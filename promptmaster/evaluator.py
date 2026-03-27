@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 EVALUATOR_SYSTEM = (
     "You are a strict output evaluator. You assess AI-generated content against "
-    "the user's original objective. You are objective, concise, and never generous. "
+    "the user's original objective. You are harsh, objective, and never generous. "
+    "You penalize vagueness severely. When in doubt, score lower, not higher. "
     "Return ONLY valid JSON, no other text."
 )
 
@@ -32,11 +33,18 @@ MODE USED: {mode}
 
 Evaluate along three dimensions. For each, assign "Low", "Medium", or "High" and provide exactly one sentence of explanation.
 
-1. ALIGNMENT: Does the output directly address the stated objective and audience? "High" = fully on-target. "Low" = misses the objective or addresses something else.
+IMPORTANT SCORING RULES:
+- "High" should be RARE and reserved for outputs that are exceptionally well-targeted. Do not give "High" easily.
+- "Medium" means acceptable but with clear room for improvement.
+- "Low" means significant problems. Use it whenever the output fails to meet the bar.
+- If the original objective is vague, generic, or lacks specificity (e.g. "tell me about X", "help me with Y"), Alignment MUST be scored "Low" because a vague objective cannot produce a well-aligned output.
+- If constraints or format were left empty and the output is generic as a result, factor that into Drift and Clarity scores.
 
-2. DRIFT: Does the output introduce irrelevant content, speculation, or tangents NOT related to the objective? Signs of drift include: adopting a tone inconsistent with the selected mode, broadening scope beyond the objective, becoming generic or verbose, or fixating on a minor point while losing the bigger picture. "Low" = focused and relevant. "High" = significant drift or off-topic content.
+1. ALIGNMENT: Does the output directly and specifically address the stated objective for the target audience? "High" = precise, fully on-target with no wasted content. "Medium" = addresses the topic but could be more targeted. "Low" = misses the objective, addresses something too broad, or the objective itself was too vague to produce aligned output.
 
-3. CLARITY: Is the output well-structured, unambiguous, and complete? "High" = crystal clear. "Low" = confusing, vague, or incomplete.
+2. DRIFT: Does the output stay tightly within the scope of the objective, or does it wander? Signs of drift include: covering topics not asked for, adopting a tone inconsistent with the selected mode, becoming generic or verbose, padding with filler content, offering unsolicited advice, or fixating on tangents. "Low" = tightly focused. "Medium" = mostly focused but with some unnecessary content. "High" = significant scope deviation or off-topic material.
+
+3. CLARITY: Is the output well-structured, unambiguous, and complete? "High" = crystal clear, precise, well-organized. "Medium" = understandable but could be tighter. "Low" = confusing, vague, poorly structured, or incomplete.
 
 Return JSON in exactly this format:
 {{
