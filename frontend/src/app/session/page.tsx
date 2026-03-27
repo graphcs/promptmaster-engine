@@ -1,11 +1,9 @@
 'use client';
 
 import { useSessionStore } from '@/stores/session-store';
+import { InputPhase } from '@/components/phases/input-phase';
 
-// Placeholder components — will be implemented in Tasks 5-7
-function InputPhasePlaceholder() {
-  return <div className="rounded-lg border p-8 text-center text-muted-foreground">Input Phase (Task 5)</div>;
-}
+// Placeholder components — will be implemented in Tasks 6-7
 function ReviewPhasePlaceholder() {
   return <div className="rounded-lg border p-8 text-center text-muted-foreground">Review Phase (Task 6)</div>;
 }
@@ -35,7 +33,7 @@ export default function SessionPage() {
         </div>
       )}
 
-      {phase === 'input' && <InputPhasePlaceholder />}
+      {phase === 'input' && <InputPhase />}
       {phase === 'review' && <ReviewPhasePlaceholder />}
       {phase === 'output' && <OutputPhasePlaceholder />}
       {phase === 'realign' && <RealignPhasePlaceholder />}
