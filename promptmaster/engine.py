@@ -216,6 +216,9 @@ async def run_self_audit(
 
 def export_session_json(inputs: PMInput, iterations: list[Iteration], model: str = "") -> str:
     """Serialize a session to JSON for export/download."""
+    # Convert iterations to dicts to avoid Pydantic class-identity
+    # issues across Streamlit re-runs
+    iter_dicts = [it.model_dump() if hasattr(it, 'model_dump') else it for it in iterations]
     session = Session(
         objective=inputs.objective,
         audience=inputs.audience,
@@ -223,7 +226,7 @@ def export_session_json(inputs: PMInput, iterations: list[Iteration], model: str
         output_format=inputs.output_format,
         mode=inputs.mode,
         model=model,
-        iterations=iterations,
+        iterations=iter_dicts,
         finalized=True,
     )
     return session.model_dump_json(indent=2)

@@ -1267,6 +1267,9 @@ elif st.session_state.pm_phase == "summary":
 
     # Auto-save session (only for signed-in users)
     if _is_authed and not st.session_state.get("pm_session_saved"):
+        # Convert iterations to dicts to avoid Pydantic class-identity
+        # issues across Streamlit re-runs
+        iter_dicts = [it.model_dump() if hasattr(it, 'model_dump') else it for it in st.session_state.pm_iterations]
         session = Session(
             objective=inputs.objective,
             audience=inputs.audience,
@@ -1274,7 +1277,7 @@ elif st.session_state.pm_phase == "summary":
             output_format=inputs.output_format,
             mode=inputs.mode,
             model=st.session_state.pm_model,
-            iterations=st.session_state.pm_iterations,
+            iterations=iter_dicts,
             finalized=True,
         )
         _store.save(session)
