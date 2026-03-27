@@ -36,7 +36,6 @@ SCORING GUIDELINES:
 - "High" = strong, well-targeted output that clearly meets the bar. Award it when genuinely earned.
 - "Medium" = acceptable but with clear room for improvement.
 - "Low" = significant problems — misses the objective, drifts off-topic, or is poorly structured.
-- If the original objective is vague or generic (e.g. "tell me about X"), Alignment should be scored "Low" because a vague objective cannot produce well-aligned output.
 
 1. ALIGNMENT: Does the output directly address the stated objective for the target audience? "High" = on-target and substantive. "Medium" = addresses the topic but could be more targeted. "Low" = misses the objective, too broad, or the objective itself was too vague.
 
