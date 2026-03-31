@@ -31,14 +31,7 @@ export function TopNav() {
             </span>
           ))}
         </nav>
-        <div className="flex items-center gap-4">
-          <span className="material-symbols-outlined text-slate-500 cursor-pointer hover:text-slate-900 transition-colors">
-            notifications
-          </span>
-          <button className="bg-[var(--pm-primary)] text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition-all">
-            Save Session
-          </button>
-        </div>
+        <div />
       </div>
     </header>
   );
