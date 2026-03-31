@@ -3,10 +3,6 @@
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { LoadingSpinner } from '@/components/shared/loading-spinner';
 
 export function ReviewPhase() {
   const assembled = useSessionStore((s) => s.assembled);
@@ -59,78 +55,129 @@ export function ReviewPhase() {
     }
   }
 
-  if (loading) {
-    return <LoadingSpinner message="Running iteration…" />;
-  }
-
   return (
-    <div className="space-y-5">
-      <h2 className="text-base font-semibold text-foreground">Step 2: Review &amp; Edit Prompt</h2>
+    <div className="space-y-10">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-display">Review Phase</h1>
+        <p className="text-body text-[var(--on-surface-variant)]">
+          Fine-tune the generated instructions and system parameters before executing the final request.
+        </p>
+      </div>
 
-      {/* Structural callout */}
-      <p className="text-xs text-muted-foreground mb-4 italic">
-        Your input has been assembled into a two-layer prompt: a system prompt that locks the AI&apos;s persona and tone, and a user prompt that anchors your objective.
-      </p>
-
-      {/* System Prompt — collapsible */}
-      <details className="rounded-lg border border-border/60 bg-muted/20">
-        <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground select-none hover:text-foreground transition-colors">
-          System Prompt (read-only)
+      {/* System Prompt — collapsible card */}
+      <details className="bg-white rounded-xl shadow-ambient overflow-hidden group">
+        <summary className="flex items-center justify-between px-6 py-5 cursor-pointer select-none list-none">
+          <div className="flex items-center gap-3">
+            <span
+              className="material-symbols-outlined text-[18px] text-[var(--on-surface-variant)]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              lock
+            </span>
+            <span className="text-sm font-semibold text-[var(--on-surface)]">System Prompt</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[var(--surface-container-low)] text-[var(--on-surface-variant)]">
+              READ-ONLY
+            </span>
+          </div>
+          <span className="material-symbols-outlined text-[18px] text-[var(--on-surface-variant)] transition-transform group-open:rotate-180">
+            expand_more
+          </span>
         </summary>
-        <div className="px-3 pb-3 pt-1">
-          <pre className="whitespace-pre-wrap text-xs text-muted-foreground font-mono bg-background/50 rounded p-3 border border-border/40">
+        <div className="px-6 pb-6">
+          <div className="bg-[var(--surface-container-low)] rounded-lg p-4 font-mono text-[13px] text-[var(--on-surface-variant)] whitespace-pre-wrap leading-relaxed">
             {systemPrompt}
-          </pre>
+          </div>
         </div>
       </details>
 
+      {/* User Prompt editor */}
+      <div className="bg-white rounded-xl shadow-ambient p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <label
+            htmlFor="user-prompt"
+            className="text-sm font-semibold text-[var(--on-surface)]"
+          >
+            Assembled User Prompt
+          </label>
+          <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-100 text-amber-700">
+            Manual Edit Mode
+          </span>
+        </div>
+        <textarea
+          id="user-prompt"
+          value={promptEdited}
+          onChange={(e) => setPromptEdited(e.target.value)}
+          className="w-full min-h-[320px] resize-none bg-[var(--surface-container-low)] rounded-lg p-4 font-mono text-[13px] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] transition-shadow"
+        />
+      </div>
+
       {/* Scaffolding toggle */}
       {assembled?.scaffolding_notes && (
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showScaffolding}
-              onChange={(e) => setShowScaffolding(e.target.checked)}
-              className="rounded border-border"
-            />
-            <span className="text-xs text-muted-foreground">Show internal scaffolding</span>
-          </label>
+        <div className="bg-white rounded-xl shadow-ambient p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="text-sm font-semibold text-[var(--on-surface)]">
+                Internal Scaffolding
+              </div>
+              <div className="text-xs text-[var(--on-surface-variant)]">
+                Backend-only instructions guiding AI behavior
+              </div>
+            </div>
+            {/* Toggle switch */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showScaffolding}
+              onClick={() => setShowScaffolding(!showScaffolding)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] ${
+                showScaffolding ? 'bg-[var(--pm-primary)]' : 'bg-[var(--outline-variant)]'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                  showScaffolding ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
           {showScaffolding && (
-            <pre className="whitespace-pre-wrap text-xs text-muted-foreground font-mono bg-muted/30 rounded p-3 border border-border/40">
+            <div className="bg-[var(--surface-container-low)] rounded-lg p-4 font-mono text-[13px] text-[var(--on-surface-variant)] whitespace-pre-wrap leading-relaxed">
               {assembled.scaffolding_notes}
-            </pre>
+            </div>
           )}
         </div>
       )}
 
-      {/* User Prompt — editable */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">User Prompt (editable)</Label>
-        <Textarea
-          value={promptEdited}
-          onChange={(e) => setPromptEdited(e.target.value)}
-          className="text-sm font-mono resize-none"
-          style={{ minHeight: '200px' }}
-        />
-      </div>
-
-      {/* Navigation buttons */}
-      <div className="flex gap-3">
-        <Button
-          variant="outline"
+      {/* Action row */}
+      <div className="flex items-center gap-4 pt-2">
+        <button
+          type="button"
           onClick={() => setPhase('input')}
-          className="flex-1"
+          disabled={loading}
+          className="flex items-center gap-2 px-6 py-3 border border-[var(--outline-variant)] bg-white text-sm font-semibold text-[var(--on-surface)] rounded-xl hover:bg-[var(--surface-container-low)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          &larr; Back to Input
-        </Button>
-        <Button
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Back to Input
+        </button>
+        <button
+          type="button"
           onClick={handleExecute}
           disabled={loading || !promptEdited.trim()}
-          className="flex-1"
+          className="flex items-center gap-2 px-8 py-3 bg-[var(--pm-primary)] text-white text-sm font-semibold rounded-xl shadow-ambient hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Execute &rarr;
-        </Button>
+          {loading ? (
+            <>
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Executing…
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined text-[18px]">electric_bolt</span>
+              Execute
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

@@ -3,22 +3,10 @@
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
-import { needsRealignment, downloadFile } from '@/lib/utils';
-import { MODE_DISPLAY } from '@/lib/constants';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { MarkdownOutput } from '@/components/shared/markdown-output';
-import { EvalCard } from '@/components/evaluation/eval-card';
-import { Suggestions } from '@/components/evaluation/suggestions';
-import type { ModeType } from '@/types';
+import { needsRealignment } from '@/lib/utils';
+import { EvalSection } from '@/components/shared/eval-section';
+import { SuggestionsList } from '@/components/shared/suggestions-list';
+import ReactMarkdown from 'react-markdown';
 
 export function OutputPhase() {
   const iterations = useSessionStore((s) => s.iterations);
@@ -31,21 +19,18 @@ export function OutputPhase() {
   const outputFormat = useSessionStore((s) => s.outputFormat);
   const mode = useSessionStore((s) => s.mode);
   const model = useSessionStore((s) => s.model);
-  const assembled = useSessionStore((s) => s.assembled);
 
   const setPhase = useSessionStore((s) => s.setPhase);
   const setError = useSessionStore((s) => s.setError);
   const setMode = useSessionStore((s) => s.setMode);
   const setRealignmentPrompt = useSessionStore((s) => s.setRealignmentPrompt);
   const setAssembled = useSessionStore((s) => s.setAssembled);
-  const setPromptEdited = useSessionStore((s) => s.setPromptEdited);
   const finalize = useSessionStore((s) => s.finalize);
 
   const [realignLoading, setRealignLoading] = useState(false);
   const [refineLoading, setRefineLoading] = useState(false);
-  const [nextMode, setNextMode] = useState<ModeType>(mode);
+  const [copied, setCopied] = useState(false);
 
-  const iterationNumber = iterations.length;
   const shouldRealign = currentEval ? needsRealignment(currentEval) : false;
 
   async function handleGenerateRealignment() {
@@ -82,11 +67,11 @@ export function OutputPhase() {
         audience,
         constraints,
         output_format: outputFormat,
-        mode: nextMode,
+        mode,
       };
 
       const result = await api.buildPrompt(inputs);
-      setMode(nextMode);
+      setMode(mode);
       setAssembled(result);
       setPhase('review');
     } catch (err) {
@@ -96,138 +81,116 @@ export function OutputPhase() {
     }
   }
 
-  function handleDownload() {
+  async function handleCopy() {
     if (!currentOutput) return;
-    const filename = `promptmaster-output-iteration-${iterationNumber}.txt`;
-    downloadFile(currentOutput, filename);
+    try {
+      await navigator.clipboard.writeText(currentOutput);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable
+    }
   }
 
+  const anyLoading = realignLoading || refineLoading;
+
   return (
-    <div className="space-y-5">
-      <h2 className="text-base font-semibold text-foreground">
-        Step 3: Output &amp; Evaluation (Iteration {iterationNumber})
-      </h2>
-
-      {/* Generated output */}
-      {currentOutput && (
-        <div className="rounded-lg border border-border bg-card p-4">
-          <MarkdownOutput content={currentOutput} />
-        </div>
-      )}
-
-      <Separator />
-
-      {/* Mode switch for next iteration */}
+    <div className="space-y-10">
+      {/* Header */}
       <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Mode for next iteration
-        </Label>
-        <Select
-          value={nextMode}
-          onValueChange={(value) => setNextMode(value as ModeType)}
-        >
-          <SelectTrigger className="w-full h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(MODE_DISPLAY) as ModeType[]).map((m) => (
-              <SelectItem key={m} value={m}>
-                {MODE_DISPLAY[m].display_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <h1 className="text-display">Output &amp; Evaluation</h1>
+        <p className="text-body text-[var(--on-surface-variant)]">
+          Assess the generated response and verify alignment with your initial parameters.
+        </p>
       </div>
 
-      {/* Evaluation card */}
-      {currentEval && <EvalCard evaluation={currentEval} />}
+      {/* AI Output card */}
+      <div className="bg-white rounded-xl shadow-ambient p-8">
+        <div className="flex items-center justify-between mb-6">
+          <span className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
+            Generated Output
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopy}
+              title="Copy to clipboard"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                {copied ? 'check' : 'content_copy'}
+              </span>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+        {currentOutput ? (
+          <div className="prose prose-sm max-w-none text-[var(--on-surface)] leading-relaxed">
+            <ReactMarkdown>{currentOutput}</ReactMarkdown>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--on-surface-variant)] italic">No output available.</p>
+        )}
+      </div>
+
+      {/* Evaluation section */}
+      {currentEval && <EvalSection evaluation={currentEval} />}
 
       {/* Suggestions */}
-      {suggestions.length > 0 && <Suggestions suggestions={suggestions} />}
+      {suggestions.length > 0 && <SuggestionsList suggestions={suggestions} />}
 
-      {/* Evaluator callout */}
-      <p className="text-xs text-muted-foreground mb-4 italic">
-        These scores come from a separate evaluator — a second AI call that independently checks the output against your original objective, not the AI grading itself.
-      </p>
+      {/* Action row */}
+      <div className="flex flex-wrap items-center gap-4 pt-2">
+        <button
+          type="button"
+          onClick={handleRefinePrompt}
+          disabled={anyLoading}
+          className="flex items-center gap-2 px-6 py-3 border border-[var(--outline-variant)] bg-white text-sm font-semibold text-[var(--on-surface)] rounded-xl hover:bg-[var(--surface-container-low)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {refineLoading ? (
+            <>
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+              Rebuilding…
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined text-[18px]">tune</span>
+              Refine Prompt
+            </>
+          )}
+        </button>
 
-      <Separator />
-
-      {/* Realignment or proceed buttons */}
-      {shouldRealign ? (
-        <div className="space-y-3">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-4 py-3">
-            <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
-              Realignment recommended
-            </p>
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-              One or more scores indicate the output may have drifted or misaligned with your objective. Consider realigning before proceeding.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={handleGenerateRealignment}
-              disabled={realignLoading || refineLoading}
-              className="flex-1"
-            >
-              {realignLoading ? 'Generating…' : 'Generate Realignment Prompt'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleRefinePrompt}
-              disabled={realignLoading || refineLoading}
-              className="flex-1"
-            >
-              {refineLoading ? 'Rebuilding…' : 'Refine Prompt'}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={finalize}
-              disabled={realignLoading || refineLoading}
-              className="flex-1"
-            >
-              Proceed Anyway &rarr;
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-4 py-3">
-            <p className="text-sm text-emerald-800 dark:text-emerald-300 font-medium">
-              All scores acceptable.
-            </p>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
-              Alignment, clarity, and drift are within acceptable ranges.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={finalize}
-              className="flex-1"
-            >
-              Finalize Session &rarr;
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleRefinePrompt}
-              disabled={refineLoading}
-              className="flex-1"
-            >
-              {refineLoading ? 'Rebuilding…' : 'Refine Prompt'}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Download button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleDownload}
-        disabled={!currentOutput}
-        className="w-full text-xs text-muted-foreground"
-      >
-        Download Current Output
-      </Button>
+        {shouldRealign ? (
+          <button
+            type="button"
+            onClick={handleGenerateRealignment}
+            disabled={anyLoading}
+            className="flex items-center gap-2 px-8 py-3 bg-[var(--pm-primary)] text-white text-sm font-semibold rounded-xl shadow-ambient hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {realignLoading ? (
+              <>
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Generating…
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
+                Generate Realignment
+              </>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={finalize}
+            disabled={anyLoading}
+            className="flex items-center gap-2 px-8 py-3 bg-[var(--pm-primary)] text-white text-sm font-semibold rounded-xl shadow-ambient hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[18px]">check_circle</span>
+            Finalize Session
+          </button>
+        )}
+      </div>
     </div>
   );
 }
