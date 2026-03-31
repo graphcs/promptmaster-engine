@@ -8,6 +8,8 @@ import { api } from '@/lib/api/client';
 import { DEFAULT_MODEL } from '@/lib/constants';
 import { assessTier } from '@/lib/utils';
 import { TierBadge } from '@/components/sidebar/tier-badge';
+import { SessionModal } from '@/components/shared/session-modal';
+import { TemplateModal } from '@/components/shared/template-modal';
 import { CustomSelect } from '@/components/shared/custom-select';
 import type { Phase } from '@/types';
 
@@ -45,6 +47,8 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   const [models, setModels] = useState<ModelOption[]>([]);
   const [modelsError, setModelsError] = useState(false);
+  const [showSessions, setShowSessions] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   useEffect(() => {
     api.getModels()
@@ -130,6 +134,28 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <TierBadge tier={tier} />
       </div>
 
+      {/* Library Nav (authenticated only) */}
+      {user && (
+        <div className="px-1 space-y-1">
+          <button
+            type="button"
+            onClick={() => setShowSessions(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 text-sm font-medium hover:bg-slate-200/50 rounded-lg transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">history</span>
+            Session History
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowTemplates(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 text-sm font-medium hover:bg-slate-200/50 rounded-lg transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">bookmark</span>
+            Prompt Templates
+          </button>
+        </div>
+      )}
+
       <hr className="border-slate-200" />
 
       {/* Auth */}
@@ -163,6 +189,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           )
         )}
       </div>
+
+      {/* Modals (rendered outside sidebar flow) */}
+      <SessionModal open={showSessions} onClose={() => setShowSessions(false)} />
+      <TemplateModal open={showTemplates} onClose={() => setShowTemplates(false)} />
     </aside>
   );
 }
