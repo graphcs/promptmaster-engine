@@ -12,7 +12,7 @@ export default function AuthCallbackPage() {
 
     // The Supabase client automatically handles the code exchange
     // when it detects the auth params in the URL hash/query
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === 'SIGNED_IN') {
         router.push('/session');
       }
