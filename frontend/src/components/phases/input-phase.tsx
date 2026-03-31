@@ -36,7 +36,6 @@ export function InputPhase() {
   const setError = useSessionStore((s) => s.setError);
 
   const [loading, setLoading] = useState(false);
-  const [negativeConstraints, setNegativeConstraints] = useState('');
   const [customAudience, setCustomAudience] = useState('');
 
   function handleToggleConstraintPreset(preset: string) {
@@ -74,23 +73,23 @@ export function InputPhase() {
     try {
       const effectiveAudience = audience === 'Other' ? customAudience || 'Other' : audience;
 
-      const joinedConstraints = [
-        ...constraintPresets,
-        ...(negativeConstraints.trim() ? [negativeConstraints.trim()] : []),
-      ].join('. ');
+      // Combine preset chips + free-text constraints
+      const parts = [...constraintPresets];
+      if (constraints.trim()) parts.push(constraints.trim());
+      const finalConstraints = parts.join('. ');
 
-      const joinedFormat = formatPresets.length > 0
-        ? formatPresets.join(', ') + (outputFormat.trim() ? '. ' + outputFormat.trim() : '')
-        : outputFormat;
+      // Combine format preset chips + free-text format
+      const fmtParts = [...formatPresets];
+      if (outputFormat.trim()) fmtParts.push(outputFormat.trim());
+      const finalFormat = fmtParts.join(', ');
 
       const result = await api.buildPrompt({
         objective,
         audience: effectiveAudience,
-        constraints: joinedConstraints || constraints,
-        output_format: joinedFormat,
+        constraints: finalConstraints,
+        output_format: finalFormat,
         mode,
       });
-      setConstraints(joinedConstraints || constraints);
       setAssembled(result);
       setPhase('review');
     } catch (err) {
@@ -300,8 +299,8 @@ export function InputPhase() {
         </label>
         <textarea
           id="negative-constraints"
-          value={negativeConstraints}
-          onChange={(e) => setNegativeConstraints(e.target.value)}
+          value={constraints}
+          onChange={(e) => setConstraints(e.target.value)}
           placeholder="Any additional constraints, restrictions, or requirements not covered above..."
           className="w-full min-h-[100px] resize-none bg-white rounded-xl shadow-ambient border border-[var(--outline-variant)] px-5 py-4 text-sm text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] transition-shadow"
         />
