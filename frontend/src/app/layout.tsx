@@ -1,22 +1,29 @@
 import type { Metadata } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
-import './globals.css';
+import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
+import './globals.css';
 
-const font = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: 'PromptMaster Engine',
-  description: 'Structured prompt engineering for aligned LLM outputs',
+  description: 'Professional AI Workflow — Structured prompt engineering for aligned LLM outputs',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={font.variable}>
-      <body className="font-sans antialiased bg-background text-foreground">
+    <html lang="en" className={inter.variable}>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-sans antialiased bg-[var(--surface)] text-[var(--on-surface)] min-h-screen">
         {children}
         <Toaster />
       </body>
