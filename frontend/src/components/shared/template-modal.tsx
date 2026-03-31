@@ -71,7 +71,15 @@ export function TemplateModal({ open, onClose }: TemplateModalProps) {
     setDeleting(templateId);
     try {
       await deleteTemplate(templateId);
-      setTemplates((prev) => prev.filter((t) => t.template_id !== templateId));
+      setTemplates((prev) => {
+        const updated = prev.filter((t) => t.template_id !== templateId);
+        // If current page is now beyond the last page, go back
+        const newTotalPages = Math.ceil(updated.length / PAGE_SIZE);
+        if (page >= newTotalPages && newTotalPages > 0) {
+          setPage(newTotalPages - 1);
+        }
+        return updated;
+      });
     } catch {
       // silently fail
     } finally {

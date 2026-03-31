@@ -57,7 +57,15 @@ export function SessionModal({ open, onClose }: SessionModalProps) {
     setDeleting(sessionId);
     try {
       await deleteSession(sessionId);
-      setSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
+      setSessions((prev) => {
+        const updated = prev.filter((s) => s.session_id !== sessionId);
+        // If current page is now beyond the last page, go back
+        const newTotalPages = Math.ceil(updated.length / PAGE_SIZE);
+        if (page >= newTotalPages && newTotalPages > 0) {
+          setPage(newTotalPages - 1);
+        }
+        return updated;
+      });
     } catch {
       // silently fail
     } finally {
