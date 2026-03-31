@@ -243,7 +243,7 @@ export function InputPhase() {
             id="audience"
             value={audience}
             onChange={(e) => setAudience(e.target.value)}
-            className="w-full bg-white rounded-xl shadow-ambient border border-[var(--outline-variant)] px-4 py-3 text-sm text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] transition-shadow appearance-none"
+            className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] transition-shadow"
           >
             {AUDIENCE_OPTIONS.map((option) => (
               <option key={option} value={option}>

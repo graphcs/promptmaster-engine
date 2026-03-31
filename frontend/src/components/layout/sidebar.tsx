@@ -91,7 +91,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] cursor-pointer"
             disabled={models.length === 0}
           >
             {models.length === 0 ? (

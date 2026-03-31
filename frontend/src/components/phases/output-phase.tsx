@@ -8,7 +8,7 @@ import { EvalSection } from '@/components/shared/eval-section';
 import { SuggestionsList } from '@/components/shared/suggestions-list';
 import { MODE_DISPLAY } from '@/lib/constants';
 import type { ModeType, ScoreLevel } from '@/types';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownOutput } from '@/components/shared/markdown-output';
 
 const SCORE_BADGE: Record<ScoreLevel, string> = {
   High: 'bg-emerald-100 text-emerald-800',
@@ -138,9 +138,7 @@ export function OutputPhase() {
           </div>
         </div>
         {currentOutput ? (
-          <div className="prose prose-sm max-w-none text-[var(--on-surface)] leading-relaxed">
-            <ReactMarkdown>{currentOutput}</ReactMarkdown>
-          </div>
+          <MarkdownOutput content={currentOutput} />
         ) : (
           <p className="text-sm text-[var(--on-surface-variant)] italic">No output available.</p>
         )}
@@ -154,7 +152,7 @@ export function OutputPhase() {
         <select
           value={mode}
           onChange={(e) => setMode(e.target.value as ModeType)}
-          className="w-full max-w-xs rounded-lg border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-3 py-2 text-sm text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
+          className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
         >
           {(Object.entries(MODE_DISPLAY) as Array<[ModeType, { display_name: string; tagline: string }]>).map(
             ([key, info]) => (
@@ -293,8 +291,8 @@ export function OutputPhase() {
                   </button>
 
                   {isExpanded && (
-                    <div className="mt-2 p-4 bg-[var(--surface-container-low)] rounded-lg text-sm text-[var(--on-surface)] leading-relaxed prose prose-sm max-w-none">
-                      <ReactMarkdown>{iter.output}</ReactMarkdown>
+                    <div className="mt-2 p-4 bg-[var(--surface-container-low)] rounded-lg">
+                      <MarkdownOutput content={iter.output} />
                     </div>
                   )}
                 </div>

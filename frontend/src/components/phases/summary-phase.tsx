@@ -1,18 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { useSessionStore } from '@/stores/session-store';
+import { MarkdownOutput } from '@/components/shared/markdown-output';
 import { api } from '@/lib/api/client';
 import { downloadFile } from '@/lib/utils';
 import { MODE_DISPLAY } from '@/lib/constants';
 import type { PMInput } from '@/types';
-
-function alignmentToPercent(score: string | undefined): number {
-  if (score === 'High') return 98;
-  if (score === 'Medium') return 70;
-  return 30;
-}
 
 export function SummaryPhase() {
   const objective = useSessionStore((s) => s.objective);
@@ -44,8 +38,6 @@ export function SummaryPhase() {
 
   const modeLabel = MODE_DISPLAY[mode]?.display_name ?? mode;
   const alignmentScore = currentEval?.alignment.score;
-  const matchPercent = alignmentToPercent(alignmentScore);
-  const matchPercentStr = `${matchPercent}%`;
 
   const inputs: PMInput = {
     objective,
@@ -99,7 +91,7 @@ export function SummaryPhase() {
       const savedLessons = result.lessons;
       resetSession();
       setObjective(savedObjective);
-      setConstraints(savedLessons);
+      setConstraints(`Lessons from previous session:\n${savedLessons}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to carry lessons forward.');
     } finally {
@@ -137,11 +129,10 @@ export function SummaryPhase() {
               className="font-extrabold text-[var(--pm-primary)] leading-none tracking-tighter"
               style={{ fontSize: '3rem' }}
             >
-              {matchPercent}
-              <span className="text-xl font-medium opacity-50">%</span>
+              {iterations.length}
             </div>
             <div className="text-[10px] uppercase font-bold text-[var(--outline)]">
-              Overall Match
+              {iterations.length === 1 ? 'Iteration' : 'Iterations'}
             </div>
           </div>
         </div>
@@ -169,8 +160,8 @@ export function SummaryPhase() {
           <span className="material-symbols-outlined text-[var(--pm-primary)] mb-3 block text-[20px]">
             verified
           </span>
-          <div className="text-sm font-medium text-[var(--outline-variant)] mb-1">Match Score</div>
-          <div className="text-xl font-semibold text-[var(--on-surface)]">{matchPercentStr} Match</div>
+          <div className="text-sm font-medium text-[var(--outline-variant)] mb-1">Final Alignment</div>
+          <div className="text-xl font-semibold text-[var(--on-surface)]">{alignmentScore ?? 'N/A'}</div>
         </div>
       </section>
 
@@ -195,9 +186,7 @@ export function SummaryPhase() {
 
         <div className="rounded-xl bg-white p-8 shadow-ambient border border-[var(--outline-variant)] border-opacity-10">
           {currentOutput ? (
-            <article className="prose prose-sm max-w-none text-[var(--on-surface)] leading-relaxed">
-              <ReactMarkdown>{currentOutput}</ReactMarkdown>
-            </article>
+            <MarkdownOutput content={currentOutput} />
           ) : (
             <p className="text-sm text-[var(--outline)]">No output yet.</p>
           )}
@@ -252,7 +241,7 @@ export function SummaryPhase() {
                   <select
                     value={leftIdx}
                     onChange={(e) => setLeftIdx(Number(e.target.value))}
-                    className="w-full rounded-lg border-none bg-white text-sm font-medium focus:ring-1 focus:ring-[var(--pm-primary)]"
+                    className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
                   >
                     {iterations.map((_, i) => (
                       <option key={i} value={i}>
@@ -273,7 +262,7 @@ export function SummaryPhase() {
                   <select
                     value={rightIdx}
                     onChange={(e) => setRightIdx(Number(e.target.value))}
-                    className="w-full rounded-lg border-none bg-white text-sm font-medium focus:ring-1 focus:ring-[var(--pm-primary)]"
+                    className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
                   >
                     {iterations.map((_, i) => (
                       <option key={i} value={i}>
@@ -297,9 +286,9 @@ export function SummaryPhase() {
           {selfAudit ? (
             <div className="w-full space-y-4">
               <h3 className="text-xl font-bold tracking-tight">Cold Critic Analysis</h3>
-              <article className="prose prose-sm prose-invert max-w-none leading-relaxed">
-                <ReactMarkdown>{selfAudit}</ReactMarkdown>
-              </article>
+              <div className="[&_.prose_*]:text-white [&_.prose_a]:text-blue-300 [&_.prose_code]:bg-white/10 [&_.prose_code]:text-blue-200 [&_.prose_pre]:bg-white/10">
+                <MarkdownOutput content={selfAudit} />
+              </div>
             </div>
           ) : (
             <>
@@ -327,14 +316,19 @@ export function SummaryPhase() {
 
       {/* 6. Footer actions */}
       <footer className="flex items-center justify-between border-t border-[var(--outline-variant)] border-opacity-20 pt-12">
-        <button
-          onClick={handleHardReset}
-          disabled={hardResetLoading}
-          className="flex items-center gap-2 text-sm font-semibold text-[var(--outline)] transition-colors hover:text-red-600 disabled:opacity-50"
-        >
-          <span className="material-symbols-outlined text-sm">delete_forever</span>
-          {hardResetLoading ? 'Resetting…' : 'Hard Reset'}
-        </button>
+        <div className="flex flex-col items-start">
+          <button
+            onClick={handleHardReset}
+            disabled={hardResetLoading}
+            className="flex items-center gap-2 text-sm font-semibold text-[var(--outline)] transition-colors hover:text-[var(--pm-primary)] disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-sm">auto_fix_high</span>
+            {hardResetLoading ? 'Carrying lessons forward…' : 'Carry Lessons Forward'}
+          </button>
+          <p className="text-xs text-[var(--outline)] mt-1">
+            Summarize lessons from this session and start fresh with them as context.
+          </p>
+        </div>
 
         <button
           onClick={() => resetSession()}
