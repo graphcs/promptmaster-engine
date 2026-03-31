@@ -4,17 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,6 +11,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -52,123 +42,157 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] px-4">
-      <div className="w-full max-w-md">
-        {/* Branding */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center gap-2">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-white font-bold text-sm"
-              style={{ backgroundColor: '#2563EB' }}
-            >
-              PM
-            </div>
-            <span className="text-xl font-semibold text-[#1E293B]">PromptMaster</span>
+    <div className="bg-[var(--surface)] text-[var(--on-surface)] flex min-h-screen items-center justify-center p-6">
+      <main className="w-full max-w-[420px] space-y-12">
+        {/* Minimal Branding Anchor */}
+        <header className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-[var(--pm-primary-container)] rounded-xl mb-6">
+            <span className="material-symbols-outlined text-white">terminal</span>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Structured prompt engineering</p>
-        </div>
+          <h1 className="text-[var(--on-surface)] font-bold text-xl tracking-tighter">PromptMaster Engine</h1>
+          <p className="text-[var(--on-surface-variant)] text-sm">Professional AI Workflow</p>
+        </header>
 
-        <Card className="rounded-xl shadow-sm">
-          <CardHeader className="border-b pb-4">
-            <CardTitle className="text-lg font-semibold text-[#1E293B]">Welcome back</CardTitle>
-            <CardDescription>Sign in to your account to continue</CardDescription>
-          </CardHeader>
-
-          <CardContent className="pt-5">
-            <form onSubmit={handleSignIn} className="flex flex-col gap-4">
-              {error && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </div>
-              )}
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  className="h-10 rounded-lg"
-                />
+        {/* Login Container Well */}
+        <section
+          className="bg-white rounded-xl p-8 space-y-6"
+          style={{ boxShadow: '0px 4px 20px rgba(25, 28, 30, 0.04)' }}
+        >
+          <form onSubmit={handleSignIn} className="space-y-5">
+            {/* Error state */}
+            {error && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                {error}
               </div>
+            )}
 
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label
+                className="block text-xs font-medium text-[var(--on-surface-variant)] uppercase tracking-wider"
+                htmlFor="email"
+              >
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                placeholder="name@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="w-full px-4 py-3 bg-[var(--surface-container-low)] border-none rounded-lg text-[var(--on-surface)] text-sm focus:ring-2 focus:ring-[var(--pm-primary)]/40 focus:bg-white transition-all duration-200 outline-none placeholder:text-[var(--outline)]/60"
+              />
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label
+                  className="block text-xs font-medium text-[var(--on-surface-variant)] uppercase tracking-wider"
+                  htmlFor="password"
+                >
+                  Password
+                </label>
+                <a
+                  className="text-xs text-[var(--pm-primary)] hover:underline transition-all"
+                  href="#"
+                >
+                  Forgot password?
+                </a>
+              </div>
+              <div className="relative">
+                <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  className="h-10 rounded-lg"
+                  className="w-full px-4 py-3 bg-[var(--surface-container-low)] border-none rounded-lg text-[var(--on-surface)] text-sm focus:ring-2 focus:ring-[var(--pm-primary)]/40 focus:bg-white transition-all duration-200 outline-none placeholder:text-[var(--outline)]/60"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--outline)] hover:text-[var(--on-surface-variant)]"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
-
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="h-10 w-full rounded-lg text-sm font-medium transition-opacity duration-200"
-                style={{ backgroundColor: '#2563EB', color: '#fff' }}
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </form>
-
-            <div className="my-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <div className="h-px flex-1 bg-border" />
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isGoogleLoading}
-              onClick={handleGoogleSignIn}
-              className="h-10 w-full rounded-lg text-sm font-medium transition-colors duration-200"
+            {/* Submit Action */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 px-4 bg-[var(--pm-primary)] text-white font-semibold rounded-lg hover:bg-[var(--pm-primary-container)] active:scale-[0.98] transition-all duration-200 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <svg
-                className="mr-2 h-4 w-4"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              {isGoogleLoading ? 'Redirecting...' : 'Continue with Google'}
-            </Button>
-          </CardContent>
+              {isLoading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
 
-          <CardFooter className="justify-center gap-1 text-sm text-muted-foreground">
+          {/* Divider */}
+          <div className="relative py-2 flex items-center gap-4">
+            <div className="flex-grow h-[1px] bg-[var(--surface-container-high)]" />
+            <span className="text-[10px] font-bold text-[var(--outline)] uppercase tracking-widest">OR</span>
+            <div className="flex-grow h-[1px] bg-[var(--surface-container-high)]" />
+          </div>
+
+          {/* Google Sign In */}
+          <button
+            type="button"
+            disabled={isGoogleLoading}
+            onClick={handleGoogleSignIn}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-[var(--outline-variant)]/30 text-[var(--on-surface)] font-medium rounded-lg hover:bg-[var(--surface-container-low)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <svg fill="none" height="18" viewBox="0 0 24 24" width="18" aria-hidden="true">
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </svg>
+            {isGoogleLoading ? 'Redirecting...' : 'Sign in with Google'}
+          </button>
+        </section>
+
+        {/* Footer */}
+        <footer className="text-center">
+          <p className="text-sm text-[var(--on-surface-variant)]">
             Don&apos;t have an account?{' '}
             <Link
               href="/auth/signup"
-              className="font-medium text-[#2563EB] hover:underline transition-colors duration-200"
+              className="text-[var(--pm-primary)] font-medium hover:underline ml-1"
             >
               Sign up
             </Link>
-          </CardFooter>
-        </Card>
+          </p>
+        </footer>
+      </main>
+
+      {/* Decorative Structural Element */}
+      <div className="fixed top-0 right-0 p-12 opacity-5 pointer-events-none">
+        <span className="material-symbols-outlined" style={{ fontSize: '320px' }}>
+          architecture
+        </span>
       </div>
     </div>
   );
