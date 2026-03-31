@@ -11,11 +11,14 @@ import type { ModeType, ScoreLevel } from '@/types';
 import { MarkdownOutput } from '@/components/shared/markdown-output';
 import { CustomSelect } from '@/components/shared/custom-select';
 
-const SCORE_BADGE: Record<ScoreLevel, string> = {
-  High: 'bg-emerald-100 text-emerald-800',
-  Medium: 'bg-amber-100 text-amber-800',
-  Low: 'bg-red-100 text-red-800',
-};
+function scoreBadgeClass(dim: string, score: ScoreLevel): string {
+  const isDrift = dim === 'drift';
+  const isGood = isDrift ? score === 'Low' : score === 'High';
+  const isBad = isDrift ? score === 'High' : score === 'Low';
+  if (isGood) return 'bg-emerald-100 text-emerald-800';
+  if (isBad) return 'bg-red-100 text-red-800';
+  return 'bg-amber-100 text-amber-800';
+}
 
 export function OutputPhase() {
   const iterations = useSessionStore((s) => s.iterations);
@@ -266,7 +269,7 @@ export function OutputPhase() {
                           return (
                             <span
                               key={dim}
-                              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${SCORE_BADGE[score]}`}
+                              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${scoreBadgeClass(dim, score)}`}
                             >
                               {dim}: {score}
                             </span>
