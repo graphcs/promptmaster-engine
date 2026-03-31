@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { MarkdownOutput } from '@/components/shared/markdown-output';
 import { api } from '@/lib/api/client';
 import { downloadFile } from '@/lib/utils';
 import { MODE_DISPLAY } from '@/lib/constants';
 import { CustomSelect } from '@/components/shared/custom-select';
-import type { PMInput } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
+import { saveSession } from '@/lib/supabase/sessions';
+import { recordUsage } from '@/lib/supabase/usage';
+import type { PMInput, Session } from '@/types';
 
 export function SummaryPhase() {
   const objective = useSessionStore((s) => s.objective);
@@ -20,6 +23,31 @@ export function SummaryPhase() {
   const currentOutput = useSessionStore((s) => s.currentOutput);
   const currentEval = useSessionStore((s) => s.currentEval);
   const selfAudit = useSessionStore((s) => s.selfAudit);
+  const sessionSaved = useSessionStore((s) => s.sessionSaved);
+  const setSessionSaved = useSessionStore((s) => s.setSessionSaved);
+
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user && !sessionSaved && iterations.length > 0) {
+      const session: Session = {
+        session_id: crypto.randomUUID().slice(0, 8),
+        created_at: new Date().toISOString(),
+        objective,
+        audience,
+        constraints,
+        output_format: outputFormat,
+        mode,
+        model,
+        iterations,
+        finalized: true,
+      };
+      saveSession(session, user.id).catch(() => {});
+      recordUsage('session_finalize').catch(() => {});
+      setSessionSaved(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, sessionSaved]);
 
   const setSelfAudit = useSessionStore((s) => s.setSelfAudit);
   const resetSession = useSessionStore((s) => s.resetSession);
@@ -243,8 +271,12 @@ export function SummaryPhase() {
                       label: `Iteration ${i + 1}${i === iterations.length - 1 ? ' (Latest)' : ''}`,
                     }))}
                   />
-                  <div className="h-40 overflow-y-auto rounded-lg border border-[var(--outline-variant)] border-opacity-10 bg-white p-4 text-xs leading-relaxed text-[var(--on-surface-variant)]">
-                    {iterations[leftIdx]?.output ?? '—'}
+                  <div className="min-h-[200px] max-h-[400px] overflow-y-auto rounded-xl bg-white p-6 border border-[var(--outline-variant)]/10 custom-scrollbar">
+                    {iterations[leftIdx]?.output ? (
+                      <MarkdownOutput content={iterations[leftIdx].output} />
+                    ) : (
+                      <p className="text-sm text-[var(--outline)]">No output</p>
+                    )}
                   </div>
                 </div>
 
@@ -261,8 +293,12 @@ export function SummaryPhase() {
                       label: `Iteration ${i + 1}${i === 0 ? ' (First)' : ''}`,
                     }))}
                   />
-                  <div className="h-40 overflow-y-auto rounded-lg border border-[var(--outline-variant)] border-opacity-10 bg-white p-4 text-xs leading-relaxed text-[var(--on-surface-variant)]">
-                    {iterations[rightIdx]?.output ?? '—'}
+                  <div className="min-h-[200px] max-h-[400px] overflow-y-auto rounded-xl bg-white p-6 border border-[var(--outline-variant)]/10 custom-scrollbar">
+                    {iterations[rightIdx]?.output ? (
+                      <MarkdownOutput content={iterations[rightIdx].output} />
+                    ) : (
+                      <p className="text-sm text-[var(--outline)]">No output</p>
+                    )}
                   </div>
                 </div>
               </div>

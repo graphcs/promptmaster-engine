@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
+import { recordUsage } from '@/lib/supabase/usage';
 
 export function ReviewPhase() {
   const assembled = useSessionStore((s) => s.assembled);
@@ -47,6 +48,7 @@ export function ReviewPhase() {
       });
 
       appendIteration(result.iteration, result.suggestions);
+      recordUsage('iteration').catch(() => {});
       setPhase('output');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run iteration.');

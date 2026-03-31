@@ -7,7 +7,9 @@ import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, EXAMPLES } from '
 import { ModeGrid } from '@/components/shared/mode-grid';
 import { ConstraintPills } from '@/components/shared/constraint-pills';
 import { CustomSelect } from '@/components/shared/custom-select';
-import type { ModeType } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
+import { saveTemplate } from '@/lib/supabase/templates';
+import type { ModeType, PromptTemplate } from '@/types';
 
 export function InputPhase() {
   const objective = useSessionStore((s) => s.objective);
@@ -37,6 +39,11 @@ export function InputPhase() {
 
   const [loading, setLoading] = useState(false);
   const [customAudience, setCustomAudience] = useState('');
+  const [templateName, setTemplateName] = useState('');
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateSaved, setTemplateSaved] = useState(false);
+
+  const { user } = useAuth();
 
   function handleToggleConstraintPreset(preset: string) {
     if (constraintPresets.includes(preset)) {
@@ -59,6 +66,34 @@ export function InputPhase() {
     setAudience(example.audience);
     setConstraints(example.constraints);
     setMode(example.mode);
+  }
+
+  async function handleSaveTemplate() {
+    if (!user || !templateName.trim()) return;
+    setTemplateSaving(true);
+    try {
+      const template: PromptTemplate = {
+        template_id: crypto.randomUUID().slice(0, 8),
+        name: templateName.trim(),
+        created_at: new Date().toISOString(),
+        mode,
+        audience,
+        constraints,
+        output_format: outputFormat,
+        objective_hint: objective,
+        custom_name: customName,
+        custom_preamble: customPreamble,
+        custom_tone: customTone,
+      };
+      await saveTemplate(template, user.id);
+      setTemplateSaved(true);
+      setTemplateName('');
+      setTimeout(() => setTemplateSaved(false), 3000);
+    } catch {
+      // Silently fail — non-blocking
+    } finally {
+      setTemplateSaving(false);
+    }
   }
 
   async function handleAssemble() {
@@ -334,6 +369,44 @@ export function InputPhase() {
           className="w-full min-h-[100px] resize-none bg-white rounded-xl shadow-ambient border border-[var(--outline-variant)] px-5 py-4 text-sm text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] transition-shadow"
         />
       </div>
+
+      {/* Save as Template */}
+      {user && (
+        <details className="rounded-xl border border-[var(--outline-variant)]/30 bg-white overflow-hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 select-none">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-[var(--on-surface-variant)]">bookmark_add</span>
+              <span className="text-sm font-semibold text-[var(--on-surface)]">Save as Template</span>
+            </div>
+            <span className="material-symbols-outlined text-[18px] text-[var(--on-surface-variant)] transition-transform group-open:rotate-180">expand_more</span>
+          </summary>
+          <div className="px-5 pb-5 space-y-3">
+            <p className="text-xs text-[var(--on-surface-variant)]">
+              Save the current configuration as a reusable template.
+            </p>
+            <div className="flex gap-3 items-center">
+              <input
+                type="text"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Template name…"
+                className="flex-1 bg-[var(--surface-container-low)] rounded-lg border border-[var(--outline-variant)]/30 px-4 py-2.5 text-sm text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] transition-shadow"
+              />
+              <button
+                type="button"
+                onClick={handleSaveTemplate}
+                disabled={templateSaving || !templateName.trim()}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--pm-primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {templateSaved ? 'check' : 'save'}
+                </span>
+                {templateSaving ? 'Saving…' : templateSaved ? 'Saved!' : 'Save Template'}
+              </button>
+            </div>
+          </div>
+        </details>
+      )}
 
       {/* Footer CTA */}
       <div className="pt-2">

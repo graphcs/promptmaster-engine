@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
+import { recordUsage } from '@/lib/supabase/usage';
 import type { PMInput } from '@/types';
 
 export function RealignPhase() {
@@ -46,6 +47,7 @@ export function RealignPhase() {
       });
 
       appendIteration(result.iteration, result.suggestions);
+      recordUsage('realignment').catch(() => {});
       setRealignmentPrompt(null);
       setPhase('output');
     } catch (err) {
