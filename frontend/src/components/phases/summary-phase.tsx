@@ -23,8 +23,7 @@ export function SummaryPhase() {
 
   const setSelfAudit = useSessionStore((s) => s.setSelfAudit);
   const resetSession = useSessionStore((s) => s.resetSession);
-  const setObjective = useSessionStore((s) => s.setObjective);
-  const setConstraints = useSessionStore((s) => s.setConstraints);
+  const carryLessonsForward = useSessionStore((s) => s.carryLessonsForward);
   const setError = useSessionStore((s) => s.setError);
 
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -88,11 +87,8 @@ export function SummaryPhase() {
     setHardResetLoading(true);
     try {
       const result = await api.hardResetLessons({ inputs, iterations, model });
-      const savedObjective = objective;
-      const savedLessons = result.lessons;
-      resetSession();
-      setObjective(savedObjective);
-      setConstraints(`Lessons from previous session:\n${savedLessons}`);
+      // Use carryLessonsForward to atomically reset + prefill in one store update
+      carryLessonsForward(objective, `Lessons from previous session:\n${result.lessons}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to carry lessons forward.');
     } finally {
@@ -311,19 +307,15 @@ export function SummaryPhase() {
 
       {/* 6. Footer actions */}
       <footer className="flex items-center justify-between border-t border-[var(--outline-variant)] border-opacity-20 pt-12">
-        <div className="flex flex-col items-start">
-          <button
-            onClick={handleHardReset}
-            disabled={hardResetLoading}
-            className="flex items-center gap-2 text-sm font-semibold text-[var(--outline)] transition-colors hover:text-[var(--pm-primary)] disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined text-sm">auto_fix_high</span>
-            {hardResetLoading ? 'Carrying lessons forward…' : 'Carry Lessons Forward'}
-          </button>
-          <p className="text-xs text-[var(--outline)] mt-1">
-            Summarize lessons from this session and start fresh with them as context.
-          </p>
-        </div>
+        <button
+          onClick={handleHardReset}
+          disabled={hardResetLoading}
+          className="flex items-center gap-2 px-6 py-3 border border-[var(--outline-variant)] bg-white text-sm font-semibold text-[var(--on-surface)] rounded-xl hover:bg-[var(--surface-container-low)] hover:border-[var(--pm-primary)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          title="Summarize lessons from this session and start fresh with them as context"
+        >
+          <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
+          {hardResetLoading ? 'Carrying lessons…' : 'Carry Lessons Forward'}
+        </button>
 
         <button
           onClick={() => resetSession()}

@@ -66,6 +66,7 @@ interface SessionState {
   setShowScaffolding: (show: boolean) => void;
   finalize: () => void;
   resetSession: () => void;
+  carryLessonsForward: (objective: string, constraints: string) => void;
   loadSession: (session: Session) => void;
 }
 
@@ -133,6 +134,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   setShowScaffolding: (showScaffolding) => set({ showScaffolding }),
   finalize: () => set({ finalized: true, phase: 'summary' }),
   resetSession: () => set({ ...initialState }),
+  carryLessonsForward: (objective, constraints) =>
+    set({ ...initialState, objective, constraints }),
   loadSession: (session) =>
     set({
       objective: session.objective,
