@@ -3,10 +3,18 @@
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
-import { needsRealignment } from '@/lib/utils';
+import { needsRealignment, downloadFile } from '@/lib/utils';
 import { EvalSection } from '@/components/shared/eval-section';
 import { SuggestionsList } from '@/components/shared/suggestions-list';
+import { MODE_DISPLAY } from '@/lib/constants';
+import type { ModeType, ScoreLevel } from '@/types';
 import ReactMarkdown from 'react-markdown';
+
+const SCORE_BADGE: Record<ScoreLevel, string> = {
+  High: 'bg-emerald-100 text-emerald-800',
+  Medium: 'bg-amber-100 text-amber-800',
+  Low: 'bg-red-100 text-red-800',
+};
 
 export function OutputPhase() {
   const iterations = useSessionStore((s) => s.iterations);
@@ -30,6 +38,7 @@ export function OutputPhase() {
   const [realignLoading, setRealignLoading] = useState(false);
   const [refineLoading, setRefineLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [expandedIterations, setExpandedIterations] = useState<Record<number, boolean>>({});
 
   const shouldRealign = currentEval ? needsRealignment(currentEval) : false;
 
@@ -92,6 +101,10 @@ export function OutputPhase() {
     }
   }
 
+  function toggleIteration(num: number) {
+    setExpandedIterations((prev) => ({ ...prev, [num]: !prev[num] }));
+  }
+
   const anyLoading = realignLoading || refineLoading;
 
   return (
@@ -133,11 +146,37 @@ export function OutputPhase() {
         )}
       </div>
 
+      {/* Mode switch for next iteration */}
+      <div className="bg-white rounded-xl shadow-ambient p-6">
+        <label className="block text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)] mb-3">
+          Mode for next iteration:
+        </label>
+        <select
+          value={mode}
+          onChange={(e) => setMode(e.target.value as ModeType)}
+          className="w-full max-w-xs rounded-lg border border-[var(--outline-variant)] bg-[var(--surface-container-low)] px-3 py-2 text-sm text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
+        >
+          {(Object.entries(MODE_DISPLAY) as Array<[ModeType, { display_name: string; tagline: string }]>).map(
+            ([key, info]) => (
+              <option key={key} value={key}>
+                {info.display_name} — {info.tagline}
+              </option>
+            )
+          )}
+        </select>
+      </div>
+
       {/* Evaluation section */}
       {currentEval && <EvalSection evaluation={currentEval} />}
 
       {/* Suggestions */}
       {suggestions.length > 0 && <SuggestionsList suggestions={suggestions} />}
+
+      {/* Evaluator callout caption */}
+      <p className="text-[11px] text-[var(--on-surface-variant)] italic mt-3">
+        These scores come from a separate evaluator — a second AI call that independently checks the output against
+        your original objective, not the AI grading itself.
+      </p>
 
       {/* Action row */}
       <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -158,6 +197,21 @@ export function OutputPhase() {
               Refine Prompt
             </>
           )}
+        </button>
+
+        {/* Download current output */}
+        <button
+          type="button"
+          onClick={() =>
+            downloadFile(
+              currentOutput || '',
+              `promptmaster_iteration_${iterations.length}.txt`
+            )
+          }
+          className="w-10 h-10 flex items-center justify-center rounded-xl border border-[var(--outline-variant)]/30 hover:bg-[var(--surface-container-low)] transition-all"
+          title="Download output"
+        >
+          <span className="material-symbols-outlined text-[20px] text-[var(--on-surface-variant)]">download</span>
         </button>
 
         {shouldRealign ? (
@@ -191,6 +245,64 @@ export function OutputPhase() {
           </button>
         )}
       </div>
+
+      {/* Iteration history (2+ iterations) */}
+      {iterations.length >= 2 && (
+        <details className="bg-white rounded-xl shadow-ambient overflow-hidden">
+          <summary className="cursor-pointer px-8 py-5 text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)] select-none hover:bg-[var(--surface-container-low)] transition-colors">
+            Iteration History ({iterations.length} iterations)
+          </summary>
+          <div className="divide-y divide-[var(--outline-variant)]/20">
+            {iterations.map((iter) => {
+              const modeLabel = MODE_DISPLAY[iter.mode]?.display_name ?? iter.mode;
+              const isExpanded = !!expandedIterations[iter.iteration_number];
+              return (
+                <div key={iter.iteration_number} className="px-8 py-5">
+                  {/* Iteration header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-bold text-[var(--on-surface)]">
+                      Iteration {iter.iteration_number} ({modeLabel})
+                    </span>
+                    {iter.evaluation && (
+                      <div className="flex items-center gap-2">
+                        {(['alignment', 'drift', 'clarity'] as const).map((dim) => {
+                          const score = iter.evaluation![dim].score;
+                          return (
+                            <span
+                              key={dim}
+                              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${SCORE_BADGE[score]}`}
+                            >
+                              {dim}: {score}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expandable output */}
+                  <button
+                    type="button"
+                    onClick={() => toggleIteration(iter.iteration_number)}
+                    className="flex items-center gap-1.5 text-xs text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors mb-2"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {isExpanded ? 'expand_less' : 'expand_more'}
+                    </span>
+                    {isExpanded ? 'Hide output' : 'Show output'}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-2 p-4 bg-[var(--surface-container-low)] rounded-lg text-sm text-[var(--on-surface)] leading-relaxed prose prose-sm max-w-none">
+                      <ReactMarkdown>{iter.output}</ReactMarkdown>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
