@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login | PromptMaster Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-container": "#acbfff",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "surface": "#f7f9fb",
+                        "on-surface-variant": "#434655",
+                        "primary-container": "#2563eb",
+                        "outline-variant": "#c3c6d7",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "surface-container-high": "#e6e8ea",
+                        "inverse-primary": "#b4c5ff",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-surface": "#191c1e",
+                        "on-secondary-fixed-variant": "#31447b",
+                        "secondary": "#495c95",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-tint": "#0053db",
+                        "surface-dim": "#d8dadc",
+                        "tertiary-container": "#bc4800",
+                        "tertiary": "#943700",
+                        "on-background": "#191c1e",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "inverse-surface": "#2d3133",
+                        "on-secondary-fixed": "#00174b",
+                        "background": "#f7f9fb",
+                        "on-primary-fixed": "#00174b",
+                        "on-primary-container": "#eeefff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#360f00",
+                        "surface-container": "#eceef0",
+                        "on-secondary-container": "#394c84",
+                        "outline": "#737686",
+                        "on-tertiary-container": "#ffede6",
+                        "primary": "#004ac6",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-bright": "#f7f9fb"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .auth-card-shadow {
+            box-shadow: 0px 4px 20px rgba(25, 28, 30, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex min-h-screen items-center justify-center p-6">
+<!-- Suppression of Navigation Shell: Login pages are focused journeys -->
+<main class="w-full max-w-[420px] space-y-12">
+<!-- Minimal Branding Anchor -->
+<header class="text-center space-y-2">
+<div class="inline-flex items-center justify-center w-12 h-12 bg-primary-container rounded-xl mb-6">
+<span class="material-symbols-outlined text-on-primary" data-icon="terminal">terminal</span>
+</div>
+<h1 class="text-on-surface font-headline font-bold text-xl tracking-tighter">PromptMaster Engine</h1>
+<p class="text-on-surface-variant font-body text-sm">Professional AI Workflow</p>
+</header>
+<!-- Login Container Well -->
+<section class="bg-surface-container-lowest rounded-xl p-8 auth-card-shadow space-y-6">
+<form action="#" class="space-y-5">
+<!-- Email Field -->
+<div class="space-y-2">
+<label class="block text-xs font-label font-medium text-on-surface-variant uppercase tracking-wider" for="email">Email Address</label>
+<input class="w-full px-4 py-3 bg-surface-container-low border-none rounded-lg text-on-surface text-sm focus:ring-2 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all duration-200 outline-none placeholder:text-outline/60" id="email" name="email" placeholder="name@company.com" type="email"/>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="block text-xs font-label font-medium text-on-surface-variant uppercase tracking-wider" for="password">Password</label>
+<a class="text-xs font-label text-primary hover:underline transition-all" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<input class="w-full px-4 py-3 bg-surface-container-low border-none rounded-lg text-on-surface text-sm focus:ring-2 focus:ring-primary/40 focus:bg-surface-container-lowest transition-all duration-200 outline-none placeholder:text-outline/60" id="password" name="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface-variant" type="button">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Submit Action -->
+<button class="w-full py-3 px-4 bg-primary text-on-primary font-label font-semibold rounded-lg hover:bg-primary-container active:scale-[0.98] transition-all duration-200 shadow-sm" type="submit">
+                    Sign In
+                </button>
+</form>
+<!-- Divider with Tonal Separation (No 1px Lines Rule applied with subtle contrast) -->
+<div class="relative py-2 flex items-center gap-4">
+<div class="flex-grow h-[1px] bg-surface-container-high"></div>
+<span class="text-[10px] font-label font-bold text-outline uppercase tracking-widest">OR</span>
+<div class="flex-grow h-[1px] bg-surface-container-high"></div>
+</div>
+<!-- OAuth Actions -->
+<button class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-surface-container-lowest border border-outline-variant/30 text-on-surface font-label font-medium rounded-lg hover:bg-surface-container-low transition-all duration-200">
+<svg fill="none" height="18" viewbox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"></path>
+</svg>
+                Sign in with Google
+            </button>
+</section>
+<!-- Footer Footer Context -->
+<footer class="text-center">
+<p class="text-sm font-body text-on-surface-variant">
+                Don't have an account? 
+                <a class="text-primary font-medium hover:underline ml-1" href="#">Sign up</a>
+</p>
+</footer>
+</main>
+<!-- Decorative Structural Elements (Architectural Monolithism) -->
+<div class="fixed top-0 right-0 p-12 opacity-5 pointer-events-none">
+<span class="material-symbols-outlined text-[320px]" data-icon="architecture">architecture</span>
+</div>
+</body></html>

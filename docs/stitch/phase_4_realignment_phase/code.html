@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-container": "#acbfff",
+              "tertiary-fixed-dim": "#ffb596",
+              "surface": "#f7f9fb",
+              "on-surface-variant": "#434655",
+              "primary-container": "#2563eb",
+              "outline-variant": "#c3c6d7",
+              "error": "#ba1a1a",
+              "error-container": "#ffdad6",
+              "on-primary-fixed-variant": "#003ea8",
+              "on-primary": "#ffffff",
+              "secondary-fixed-dim": "#b4c5ff",
+              "surface-container-high": "#e6e8ea",
+              "inverse-primary": "#b4c5ff",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary": "#ffffff",
+              "primary-fixed": "#dbe1ff",
+              "tertiary-fixed": "#ffdbcd",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface": "#191c1e",
+              "on-secondary-fixed-variant": "#31447b",
+              "secondary": "#495c95",
+              "secondary-fixed": "#dbe1ff",
+              "on-error-container": "#93000a",
+              "surface-container-low": "#f2f4f6",
+              "surface-tint": "#0053db",
+              "surface-dim": "#d8dadc",
+              "tertiary-container": "#bc4800",
+              "tertiary": "#943700",
+              "on-background": "#191c1e",
+              "on-secondary": "#ffffff",
+              "on-tertiary-fixed-variant": "#7d2d00",
+              "inverse-surface": "#2d3133",
+              "on-secondary-fixed": "#00174b",
+              "background": "#f7f9fb",
+              "on-primary-fixed": "#00174b",
+              "on-primary-container": "#eeefff",
+              "primary-fixed-dim": "#b4c5ff",
+              "surface-container-lowest": "#ffffff",
+              "on-error": "#ffffff",
+              "on-tertiary-fixed": "#360f00",
+              "surface-container": "#eceef0",
+              "on-secondary-container": "#394c84",
+              "outline": "#737686",
+              "on-tertiary-container": "#ffede6",
+              "primary": "#004ac6",
+              "inverse-on-surface": "#eff1f3",
+              "surface-bright": "#f7f9fb"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-separation {
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface overflow-x-hidden">
+<!-- SideNavBar Component -->
+<aside class="w-[260px] h-screen fixed left-0 top-0 bg-slate-100 dark:bg-slate-900 flex flex-col p-4 gap-y-4 tonal-separation">
+<div class="flex items-center gap-3 px-2 mb-2">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</div>
+<div>
+<h1 class="text-lg font-semibold tracking-tighter text-slate-900 dark:text-slate-50">PromptMaster Engine</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Professional AI Workflow</p>
+</div>
+</div>
+<button class="w-full py-2 px-4 bg-primary text-on-primary rounded-xl text-sm font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+            New Session
+        </button>
+<nav class="flex flex-col gap-y-1 mt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+                Library
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="mt-auto flex flex-col gap-y-1 border-t border-slate-200/50 pt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+                Model Selector
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+                Pro Tier
+            </a>
+</div>
+</aside>
+<!-- TopNavBar Component -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-14 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 z-10">
+<div class="flex justify-between items-center px-6 max-w-[720px] mx-auto w-full h-full">
+<nav class="flex gap-6 h-full items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Phase: Input</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Review</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Output</a>
+<a class="text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 h-full flex items-center text-sm font-medium Inter tracking-tight" href="#">Realignment</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Summary</a>
+</nav>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-500 text-[20px] cursor-pointer" data-icon="notifications">notifications</span>
+<button class="bg-primary px-4 py-1.5 text-on-primary text-xs font-semibold rounded-lg hover:opacity-90 transition-all">Save Session</button>
+</div>
+</div>
+</header>
+<!-- Main Content Well -->
+<main class="ml-[260px] pt-14 min-h-screen flex flex-col">
+<div class="max-w-[720px] mx-auto w-full py-12 px-6">
+<!-- Realignment Header -->
+<section class="mb-12">
+<h2 class="text-[2.75rem] font-semibold leading-tight tracking-[-0.04em] text-on-surface mb-2">Realignment</h2>
+<p class="text-on-surface-variant font-body text-sm leading-[1.6]">Fine-tune the trajectory of the AI's logic to eliminate semantic drift and ensure output fidelity.</p>
+</section>
+<!-- Realignment Banner -->
+<div class="mb-10 p-6 bg-surface-container-low rounded-xl flex items-start gap-4">
+<div class="p-2 bg-primary-container/10 rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="info">info</span>
+</div>
+<div>
+<h3 class="text-sm font-semibold text-on-surface mb-1">Why Realignment is Needed</h3>
+<p class="text-sm text-on-surface-variant leading-[1.6]">The current output shows signs of semantic drift. Realignment allows you to correct clarity, adjust tone, or refocus the AI on the original constraints if it has begun to prioritize creative variance over technical accuracy.</p>
+</div>
+</div>
+<!-- Workspace: Corrective Prompt -->
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-[0px_4px_20px_rgba(25,28,30,0.04)]">
+<div class="flex justify-between items-center mb-6">
+<label class="text-sm font-medium tracking-[-0.01em] text-on-surface">Corrective Prompt</label>
+<div class="flex items-center gap-2 px-2 py-1 bg-surface-container rounded-lg">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Active Pivot</span>
+</div>
+</div>
+<div class="relative group">
+<textarea class="w-full min-h-[320px] p-6 bg-surface-container-low border-none rounded-xl text-on-surface font-body text-sm leading-[1.6] focus:ring-0 focus:bg-surface-container-lowest transition-all placeholder:text-outline" placeholder="Type your corrective instructions here...">Based on the previous output, the technical specifications for the cooling system were overly generalized. 
+
+RE-ALIGNMENT DIRECTIVES:
+1. Re-introduce specific thermodynamic constants (k-values) for the polymer housing.
+2. Ensure the tone is purely technical, removing the 'introductory' phrases.
+3. Consolidate the data points into a markdown table rather than a bulleted list.
+4. Correct the latent bias toward air-cooling; prioritize liquid-immersion variables as per the Input phase constraints.</textarea>
+<div class="absolute bottom-4 right-4 flex items-center gap-3 opacity-40 group-focus-within:opacity-100 transition-opacity">
+<span class="text-[11px] font-medium text-outline">1,240 tokens remaining</span>
+<span class="material-symbols-outlined text-[18px] text-outline cursor-pointer hover:text-primary transition-colors" data-icon="auto_fix">auto_fix</span>
+</div>
+</div>
+</div>
+<!-- Actions Row -->
+<div class="mt-10 flex items-center justify-between">
+<button class="px-6 py-2.5 border border-outline-variant/30 text-on-surface text-sm font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                    Back to Output
+                </button>
+<button class="px-8 py-2.5 bg-primary text-on-primary text-sm font-semibold rounded-lg shadow-sm hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-2">
+                    Execute Realignment
+                    <span class="material-symbols-outlined text-[18px]" data-icon="bolt" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</button>
+</div>
+<!-- Visualization / Insight Section -->
+<section class="mt-20 border-t border-outline-variant/10 pt-12">
+<h4 class="text-sm font-semibold text-on-surface-variant uppercase tracking-widest mb-8">System Drift Analytics</h4>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="p-6 bg-surface-container-low rounded-xl">
+<div class="flex items-center justify-between mb-4">
+<span class="text-xs font-medium text-on-surface-variant">Instruction Adherence</span>
+<span class="text-xs font-bold text-error">72%</span>
+</div>
+<div class="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+<div class="bg-error h-full w-[72%]"></div>
+</div>
+</div>
+<div class="p-6 bg-surface-container-low rounded-xl">
+<div class="flex items-center justify-between mb-4">
+<span class="text-xs font-medium text-on-surface-variant">Clarity Index</span>
+<span class="text-xs font-bold text-primary">94%</span>
+</div>
+<div class="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[94%]"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 overflow-hidden rounded-xl h-48 bg-surface-container-low relative">
+<img alt="Technical schematic of AI logical nodes drifting from a central baseline with red error highlights and blue corrective vectors" class="w-full h-full object-cover mix-blend-multiply opacity-20" data-alt="A clean technical diagram showing abstract nodes connected by lines, with some nodes highlighted in red indicating drift and blue arrows showing realignment path" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrEIbCi-W8YOXkmox4PrsvABQ-dVBqlMAyfClfjBKu69CCtvp_vE6Uskwmgf6wRSSejs-ELuxVgrew5SW35Na6vG0ygJY1jpVLdpZ3IVfELDzyzaieh3oyD-PqorkI-ytuKq5kzgPygkj5Nz5JoIdon3cp4KQyWZLRF50O53266UvVI1OsOS0boDKNPINzWUY6sQ--p7QlOcZkG_c7jqF78mY3wEAimSWI1QUkfIpKMYOLUWZ9Ib30M2IyoXM1b3NaKTgFDSL_9JGH"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<p class="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-[0.2em]">Logical Topology Map</p>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

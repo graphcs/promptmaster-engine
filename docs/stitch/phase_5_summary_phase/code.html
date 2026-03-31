@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PromptMaster Engine - Phase 5: Summary</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-container": "#acbfff",
+              "tertiary-fixed-dim": "#ffb596",
+              "surface": "#f7f9fb",
+              "on-surface-variant": "#434655",
+              "primary-container": "#2563eb",
+              "outline-variant": "#c3c6d7",
+              "error": "#ba1a1a",
+              "error-container": "#ffdad6",
+              "on-primary-fixed-variant": "#003ea8",
+              "on-primary": "#ffffff",
+              "secondary-fixed-dim": "#b4c5ff",
+              "surface-container-high": "#e6e8ea",
+              "inverse-primary": "#b4c5ff",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary": "#ffffff",
+              "primary-fixed": "#dbe1ff",
+              "tertiary-fixed": "#ffdbcd",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface": "#191c1e",
+              "on-secondary-fixed-variant": "#31447b",
+              "secondary": "#495c95",
+              "secondary-fixed": "#dbe1ff",
+              "on-error-container": "#93000a",
+              "surface-container-low": "#f2f4f6",
+              "surface-tint": "#0053db",
+              "surface-dim": "#d8dadc",
+              "tertiary-container": "#bc4800",
+              "tertiary": "#943700",
+              "on-background": "#191c1e",
+              "on-secondary": "#ffffff",
+              "on-tertiary-fixed-variant": "#7d2d00",
+              "inverse-surface": "#2d3133",
+              "on-secondary-fixed": "#00174b",
+              "background": "#f7f9fb",
+              "on-primary-fixed": "#00174b",
+              "on-primary-container": "#eeefff",
+              "primary-fixed-dim": "#b4c5ff",
+              "surface-container-lowest": "#ffffff",
+              "on-error": "#ffffff",
+              "on-tertiary-fixed": "#360f00",
+              "surface-container": "#eceef0",
+              "on-secondary-container": "#394c84",
+              "outline": "#737686",
+              "on-tertiary-container": "#ffede6",
+              "primary": "#004ac6",
+              "inverse-on-surface": "#eff1f3",
+              "surface-bright": "#f7f9fb"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar (Execution from JSON) -->
+<aside class="w-[260px] h-screen fixed left-0 top-0 bg-slate-100 dark:bg-slate-900 flex flex-col p-4 gap-y-4 font-sans text-sm font-medium leading-6 tracking-tight">
+<div class="flex items-center gap-3 px-2 mb-4">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+</div>
+<div>
+<h1 class="text-lg font-semibold tracking-tighter text-slate-900 dark:text-slate-50">PromptMaster Engine</h1>
+<p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Professional AI Workflow</p>
+</div>
+</div>
+<button class="w-full py-2.5 bg-primary text-on-primary rounded-xl font-semibold mb-6 hover:bg-primary/90 transition-colors shadow-sm">
+            New Session
+        </button>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span> Library
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span> Settings
+            </a>
+</nav>
+<div class="mt-auto space-y-1 pt-4 border-t border-slate-200/50">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span> Model Selector
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="verified">verified</span> Pro Tier
+            </a>
+</div>
+</aside>
+<!-- TopNavBar (Execution from JSON) -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-14 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm z-10">
+<div class="flex justify-between items-center px-6 max-w-[720px] mx-auto w-full h-full">
+<div class="flex gap-6 h-full">
+<a class="flex items-center text-sm font-medium Inter tracking-tight text-slate-500 hover:text-slate-900" href="#">Phase: Input</a>
+<a class="flex items-center text-sm font-medium Inter tracking-tight text-slate-500 hover:text-slate-900" href="#">Review</a>
+<a class="flex items-center text-sm font-medium Inter tracking-tight text-slate-500 hover:text-slate-900" href="#">Output</a>
+<a class="flex items-center text-sm font-medium Inter tracking-tight text-slate-500 hover:text-slate-900" href="#">Realignment</a>
+<a class="flex items-center text-sm font-medium Inter tracking-tight text-blue-600 dark:text-blue-400 border-b-2 border-blue-600" href="#">Summary</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-outline" data-icon="notifications">notifications</button>
+<button class="text-sm font-medium text-primary hover:underline">Save Session</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[260px] pt-24 pb-32 min-h-screen">
+<div class="max-w-[720px] mx-auto space-y-12">
+<!-- Evaluation Summary Header -->
+<section class="space-y-4">
+<div class="flex items-end justify-between">
+<div>
+<span class="text-[10px] uppercase tracking-[0.2em] font-bold text-primary mb-1 block">Session Complete</span>
+<h2 class="text-[2.75rem] font-semibold tracking-[-0.04em] leading-tight text-on-surface">Evaluation Summary</h2>
+</div>
+<div class="text-right">
+<div class="text-[3rem] font-extrabold text-primary leading-none tracking-tighter">98<span class="text-xl font-medium opacity-50">%</span></div>
+<div class="text-[10px] uppercase font-bold text-outline">Accuracy Score</div>
+</div>
+</div>
+</section>
+<!-- Metric Cards (Bento Style) -->
+<section class="grid grid-cols-3 gap-4">
+<div class="p-6 bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(25,28,30,0.04)] transition-all hover:scale-[1.01]">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="architecture">architecture</span>
+<div class="text-sm font-medium text-outline-variant mb-1">Mode</div>
+<div class="text-xl font-semibold text-on-surface">Architect</div>
+</div>
+<div class="p-6 bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(25,28,30,0.04)] transition-all hover:scale-[1.01]">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="rebase_edit">rebase_edit</span>
+<div class="text-sm font-medium text-outline-variant mb-1">Iterations</div>
+<div class="text-xl font-semibold text-on-surface">3 Cycles</div>
+</div>
+<div class="p-6 bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(25,28,30,0.04)] transition-all hover:scale-[1.01]">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="bolt">bolt</span>
+<div class="text-sm font-medium text-outline-variant mb-1">Final Alignment</div>
+<div class="text-xl font-semibold text-on-surface">98% Match</div>
+</div>
+</section>
+<!-- Final Output Section -->
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-semibold tracking-tight">Final Prompt Output</h3>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="content_copy">content_copy</span> Copy
+                        </button>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_4px_20px_rgba(25,28,30,0.04)] border border-outline-variant/10">
+<article class="prose prose-sm max-w-none text-on-surface leading-relaxed font-body">
+<h4 class="text-primary font-bold mb-4 uppercase tracking-widest text-xs">System Persona</h4>
+<p class="mb-6">Act as a <strong>Senior Software Architect</strong> with expertise in distributed systems and high-availability patterns. Your tone should be technical, objective, and authoritative. Prioritize scalability and security over ease of implementation.</p>
+<h4 class="text-primary font-bold mb-4 uppercase tracking-widest text-xs">Constraint Matrix</h4>
+<ul class="list-disc pl-5 space-y-2 mb-6 text-on-surface-variant">
+<li>Latency threshold: &lt; 200ms</li>
+<li>Stateless authentication only (JWT/OAuth2)</li>
+<li>Strict adherence to SOLID principles</li>
+</ul>
+<h4 class="text-primary font-bold mb-4 uppercase tracking-widest text-xs">Instruction Set</h4>
+<p>Analyze the following microservices architecture proposal and identify potential single points of failure. Provide a remediation plan for each identified risk, including specific AWS managed services that could mitigate these issues.</p>
+</article>
+</div>
+<div class="flex gap-4">
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-surface-container-high text-on-surface font-semibold rounded-xl hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined" data-icon="description">description</span> Download Summary .txt
+                    </button>
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-surface-container-high text-on-surface font-semibold rounded-xl hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined" data-icon="data_object">data_object</span> Download Session .json
+                    </button>
+</div>
+</section>
+<!-- Iteration Comparison (Collapsible Pattern) -->
+<section class="bg-surface-container-low rounded-xl overflow-hidden">
+<details class="group" open="">
+<summary class="flex items-center justify-between p-6 cursor-pointer list-none">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline" data-icon="compare_arrows">compare_arrows</span>
+<h3 class="text-lg font-semibold tracking-tight">Iteration Comparison</h3>
+</div>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="p-6 pt-0 space-y-6">
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-3">
+<label class="text-[10px] uppercase font-bold text-outline">Primary Version</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-lg text-sm font-medium focus:ring-1 focus:ring-primary/40">
+<option>Iteration 3 (Latest)</option>
+<option>Iteration 2</option>
+<option>Iteration 1</option>
+</select>
+<div class="text-xs text-on-surface-variant leading-relaxed p-4 bg-surface-container-lowest rounded-lg h-40 overflow-y-auto border border-outline-variant/10">
+                                    Final optimized output with architecture context and strict constraint matrices applied for high-precision results.
+                                </div>
+</div>
+<div class="space-y-3">
+<label class="text-[10px] uppercase font-bold text-outline">Compare With</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-lg text-sm font-medium focus:ring-1 focus:ring-primary/40">
+<option>Iteration 1 (Raw)</option>
+<option>Iteration 2</option>
+</select>
+<div class="text-xs text-on-surface-variant leading-relaxed p-4 bg-surface-container-lowest rounded-lg h-40 overflow-y-auto border border-outline-variant/10">
+                                    Standard user request without persona reinforcement or structured constraint definitions. Lacked technical depth.
+                                </div>
+</div>
+</div>
+</div>
+</details>
+</section>
+<!-- Self-Audit Section -->
+<section class="relative overflow-hidden p-8 bg-slate-900 rounded-2xl text-white">
+<div class="relative z-10 flex items-center justify-between">
+<div class="space-y-2">
+<h3 class="text-xl font-bold tracking-tight">Cold Critic Analysis</h3>
+<p class="text-slate-400 text-sm max-w-md leading-relaxed">Run an adversarial self-audit to identify logical gaps, bias, or potential prompt-injection vulnerabilities in your final output.</p>
+</div>
+<button class="bg-primary hover:bg-primary-container px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 group shadow-xl">
+<span class="material-symbols-outlined text-sm group-hover:rotate-12 transition-transform" data-icon="troubleshoot">troubleshoot</span>
+                        Run Self-Audit
+                    </button>
+</div>
+<!-- Abstract visual accent -->
+<div class="absolute -right-10 -bottom-10 w-40 h-40 bg-primary opacity-20 blur-[80px]"></div>
+</section>
+<!-- Bottom Actions -->
+<footer class="flex items-center justify-between pt-12 border-t border-outline-variant/20">
+<button class="text-sm font-semibold text-outline hover:text-error transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="delete_forever">delete_forever</span>
+                    Hard Reset
+                </button>
+<button class="bg-primary text-on-primary px-10 py-4 rounded-xl font-bold text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20">
+                    Start New Session
+                </button>
+</footer>
+</div>
+</main>
+</body></html>

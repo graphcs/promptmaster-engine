@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PromptMaster Engine - Output &amp; Evaluation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-container": "#acbfff",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "surface": "#f7f9fb",
+                        "on-surface-variant": "#434655",
+                        "primary-container": "#2563eb",
+                        "outline-variant": "#c3c6d7",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "surface-container-high": "#e6e8ea",
+                        "inverse-primary": "#b4c5ff",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-surface": "#191c1e",
+                        "on-secondary-fixed-variant": "#31447b",
+                        "secondary": "#495c95",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-tint": "#0053db",
+                        "surface-dim": "#d8dadc",
+                        "tertiary-container": "#bc4800",
+                        "tertiary": "#943700",
+                        "on-background": "#191c1e",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "inverse-surface": "#2d3133",
+                        "on-secondary-fixed": "#00174b",
+                        "background": "#f7f9fb",
+                        "on-primary-fixed": "#00174b",
+                        "on-primary-container": "#eeefff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#360f00",
+                        "surface-container": "#eceef0",
+                        "on-secondary-container": "#394c84",
+                        "outline": "#737686",
+                        "on-tertiary-container": "#ffede6",
+                        "primary": "#004ac6",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-bright": "#f7f9fb"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex min-h-screen">
+<!-- SideNavBar Component -->
+<aside class="w-[260px] h-screen fixed left-0 top-0 bg-slate-100 dark:bg-slate-900 flex flex-col p-4 gap-y-4 z-50">
+<div class="flex items-center gap-3 px-2 mb-4">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+</div>
+<div>
+<h1 class="text-lg font-semibold tracking-tighter text-slate-900 dark:text-slate-50">PromptMaster Engine</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Professional AI Workflow</p>
+</div>
+</div>
+<button class="w-full py-2.5 px-4 bg-primary text-on-primary rounded-xl font-medium text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+            New Session
+        </button>
+<nav class="flex flex-col gap-1 mt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+                Library
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="mt-auto border-t border-slate-200/50 pt-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+                Model Selector
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-blue-700 dark:text-blue-300 font-sans text-sm font-medium leading-6 tracking-tight hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+                Pro Tier
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-[260px] min-h-screen">
+<!-- TopNavBar Component -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-14 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 z-40">
+<div class="flex justify-between items-center px-6 max-w-[720px] mx-auto w-full h-full">
+<nav class="flex gap-6 h-full items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Phase: Input</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Review</a>
+<a class="text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 h-full flex items-center text-sm font-medium Inter tracking-tight" href="#">Output</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Realignment</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Summary</a>
+</nav>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-500 cursor-pointer" data-icon="notifications">notifications</span>
+<button class="bg-primary text-on-primary px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:opacity-90">Save Session</button>
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<div class="pt-24 pb-20 px-6 max-w-[720px] mx-auto space-y-12">
+<!-- Page Header -->
+<section>
+<h2 class="text-[2.75rem] font-semibold tracking-[-0.04em] text-on-surface leading-tight">Output &amp; Evaluation</h2>
+<p class="text-on-surface-variant mt-2 text-sm">Review the generated response and verify alignment with your initial parameters.</p>
+</section>
+<!-- AI Output Card -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(25,28,30,0.04)] overflow-hidden">
+<div class="p-8 space-y-6">
+<div class="flex justify-between items-center">
+<span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Generated Output</span>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-surface-container rounded-lg transition-colors text-slate-400"><span class="material-symbols-outlined text-[18px]" data-icon="content_copy">content_copy</span></button>
+<button class="p-2 hover:bg-surface-container rounded-lg transition-colors text-slate-400"><span class="material-symbols-outlined text-[18px]" data-icon="full_screen">fullscreen</span></button>
+</div>
+</div>
+<article class="prose prose-slate max-w-none text-on-surface leading-relaxed text-sm">
+<h3 class="font-semibold text-lg mb-4">Strategic Framework for Q4 Market Entry</h3>
+<p>Based on the analyzed vectors, the primary expansion should focus on the <strong>Tier 2 Urban Hubs</strong> where competition density is currently 14% lower than projected. Our recommendation is a phased rollout strategy that leverages hyper-local influencers to bridge the trust gap discovered in the Phase 1 Discovery.</p>
+<ul class="list-disc pl-5 space-y-2 mt-4">
+<li><strong>Phase Alpha:</strong> Focused awareness campaign in Seattle and Austin (Weeks 1-4).</li>
+<li><strong>Phase Beta:</strong> Beta tester conversion through exclusive incentive structures (Weeks 5-8).</li>
+<li><strong>Phase Gamma:</strong> General market release with refined messaging based on Alpha feedback.</li>
+</ul>
+</article>
+</div>
+</section>
+<!-- Evaluation Card -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(25,28,30,0.04)] overflow-hidden">
+<div class="p-8 space-y-8">
+<!-- Quality Scores -->
+<div>
+<h4 class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-6">Quality Scores</h4>
+<div class="grid grid-cols-2 gap-8">
+<div class="space-y-3">
+<div class="flex items-center gap-3">
+<span class="px-3 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full uppercase tracking-tighter">High</span>
+<span class="text-sm font-semibold text-on-surface">Alignment</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">The output perfectly mirrors the constraints defined in the initial objective for urban hub expansion.</p>
+</div>
+<div class="space-y-3">
+<div class="flex items-center gap-3">
+<span class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full uppercase tracking-tighter">Medium</span>
+<span class="text-sm font-semibold text-on-surface">Clarity</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">Technical terminology in Phase Gamma may require further simplification for non-specialist stakeholders.</p>
+</div>
+</div>
+</div>
+<!-- Scope Check -->
+<div class="pt-8 border-t border-slate-100">
+<h4 class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">Scope Check</h4>
+<div class="space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-sm font-semibold text-on-surface">Drift</span>
+<span class="text-xs font-medium text-slate-400">4% variance</span>
+</div>
+<div class="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 4%;"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant italic">Drift measures whether the output stayed focused on your objective. A lower percentage indicates tighter coherence.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Suggestions Section -->
+<section class="space-y-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="lightbulb" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+<h4 class="text-sm font-bold text-on-surface">AI Suggested Refinements</h4>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border border-slate-200/20">
+<ul class="space-y-4">
+<li class="flex gap-4">
+<span class="text-primary font-bold">01</span>
+<p class="text-sm text-on-surface leading-relaxed">Include a specific risk mitigation sub-section for the Phase Alpha rollout to address regional supply chain delays.</p>
+</li>
+<li class="flex gap-4">
+<span class="text-primary font-bold">02</span>
+<p class="text-sm text-on-surface leading-relaxed">Quantify the "trust gap" using the sentiment data collected during the Discovery phase for more authoritative reporting.</p>
+</li>
+</ul>
+</div>
+</section>
+<!-- Iteration History -->
+<section class="border-t border-slate-200/50 pt-8">
+<details class="group">
+<summary class="flex items-center justify-between cursor-pointer list-none">
+<h4 class="text-xs font-semibold uppercase tracking-widest text-slate-400">Iteration History</h4>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="mt-6 space-y-3">
+<div class="flex items-center justify-between p-4 bg-white rounded-lg text-sm">
+<div class="flex items-center gap-4">
+<span class="text-green-600 font-bold">▲</span>
+<span class="text-on-surface-variant">Version 2.4 - Context Enhancement</span>
+</div>
+<span class="text-[10px] text-slate-400 font-mono">14:02 PM</span>
+</div>
+<div class="flex items-center justify-between p-4 bg-white rounded-lg text-sm opacity-60">
+<div class="flex items-center gap-4">
+<span class="text-red-500 font-bold">▼</span>
+<span class="text-on-surface-variant">Version 2.3 - Basic Summary</span>
+</div>
+<span class="text-[10px] text-slate-400 font-mono">13:45 PM</span>
+</div>
+</div>
+</details>
+</section>
+<!-- Actions -->
+<section class="flex items-center justify-between pt-8">
+<div class="flex gap-3">
+<button class="px-6 py-2.5 rounded-xl border border-outline-variant text-on-surface font-medium text-sm hover:bg-surface-container transition-colors">Refine Prompt</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-xl border border-outline-variant text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="download">download</span>
+</button>
+</div>
+<button class="px-8 py-2.5 bg-primary text-on-primary rounded-xl font-semibold text-sm shadow-lg shadow-primary/10 hover:shadow-primary/20 transition-all active:scale-[0.98]">
+                    Finalize Session
+                </button>
+</section>
+</div>
+</main>
+<!-- Floating Action Background Image Placeholder (Subtle Overlay) -->
+<div class="fixed bottom-0 right-0 p-8 opacity-10 pointer-events-none -z-10">
+<img class="w-64 h-64 object-cover rounded-full grayscale" data-alt="minimalist architectural rendering of a modern tech office with clean lines and soft blue ambient lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCd5Pl5XRNKvN9SOyEsvJbGJP6mssHCHeBcB04_TaDxW1Vwe7cjVZcJLPGmkPmOkgwEkrMsKNiBhz4_u6LFK_U2cJeev5B_iweEFhz7o0GyO31jvHVm-8Nr1oi5iYzzPHSpqBj1kfKAcYPtsKWjzXJJjWY5Yz8ZhzwORGMG3crSXPBaHL1eGjEO6a9Y8wi_MlUHfXMNu8EL7-GRy-9NbfmN_rcBqJTamTwwH64aS3U5IQgW3hOb8wPtbr5jXlgC9zps0IadcVzOyJx"/>
+</div>
+</body></html>

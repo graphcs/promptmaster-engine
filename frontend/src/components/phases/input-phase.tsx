@@ -6,6 +6,7 @@ import { api } from '@/lib/api/client';
 import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, EXAMPLES } from '@/lib/constants';
 import { ModeGrid } from '@/components/shared/mode-grid';
 import { ConstraintPills } from '@/components/shared/constraint-pills';
+import { CustomSelect } from '@/components/shared/custom-select';
 import type { ModeType } from '@/types';
 
 export function InputPhase() {
@@ -239,18 +240,12 @@ export function InputPhase() {
           >
             Target Audience
           </label>
-          <select
-            id="audience"
+          <CustomSelect
             value={audience}
-            onChange={(e) => setAudience(e.target.value)}
-            className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] transition-shadow"
-          >
-            {AUDIENCE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setAudience(v)}
+            options={AUDIENCE_OPTIONS.map((o) => ({ value: o, label: o }))}
+            placeholder="Select audience"
+          />
 
           {audience === 'Other' && (
             <input

@@ -8,6 +8,7 @@ import { api } from '@/lib/api/client';
 import { DEFAULT_MODEL } from '@/lib/constants';
 import { assessTier } from '@/lib/utils';
 import { TierBadge } from '@/components/sidebar/tier-badge';
+import { CustomSelect } from '@/components/shared/custom-select';
 import type { Phase } from '@/types';
 
 const PHASE_LABELS: Record<Phase, string> = {
@@ -88,22 +89,17 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           Model
         </label>
         {!modelsError ? (
-          <select
+          <CustomSelect
             value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] cursor-pointer"
+            onChange={(v) => setModel(v)}
+            options={
+              models.length === 0
+                ? [{ value: DEFAULT_MODEL, label: DEFAULT_MODEL }]
+                : models.map((m) => ({ value: m.id, label: m.id }))
+            }
             disabled={models.length === 0}
-          >
-            {models.length === 0 ? (
-              <option value={DEFAULT_MODEL}>{DEFAULT_MODEL}</option>
-            ) : (
-              models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))
-            )}
-          </select>
+            placeholder={DEFAULT_MODEL}
+          />
         ) : (
           <input
             type="text"

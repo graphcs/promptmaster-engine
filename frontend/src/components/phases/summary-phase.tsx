@@ -6,6 +6,7 @@ import { MarkdownOutput } from '@/components/shared/markdown-output';
 import { api } from '@/lib/api/client';
 import { downloadFile } from '@/lib/utils';
 import { MODE_DISPLAY } from '@/lib/constants';
+import { CustomSelect } from '@/components/shared/custom-select';
 import type { PMInput } from '@/types';
 
 export function SummaryPhase() {
@@ -238,17 +239,14 @@ export function SummaryPhase() {
                   <label className="text-[10px] uppercase font-bold text-[var(--outline)]">
                     Primary Version
                   </label>
-                  <select
-                    value={leftIdx}
-                    onChange={(e) => setLeftIdx(Number(e.target.value))}
-                    className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
-                  >
-                    {iterations.map((_, i) => (
-                      <option key={i} value={i}>
-                        Iteration {i + 1}{i === iterations.length - 1 ? ' (Latest)' : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    value={String(leftIdx)}
+                    onChange={(v) => setLeftIdx(Number(v))}
+                    options={iterations.map((_, i) => ({
+                      value: String(i),
+                      label: `Iteration ${i + 1}${i === iterations.length - 1 ? ' (Latest)' : ''}`,
+                    }))}
+                  />
                   <div className="h-40 overflow-y-auto rounded-lg border border-[var(--outline-variant)] border-opacity-10 bg-white p-4 text-xs leading-relaxed text-[var(--on-surface-variant)]">
                     {iterations[leftIdx]?.output ?? '—'}
                   </div>
@@ -259,17 +257,14 @@ export function SummaryPhase() {
                   <label className="text-[10px] uppercase font-bold text-[var(--outline)]">
                     Compare With
                   </label>
-                  <select
-                    value={rightIdx}
-                    onChange={(e) => setRightIdx(Number(e.target.value))}
-                    className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
-                  >
-                    {iterations.map((_, i) => (
-                      <option key={i} value={i}>
-                        Iteration {i + 1}{i === 0 ? ' (Raw)' : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    value={String(rightIdx)}
+                    onChange={(v) => setRightIdx(Number(v))}
+                    options={iterations.map((_, i) => ({
+                      value: String(i),
+                      label: `Iteration ${i + 1}${i === 0 ? ' (First)' : ''}`,
+                    }))}
+                  />
                   <div className="h-40 overflow-y-auto rounded-lg border border-[var(--outline-variant)] border-opacity-10 bg-white p-4 text-xs leading-relaxed text-[var(--on-surface-variant)]">
                     {iterations[rightIdx]?.output ?? '—'}
                   </div>

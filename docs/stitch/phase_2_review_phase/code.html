@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "secondary-container": "#acbfff",
+            "tertiary-fixed-dim": "#ffb596",
+            "surface": "#f7f9fb",
+            "on-surface-variant": "#434655",
+            "primary-container": "#2563eb",
+            "outline-variant": "#c3c6d7",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6",
+            "on-primary-fixed-variant": "#003ea8",
+            "on-primary": "#ffffff",
+            "secondary-fixed-dim": "#b4c5ff",
+            "surface-container-high": "#e6e8ea",
+            "inverse-primary": "#b4c5ff",
+            "surface-variant": "#e0e3e5",
+            "on-tertiary": "#ffffff",
+            "primary-fixed": "#dbe1ff",
+            "tertiary-fixed": "#ffdbcd",
+            "surface-container-highest": "#e0e3e5",
+            "on-surface": "#191c1e",
+            "on-secondary-fixed-variant": "#31447b",
+            "secondary": "#495c95",
+            "secondary-fixed": "#dbe1ff",
+            "on-error-container": "#93000a",
+            "surface-container-low": "#f2f4f6",
+            "surface-tint": "#0053db",
+            "surface-dim": "#d8dadc",
+            "tertiary-container": "#bc4800",
+            "tertiary": "#943700",
+            "on-background": "#191c1e",
+            "on-secondary": "#ffffff",
+            "on-tertiary-fixed-variant": "#7d2d00",
+            "inverse-surface": "#2d3133",
+            "on-secondary-fixed": "#00174b",
+            "background": "#f7f9fb",
+            "on-primary-fixed": "#00174b",
+            "on-primary-container": "#eeefff",
+            "primary-fixed-dim": "#b4c5ff",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed": "#360f00",
+            "surface-container": "#eceef0",
+            "on-secondary-container": "#394c84",
+            "outline": "#737686",
+            "on-tertiary-container": "#ffede6",
+            "primary": "#004ac6",
+            "inverse-on-surface": "#eff1f3",
+            "surface-bright": "#f7f9fb"
+          },
+          fontFamily: {
+            "headline": ["Inter"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+    .tonal-separation { border: none !important; }
+    .no-border { border: none !important; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e0e3e5; border-radius: 10px; }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased">
+<!-- SideNavBar Anchor -->
+<aside class="w-[260px] h-screen fixed left-0 top-0 bg-slate-100 dark:bg-slate-900 flex flex-col p-4 gap-y-4 tonal-separation">
+<div class="flex items-center gap-3 px-2 mb-2">
+<div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg">terminal</span>
+</div>
+<div>
+<h1 class="text-base font-bold text-slate-900 dark:text-slate-50 leading-none">PromptMaster Engine</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">Professional AI Workflow</p>
+</div>
+</div>
+<button class="w-full py-2.5 px-4 bg-primary text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]">
+<span class="material-symbols-outlined text-sm">add</span>
+      New Session
+    </button>
+<nav class="flex-1 space-y-1 mt-4">
+<div class="text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors flex items-center gap-3 px-3 py-2 rounded-lg font-sans text-sm font-medium leading-6 tracking-tight cursor-pointer">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+        Dashboard
+      </div>
+<div class="text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors flex items-center gap-3 px-3 py-2 rounded-lg font-sans text-sm font-medium leading-6 tracking-tight cursor-pointer">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+        Library
+      </div>
+<div class="text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors flex items-center gap-3 px-3 py-2 rounded-lg font-sans text-sm font-medium leading-6 tracking-tight cursor-pointer">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+        Settings
+      </div>
+</nav>
+<div class="mt-auto space-y-1">
+<div class="text-slate-600 dark:text-slate-400 flex items-center gap-3 px-3 py-2 rounded-lg font-sans text-sm font-medium leading-6 tracking-tight cursor-pointer">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+        Model Selector
+      </div>
+<div class="text-slate-600 dark:text-slate-400 flex items-center gap-3 px-3 py-2 rounded-lg font-sans text-sm font-medium leading-6 tracking-tight cursor-pointer">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+        Pro Tier
+      </div>
+</div>
+</aside>
+<!-- TopNavBar Anchor -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-14 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-10 border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm dark:shadow-none">
+<div class="flex justify-between items-center px-6 h-full max-w-[720px] mx-auto w-full">
+<nav class="flex gap-6 h-full items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Phase: Input</a>
+<a class="text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 text-sm font-medium Inter tracking-tight h-full flex items-center" href="#">Review</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Output</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 text-sm font-medium Inter tracking-tight" href="#">Realignment</a>
+</nav>
+<div class="flex items-center gap-4">
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-on-surface transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-on-surface transition-colors" data-icon="help_outline">help_outline</span>
+</div>
+<button class="bg-primary-container text-on-primary px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200">Save Session</button>
+</div>
+</div>
+</header>
+<!-- Main Content Well -->
+<main class="ml-[260px] pt-24 pb-20 flex justify-center">
+<div class="w-full max-w-[720px] px-6 space-y-12">
+<!-- Review Header -->
+<section>
+<h2 class="text-[2.75rem] font-semibold tracking-[-0.04em] leading-tight text-on-surface">Review Phase</h2>
+<p class="text-on-surface-variant mt-2 body-md leading-[1.6]">Fine-tune the generated instructions and system parameters before executing the final request.</p>
+</section>
+<!-- System Prompt (Collapsible) -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(25,28,30,0.04)] overflow-hidden">
+<details class="group" open="">
+<summary class="flex items-center justify-between p-6 cursor-pointer list-none select-none">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-[18px]" data-icon="terminal">terminal</span>
+</div>
+<h3 class="text-sm font-medium tracking-[-0.01em] text-on-surface">System Prompt</h3>
+</div>
+<span class="material-symbols-outlined text-outline group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="px-6 pb-6 pt-0">
+<div class="bg-surface-container-low rounded-lg p-4 font-mono text-[13px] text-on-surface-variant leading-relaxed">
+              You are an expert technical editor specializing in high-precision software documentation. Your primary goal is to maintain absolute clarity, structural integrity, and consistency across all generated outputs. Prioritize Markdown formatting and technical accuracy above all else. Use a professional, objective tone.
+            </div>
+</div>
+</details>
+</section>
+<!-- User Prompt (Primary Editor) -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="text-sm font-medium tracking-[-0.01em] text-on-surface">Assembled User Prompt</h3>
+<span class="text-xs font-medium text-outline uppercase tracking-widest">Manual Edit Mode</span>
+</div>
+<div class="relative">
+<textarea class="w-full min-h-[320px] p-6 bg-surface-container-lowest border-none rounded-xl shadow-[0px_4px_20px_rgba(25,28,30,0.04)] focus:ring-1 focus:ring-primary/40 text-on-surface body-md leading-[1.6] custom-scrollbar resize-none transition-all" placeholder="Review your prompt here...">Analyze the provided architectural monolith design system. 
+
+1. Identify the core principles of Tonal Separation and the "No-Line" rule.
+2. Critique the implementation of surface hierarchy (Levels 0-2).
+3. Verify that the Inter typography scale is correctly applied to the CSS tokens.
+
+Provide a detailed report in technical prose, highlighting any deviations from the specified editorial scale or ambient shadow tokens. Do not suggest decorative gradients.</textarea>
+<div class="absolute bottom-4 right-4 flex gap-2">
+<button class="bg-surface-container-high hover:bg-surface-container-highest text-on-surface px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">Clear</button>
+<button class="bg-surface-container-high hover:bg-surface-container-highest text-on-surface px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+              Copy
+            </button>
+</div>
+</div>
+</section>
+<!-- Controls & Scaffolding -->
+<section class="bg-surface-container-lowest rounded-xl p-6 flex flex-col gap-6 shadow-[0px_4px_20px_rgba(25,28,30,0.04)]">
+<div class="flex items-center justify-between">
+<div class="flex flex-col gap-1">
+<label class="text-sm font-medium text-on-surface cursor-pointer select-none" for="scaffolding">Include scaffolding instructions</label>
+<p class="text-xs text-on-surface-variant">Adds structural guidance markers to the final prompt output.</p>
+</div>
+<div class="relative inline-block w-10 h-6">
+<input class="peer appearance-none w-10 h-6 rounded-full bg-surface-container-highest cursor-pointer transition-colors checked:bg-primary" id="scaffolding" type="checkbox"/>
+<span class="absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition-transform peer-checked:translate-x-4 pointer-events-none"></span>
+</div>
+</div>
+<div class="flex items-center justify-end gap-3 pt-2">
+<button class="px-6 py-2.5 border-2 border-surface-container-high text-on-surface-variant font-medium rounded-xl hover:bg-surface-container-high transition-colors text-sm">
+            Back to Input
+          </button>
+<button class="px-8 py-2.5 bg-primary text-on-primary font-semibold rounded-xl hover:shadow-[0px_4px_10px_rgba(0,74,198,0.3)] active:scale-[0.98] transition-all text-sm flex items-center gap-2">
+            Execute
+            <span class="material-symbols-outlined text-sm">bolt</span>
+</button>
+</div>
+</section>
+<!-- Advanced Metadata (Asymmetric Layout Extra) -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="p-6 rounded-xl bg-surface-container-low border border-outline-variant/10">
+<h4 class="text-xs font-bold text-outline uppercase tracking-[0.1em] mb-4">Prompt Metrics</h4>
+<div class="space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-sm text-on-surface-variant">Total Tokens</span>
+<span class="text-sm font-semibold text-on-surface">142</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm text-on-surface-variant">Complexity Index</span>
+<span class="text-sm font-semibold text-on-surface">Tier 2 (High)</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm text-on-surface-variant">Estimated Cost</span>
+<span class="text-sm font-semibold text-primary">$0.0042</span>
+</div>
+</div>
+</div>
+<div class="p-6 rounded-xl bg-surface-container-low border border-outline-variant/10">
+<h4 class="text-xs font-bold text-outline uppercase tracking-[0.1em] mb-4">Context Window</h4>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden mt-2">
+<div class="bg-primary h-full w-[12%]"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-3 leading-relaxed">
+            Using <span class="font-bold text-on-surface">GPT-4o</span>. Your current request uses approximately 12% of the context window.
+          </p>
+</div>
+</section>
+</div>
+</main>
+<!-- Footer Metadata -->
+<footer class="ml-[260px] py-8 flex justify-center border-t border-outline-variant/10">
+<div class="w-full max-w-[720px] px-6 flex justify-between items-center opacity-60">
+<span class="text-[10px] font-medium tracking-widest uppercase">PROMPTMaster v2.4.0</span>
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-sm" data-icon="security">security</span>
+<span class="material-symbols-outlined text-sm" data-icon="cloud_done">cloud_done</span>
+</div>
+</div>
+</footer>
+</body></html>

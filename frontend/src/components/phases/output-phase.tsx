@@ -9,6 +9,7 @@ import { SuggestionsList } from '@/components/shared/suggestions-list';
 import { MODE_DISPLAY } from '@/lib/constants';
 import type { ModeType, ScoreLevel } from '@/types';
 import { MarkdownOutput } from '@/components/shared/markdown-output';
+import { CustomSelect } from '@/components/shared/custom-select';
 
 const SCORE_BADGE: Record<ScoreLevel, string> = {
   High: 'bg-emerald-100 text-emerald-800',
@@ -149,19 +150,16 @@ export function OutputPhase() {
         <label className="block text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)] mb-3">
           Mode for next iteration:
         </label>
-        <select
+        <CustomSelect
           value={mode}
-          onChange={(e) => setMode(e.target.value as ModeType)}
-          className="w-full text-sm bg-[var(--surface-container-low)] border-none rounded-lg p-3 text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
-        >
-          {(Object.entries(MODE_DISPLAY) as Array<[ModeType, { display_name: string; tagline: string }]>).map(
-            ([key, info]) => (
-              <option key={key} value={key}>
-                {info.display_name} — {info.tagline}
-              </option>
-            )
+          onChange={(v) => setMode(v as ModeType)}
+          options={(Object.entries(MODE_DISPLAY) as Array<[ModeType, { display_name: string; tagline: string }]>).map(
+            ([key, info]) => ({
+              value: key,
+              label: `${info.display_name} — ${info.tagline}`,
+            })
           )}
-        </select>
+        />
       </div>
 
       {/* Evaluation section */}
