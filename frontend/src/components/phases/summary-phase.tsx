@@ -1,27 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
 import { downloadFile } from '@/lib/utils';
 import { MODE_DISPLAY } from '@/lib/constants';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { EvalCard } from '@/components/evaluation/eval-card';
-import { MarkdownOutput } from '@/components/shared/markdown-output';
-
-function SmallSpinner() {
-  return (
-    <div
-      className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-foreground"
-      role="status"
-      aria-label="Loading"
-    />
-  );
-}
-import { IterationHistory } from '@/components/evaluation/iteration-history';
-import { IterationComparison } from '@/components/evaluation/iteration-comparison';
 import type { PMInput } from '@/types';
+
+function alignmentToPercent(score: string | undefined): number {
+  if (score === 'High') return 98;
+  if (score === 'Medium') return 70;
+  return 30;
+}
 
 export function SummaryPhase() {
   const objective = useSessionStore((s) => s.objective);
@@ -45,9 +36,16 @@ export function SummaryPhase() {
   const [exportLoading, setExportLoading] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
   const [hardResetLoading, setHardResetLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Iteration comparison state
+  const [leftIdx, setLeftIdx] = useState(Math.max(0, iterations.length - 1));
+  const [rightIdx, setRightIdx] = useState(0);
 
   const modeLabel = MODE_DISPLAY[mode]?.display_name ?? mode;
-  const finalAlignment = currentEval?.alignment.score ?? '—';
+  const alignmentScore = currentEval?.alignment.score;
+  const matchPercent = alignmentToPercent(alignmentScore);
+  const matchPercentStr = `${matchPercent}%`;
 
   const inputs: PMInput = {
     objective,
@@ -109,173 +107,242 @@ export function SummaryPhase() {
     }
   }
 
-  // Build a simple copyable summary
-  const copyableSummary = [
-    `PromptMaster Session Summary`,
-    ``,
-    `Objective: ${objective}`,
-    `Mode: ${modeLabel}`,
-    `Iterations: ${iterations.length}`,
-    `Final Alignment: ${finalAlignment}`,
-    ``,
-    `Final Output:`,
-    currentOutput ?? '(no output)',
-  ].join('\n');
+  function handleCopy() {
+    if (currentOutput) {
+      navigator.clipboard.writeText(currentOutput).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-base font-semibold text-foreground">Step 5: Session Summary</h2>
-
-      {/* Final evaluation card */}
-      {currentEval && <EvalCard evaluation={currentEval} />}
-
-      <Separator />
-
-      {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Mode</p>
-          <p className="text-sm font-semibold text-foreground">{modeLabel}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Iterations</p>
-          <p className="text-sm font-semibold text-foreground">{iterations.length}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-3 text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Alignment</p>
-          <p className="text-sm font-semibold text-foreground">{finalAlignment}</p>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Final output */}
-      {currentOutput && (
-        <>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Final Output:
-            </p>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <MarkdownOutput content={currentOutput} />
+    <div className="space-y-12">
+      {/* 1. Header */}
+      <section className="space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <span className="block text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--pm-primary)] mb-1">
+              Session Complete
+            </span>
+            <h2
+              className="font-semibold leading-tight tracking-[-0.04em] text-[var(--on-surface)]"
+              style={{ fontSize: '2.75rem' }}
+            >
+              Evaluation Summary
+            </h2>
+          </div>
+          <div className="text-right">
+            <div
+              className="font-extrabold text-[var(--pm-primary)] leading-none tracking-tighter"
+              style={{ fontSize: '3rem' }}
+            >
+              {matchPercent}
+              <span className="text-xl font-medium opacity-50">%</span>
+            </div>
+            <div className="text-[10px] uppercase font-bold text-[var(--outline)]">
+              Overall Match
             </div>
           </div>
-          <Separator />
-        </>
-      )}
+        </div>
+      </section>
 
-      {/* Export section */}
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="outline"
+      {/* 2. Metric Cards */}
+      <section className="grid grid-cols-3 gap-4">
+        <div className="p-6 bg-white rounded-xl shadow-ambient transition-all hover:scale-[1.01]">
+          <span className="material-symbols-outlined text-[var(--pm-primary)] mb-3 block text-[20px]">
+            architecture
+          </span>
+          <div className="text-sm font-medium text-[var(--outline-variant)] mb-1">Engine Mode</div>
+          <div className="text-xl font-semibold text-[var(--on-surface)]">{modeLabel}</div>
+        </div>
+        <div className="p-6 bg-white rounded-xl shadow-ambient transition-all hover:scale-[1.01]">
+          <span className="material-symbols-outlined text-[var(--pm-primary)] mb-3 block text-[20px]">
+            refresh
+          </span>
+          <div className="text-sm font-medium text-[var(--outline-variant)] mb-1">Iterations</div>
+          <div className="text-xl font-semibold text-[var(--on-surface)]">
+            {iterations.length} {iterations.length === 1 ? 'Cycle' : 'Cycles'}
+          </div>
+        </div>
+        <div className="p-6 bg-white rounded-xl shadow-ambient transition-all hover:scale-[1.01]">
+          <span className="material-symbols-outlined text-[var(--pm-primary)] mb-3 block text-[20px]">
+            verified
+          </span>
+          <div className="text-sm font-medium text-[var(--outline-variant)] mb-1">Match Score</div>
+          <div className="text-xl font-semibold text-[var(--on-surface)]">{matchPercentStr} Match</div>
+        </div>
+      </section>
+
+      {/* 3. Final Output */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold tracking-tight text-[var(--on-surface)]">
+            Final Prompt Output
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 rounded-lg bg-[var(--surface-container-high)] px-3 py-1.5 text-xs font-medium transition-colors hover:bg-[var(--surface-container-highest)]"
+            >
+              <span className="material-symbols-outlined text-sm">
+                {copied ? 'check' : 'content_copy'}
+              </span>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-white p-8 shadow-ambient border border-[var(--outline-variant)] border-opacity-10">
+          {currentOutput ? (
+            <article className="prose prose-sm max-w-none text-[var(--on-surface)] leading-relaxed">
+              <ReactMarkdown>{currentOutput}</ReactMarkdown>
+            </article>
+          ) : (
+            <p className="text-sm text-[var(--outline)]">No output yet.</p>
+          )}
+        </div>
+
+        {/* Download buttons */}
+        <div className="flex gap-4">
+          <button
             onClick={handleDownloadSummary}
             disabled={summaryLoading}
-            className="w-full"
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-[var(--surface-container-high)] text-[var(--on-surface)] font-semibold rounded-xl hover:bg-[var(--surface-container-highest)] transition-all disabled:opacity-50"
           >
-            {summaryLoading ? <SmallSpinner /> : 'Download Summary (.txt)'}
-          </Button>
-          <Button
-            variant="outline"
+            <span className="material-symbols-outlined">description</span>
+            {summaryLoading ? 'Generating…' : 'Download Summary .txt'}
+          </button>
+          <button
             onClick={handleDownloadJson}
             disabled={exportLoading}
-            className="w-full"
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-[var(--surface-container-high)] text-[var(--on-surface)] font-semibold rounded-xl hover:bg-[var(--surface-container-highest)] transition-all disabled:opacity-50"
           >
-            {exportLoading ? <SmallSpinner /> : 'Download Session (.json)'}
-          </Button>
+            <span className="material-symbols-outlined">data_object</span>
+            {exportLoading ? 'Exporting…' : 'Download Session .json'}
+          </button>
         </div>
+      </section>
 
-        {/* Copyable session summary */}
-        <details className="rounded-lg border border-border overflow-hidden">
-          <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-foreground hover:bg-muted/30 transition-colors select-none list-none">
-            Copyable Session Summary
-          </summary>
-          <div className="border-t border-border">
-            <pre className="p-4 text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-muted/10 overflow-x-auto">
-              {copyableSummary}
-            </pre>
-          </div>
-        </details>
-      </div>
-
-      <Separator />
-
-      {/* Iteration history + comparison */}
+      {/* 4. Iteration Comparison */}
       {iterations.length >= 2 && (
-        <>
-          <IterationHistory iterations={iterations} />
-
-          <details className="rounded-lg border border-border overflow-hidden">
-            <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-foreground hover:bg-muted/30 transition-colors select-none list-none">
-              Compare Iterations
+        <section className="rounded-xl overflow-hidden bg-[var(--surface-container-low)]">
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between p-6">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-[var(--outline)]">
+                  compare_arrows
+                </span>
+                <h3 className="text-lg font-semibold tracking-tight text-[var(--on-surface)]">
+                  Iteration Comparison
+                </h3>
+              </div>
+              <span className="material-symbols-outlined transition-transform group-open:rotate-180">
+                expand_more
+              </span>
             </summary>
-            <div className="border-t border-border p-4">
-              <IterationComparison iterations={iterations} />
+
+            <div className="p-6 pt-0 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left column */}
+                <div className="space-y-3">
+                  <label className="text-[10px] uppercase font-bold text-[var(--outline)]">
+                    Primary Version
+                  </label>
+                  <select
+                    value={leftIdx}
+                    onChange={(e) => setLeftIdx(Number(e.target.value))}
+                    className="w-full rounded-lg border-none bg-white text-sm font-medium focus:ring-1 focus:ring-[var(--pm-primary)]"
+                  >
+                    {iterations.map((_, i) => (
+                      <option key={i} value={i}>
+                        Iteration {i + 1}{i === iterations.length - 1 ? ' (Latest)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="h-40 overflow-y-auto rounded-lg border border-[var(--outline-variant)] border-opacity-10 bg-white p-4 text-xs leading-relaxed text-[var(--on-surface-variant)]">
+                    {iterations[leftIdx]?.output ?? '—'}
+                  </div>
+                </div>
+
+                {/* Right column */}
+                <div className="space-y-3">
+                  <label className="text-[10px] uppercase font-bold text-[var(--outline)]">
+                    Compare With
+                  </label>
+                  <select
+                    value={rightIdx}
+                    onChange={(e) => setRightIdx(Number(e.target.value))}
+                    className="w-full rounded-lg border-none bg-white text-sm font-medium focus:ring-1 focus:ring-[var(--pm-primary)]"
+                  >
+                    {iterations.map((_, i) => (
+                      <option key={i} value={i}>
+                        Iteration {i + 1}{i === 0 ? ' (Raw)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="h-40 overflow-y-auto rounded-lg border border-[var(--outline-variant)] border-opacity-10 bg-white p-4 text-xs leading-relaxed text-[var(--on-surface-variant)]">
+                    {iterations[rightIdx]?.output ?? '—'}
+                  </div>
+                </div>
+              </div>
             </div>
           </details>
-
-          <Separator />
-        </>
+        </section>
       )}
 
-      {/* Self-audit section */}
-      <div className="space-y-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            Self-Audit (Cold Critic on your prompting strategy)
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Runs a separate Cold Critic pass on your entire session to surface weaknesses in your prompting approach — without filtering for politeness.
-          </p>
+      {/* 5. Cold Critic Analysis */}
+      <section className="relative overflow-hidden rounded-2xl bg-slate-900 p-8 text-white">
+        <div className="relative z-10 flex items-center justify-between">
+          {selfAudit ? (
+            <div className="w-full space-y-4">
+              <h3 className="text-xl font-bold tracking-tight">Cold Critic Analysis</h3>
+              <article className="prose prose-sm prose-invert max-w-none leading-relaxed">
+                <ReactMarkdown>{selfAudit}</ReactMarkdown>
+              </article>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold tracking-tight">Cold Critic Analysis</h3>
+                <p className="max-w-md text-sm leading-relaxed text-slate-400">
+                  Run an adversarial self-audit to identify logical gaps, bias, or potential
+                  prompt-injection vulnerabilities in your final output.
+                </p>
+              </div>
+              <button
+                onClick={handleRunSelfAudit}
+                disabled={auditLoading}
+                className="flex items-center gap-2 rounded-xl bg-[var(--pm-primary)] px-6 py-3 text-sm font-bold text-white shadow-xl transition-all hover:bg-blue-700 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-sm">troubleshoot</span>
+                {auditLoading ? 'Running…' : 'Run Full Audit'}
+              </button>
+            </>
+          )}
         </div>
+        {/* Decorative glow */}
+        <div className="absolute -bottom-10 -right-10 h-40 w-40 blur-[80px] bg-[var(--pm-primary)] opacity-20" />
+      </section>
 
-        {selfAudit ? (
-          <div className="rounded-lg border border-border bg-card p-4">
-            <MarkdownOutput content={selfAudit} />
-          </div>
-        ) : (
-          <Button
-            variant="outline"
-            onClick={handleRunSelfAudit}
-            disabled={auditLoading}
-            className="w-full"
-          >
-            {auditLoading ? (
-              <span className="flex items-center gap-2">
-                <SmallSpinner /> Running self-audit…
-              </span>
-            ) : (
-              'Run Self-Audit'
-            )}
-          </Button>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* Bottom actions */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button
-          onClick={resetSession}
-          className="w-full"
-        >
-          Start New Session
-        </Button>
-        <Button
-          variant="outline"
+      {/* 6. Footer actions */}
+      <footer className="flex items-center justify-between border-t border-[var(--outline-variant)] border-opacity-20 pt-12">
+        <button
           onClick={handleHardReset}
           disabled={hardResetLoading}
-          className="w-full"
+          className="flex items-center gap-2 text-sm font-semibold text-[var(--outline)] transition-colors hover:text-red-600 disabled:opacity-50"
         >
-          {hardResetLoading ? (
-            <span className="flex items-center gap-2">
-              <SmallSpinner /> Carrying lessons…
-            </span>
-          ) : (
-            'Hard Reset (carry lessons forward)'
-          )}
-        </Button>
-      </div>
+          <span className="material-symbols-outlined text-sm">delete_forever</span>
+          {hardResetLoading ? 'Resetting…' : 'Hard Reset'}
+        </button>
+
+        <button
+          onClick={() => resetSession()}
+          className="rounded-xl bg-[var(--pm-primary)] px-10 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
+          Start New Session
+        </button>
+      </footer>
     </div>
   );
 }
