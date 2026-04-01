@@ -163,7 +163,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       <div className="px-1">
         <button
           type="button"
-          onClick={() => replay()}
+          onClick={() => { replay(); onNavigate?.(); }}
           className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 text-sm font-medium hover:bg-slate-200/50 rounded-lg transition-colors"
         >
           <span className="material-symbols-outlined text-[20px]">school</span>
