@@ -26,7 +26,10 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
   const step = steps[currentStep];
 
   const updateSpotlight = useCallback(() => {
-    if (!step) return;
+    if (!step || !step.target) {
+      setSpotlightRect(null);
+      return;
+    }
     const el = document.querySelector(step.target);
     if (el) {
       const rect = el.getBoundingClientRect();
@@ -139,13 +142,14 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
         />
       )}
 
-      {/* Tooltip card */}
+      {/* Tooltip card — centered if no spotlight target, positioned otherwise */}
       <div
-        className="absolute w-[calc(100vw-32px)] sm:w-[320px] bg-white rounded-2xl shadow-2xl p-5 sm:p-6 transition-all duration-300"
-        style={{
-          ...tooltipStyle,
-          maxWidth: 'calc(100vw - 32px)',
-        }}
+        className={`bg-white rounded-2xl shadow-2xl p-5 sm:p-6 transition-all duration-300 ${
+          spotlightRect
+            ? 'absolute w-[calc(100vw-32px)] sm:w-[320px]'
+            : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-48px)] sm:w-[380px]'
+        }`}
+        style={spotlightRect ? { ...tooltipStyle, maxWidth: 'calc(100vw - 32px)' } : {}}
       >
         {/* Progress bar */}
         <div className="flex items-center gap-1 mb-4">

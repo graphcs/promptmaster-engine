@@ -51,10 +51,10 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     position: 'bottom',
   },
   {
-    target: '[data-tutorial="new-session"]',
-    title: 'Start Fresh Anytime',
+    target: '',
+    title: 'You\'re All Set!',
     description:
-      'Click "New Session" to reset everything and start a new prompt. Your previous sessions are saved if you\'re signed in. You\'re all set — let\'s build your first prompt!',
+      'You now know the essentials. Use "New Session" in the sidebar to start fresh anytime. Your sessions are saved automatically if you\'re signed in. Go ahead — build your first prompt!',
     position: 'bottom',
   },
 ];
