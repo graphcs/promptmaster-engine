@@ -200,7 +200,7 @@ export function InputPhase() {
       </div>
 
       {/* Mode Grid section */}
-      <div className="space-y-4">
+      <div className="space-y-4" data-tutorial="mode-grid">
         <h2 className="text-sm font-semibold text-[var(--on-surface)] uppercase tracking-widest">
           Select Engine Mode
         </h2>
@@ -250,7 +250,7 @@ export function InputPhase() {
       {/* Objective + Audience — 3 col grid */}
       <div className="grid grid-cols-3 gap-6">
         {/* Objective textarea — 2/3 */}
-        <div className="col-span-2 space-y-2">
+        <div className="col-span-2 space-y-2" data-tutorial="objective">
           <label
             htmlFor="objective"
             className="text-sm font-semibold text-[var(--on-surface)]"
@@ -267,7 +267,7 @@ export function InputPhase() {
         </div>
 
         {/* Audience — 1/3 */}
-        <div className="space-y-2">
+        <div className="space-y-2" data-tutorial="audience">
           <label
             htmlFor="audience"
             className="text-sm font-semibold text-[var(--on-surface)]"
@@ -313,7 +313,7 @@ export function InputPhase() {
       </div>
 
       {/* Preset Constraints */}
-      <div className="space-y-4">
+      <div className="space-y-4" data-tutorial="constraint-presets">
         <h2 className="text-sm font-semibold text-[var(--on-surface)] uppercase tracking-widest">
           Preset Constraints
         </h2>
@@ -342,7 +342,7 @@ export function InputPhase() {
       </div>
 
       {/* Output Format Presets */}
-      <div className="space-y-4">
+      <div className="space-y-4" data-tutorial="format-presets">
         <h2 className="text-sm font-semibold text-[var(--on-surface)] uppercase tracking-widest">
           Output Format Presets
         </h2>
@@ -409,7 +409,7 @@ export function InputPhase() {
       )}
 
       {/* Footer CTA */}
-      <div className="pt-2">
+      <div className="pt-2" data-tutorial="assemble-btn">
         <button
           type="button"
           onClick={handleAssemble}

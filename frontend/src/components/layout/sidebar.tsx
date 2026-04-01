@@ -11,6 +11,7 @@ import { TierBadge } from '@/components/sidebar/tier-badge';
 import { SessionModal } from '@/components/shared/session-modal';
 import { TemplateModal } from '@/components/shared/template-modal';
 import { CustomSelect } from '@/components/shared/custom-select';
+import { useTutorial } from '@/components/tutorial/tutorial-provider';
 import type { Phase } from '@/types';
 
 const PHASE_LABELS: Record<Phase, string> = {
@@ -44,6 +45,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const selfAudit = useSessionStore((s) => s.selfAudit);
 
   const { user, loading: authLoading, signOut } = useAuth();
+  const { replay } = useTutorial();
 
   const [models, setModels] = useState<ModelOption[]>([]);
   const [modelsError, setModelsError] = useState(false);
@@ -78,6 +80,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
       {/* New Session Button */}
       <button
+        data-tutorial="new-session"
         onClick={() => { resetSession(); onNavigate?.(); }}
         className="w-full bg-[var(--pm-primary-container)] text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
       >
@@ -155,6 +158,18 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           </button>
         </div>
       )}
+
+      {/* Settings */}
+      <div className="px-1">
+        <button
+          type="button"
+          onClick={() => replay()}
+          className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 text-sm font-medium hover:bg-slate-200/50 rounded-lg transition-colors"
+        >
+          <span className="material-symbols-outlined text-[20px]">school</span>
+          Replay Tutorial
+        </button>
+      </div>
 
       <hr className="border-slate-200" />
 

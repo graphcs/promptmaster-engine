@@ -17,7 +17,7 @@ export function TopNav() {
   return (
     <header className="fixed top-0 right-0 w-[calc(100%-260px)] h-14 bg-white/80 backdrop-blur-md z-40 border-b border-slate-200/50 flex items-center">
       <div className="flex justify-between items-center px-6 max-w-[720px] mx-auto w-full">
-        <nav className="flex gap-6">
+        <nav className="flex gap-6" data-tutorial="phase-tabs">
           {PHASE_TABS.map((tab) => (
             <span
               key={tab.key}
