@@ -65,28 +65,42 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
 
   if (!step) return null;
 
-  // Calculate tooltip position
+  // Calculate tooltip position with viewport clamping
   const padding = 12;
+  const tooltipWidth = 320;
+  const tooltipEstimatedHeight = 220;
   const tooltipStyle: React.CSSProperties = {};
+
   if (spotlightRect) {
-    switch (step.position) {
-      case 'bottom':
-        tooltipStyle.top = spotlightRect.bottom + padding;
-        tooltipStyle.left = spotlightRect.left;
-        break;
-      case 'top':
-        tooltipStyle.bottom = window.innerHeight - spotlightRect.top + padding;
-        tooltipStyle.left = spotlightRect.left;
-        break;
-      case 'right':
-        tooltipStyle.top = spotlightRect.top;
-        tooltipStyle.left = spotlightRect.right + padding;
-        break;
-      case 'left':
-        tooltipStyle.top = spotlightRect.top;
-        tooltipStyle.right = window.innerWidth - spotlightRect.left + padding;
-        break;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Determine best vertical position: prefer requested, but flip if it overflows
+    let placeBelow = step.position === 'bottom' || step.position === 'right' || step.position === 'left';
+    const spaceBelow = vh - spotlightRect.bottom - padding;
+    const spaceAbove = spotlightRect.top - padding;
+
+    if (placeBelow && spaceBelow < tooltipEstimatedHeight && spaceAbove > spaceBelow) {
+      placeBelow = false;
+    } else if (!placeBelow && spaceAbove < tooltipEstimatedHeight && spaceBelow > spaceAbove) {
+      placeBelow = true;
     }
+
+    if (placeBelow) {
+      tooltipStyle.top = Math.min(spotlightRect.bottom + padding, vh - tooltipEstimatedHeight - 16);
+    } else {
+      tooltipStyle.bottom = Math.min(vh - spotlightRect.top + padding, vh - 16);
+    }
+
+    // Horizontal: start at element left, but clamp to viewport
+    let left = spotlightRect.left;
+    if (left + tooltipWidth > vw - 16) {
+      left = vw - tooltipWidth - 16;
+    }
+    if (left < 16) {
+      left = 16;
+    }
+    tooltipStyle.left = left;
   }
 
   return (
@@ -127,7 +141,7 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
 
       {/* Tooltip card */}
       <div
-        className="absolute w-[320px] bg-white rounded-2xl shadow-2xl p-6 transition-all duration-300"
+        className="absolute w-[calc(100vw-32px)] sm:w-[320px] bg-white rounded-2xl shadow-2xl p-5 sm:p-6 transition-all duration-300"
         style={{
           ...tooltipStyle,
           maxWidth: 'calc(100vw - 32px)',
