@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <!-- Rounded square base -->
+  <rect width="40" height="40" rx="10" fill="#2563EB"/>
+  <!-- Abstract prompt bracket / precision mark -->
+  <!-- Left bracket -->
+  <path d="M12 10L8 20L12 30" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Right bracket -->
+  <path d="M28 10L32 20L28 30" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Center diamond — represents the structured evaluation point -->
+  <rect x="16" y="16" width="8" height="8" rx="1" transform="rotate(45 20 20)" fill="white"/>
+  <!-- Inner dot — the core alignment check -->
+  <circle cx="20" cy="20" r="1.5" fill="#2563EB"/>
+</svg>

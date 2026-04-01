@@ -101,16 +101,9 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         {/* Branding */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center gap-2">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-white font-bold text-sm"
-              style={{ backgroundColor: '#2563EB' }}
-            >
-              PM
-            </div>
-            <span className="text-xl font-semibold text-[#1E293B]">PromptMaster</span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">Structured prompt engineering</p>
+          <img src="/logo.svg" alt="PromptMaster" className="w-12 h-12 rounded-xl mx-auto mb-4" />
+          <h1 className="text-xl font-bold tracking-tighter text-[#1E293B]">PromptMaster Engine</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Professional AI Workflow</p>
         </div>
 
         <Card className="rounded-xl shadow-sm">

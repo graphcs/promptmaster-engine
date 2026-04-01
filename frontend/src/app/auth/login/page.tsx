@@ -72,9 +72,7 @@ export default function LoginPage() {
       <main className="w-full max-w-[420px] space-y-12">
         {/* Minimal Branding Anchor */}
         <header className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-[var(--pm-primary-container)] rounded-xl mb-6">
-            <span className="material-symbols-outlined text-white">terminal</span>
-          </div>
+          <img src="/logo.svg" alt="PromptMaster" className="w-12 h-12 rounded-xl mx-auto mb-6" />
           <h1 className="text-[var(--on-surface)] font-bold text-xl tracking-tighter">PromptMaster Engine</h1>
           <p className="text-[var(--on-surface-variant)] text-sm">Professional AI Workflow</p>
         </header>

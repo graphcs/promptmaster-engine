@@ -69,13 +69,16 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   return (
     <aside className="w-[260px] md:w-[260px] h-screen md:fixed md:left-0 md:top-0 bg-slate-100 flex flex-col p-4 gap-y-4 z-50 overflow-y-auto">
       {/* Brand */}
-      <div className="px-2 mb-4">
-        <h1 className="text-lg font-semibold tracking-tighter text-slate-900">
-          PromptMaster Engine
-        </h1>
-        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">
-          Professional AI Workflow
-        </p>
+      <div className="px-2 mb-4 flex items-center gap-3">
+        <img src="/logo.svg" alt="PromptMaster" className="w-9 h-9 rounded-lg" />
+        <div>
+          <h1 className="text-sm font-semibold tracking-tighter text-slate-900">
+            PromptMaster Engine
+          </h1>
+          <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold">
+            Professional AI Workflow
+          </p>
+        </div>
       </div>
 
       {/* New Session Button */}
