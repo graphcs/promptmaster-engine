@@ -308,38 +308,41 @@ export function SummaryPhase() {
       )}
 
       {/* 5. Cold Critic Analysis */}
-      <section className="relative overflow-hidden rounded-2xl bg-slate-900 p-8 text-white">
-        <div className="relative z-10 flex items-center justify-between">
-          {selfAudit ? (
-            <div className="w-full space-y-4">
+      {selfAudit ? (
+        <section className="relative rounded-2xl bg-slate-900 p-8 text-white">
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-blue-400">troubleshoot</span>
               <h3 className="text-xl font-bold tracking-tight">Cold Critic Analysis</h3>
-              <div className="[&_.prose_*]:text-white [&_.prose_a]:text-blue-300 [&_.prose_code]:bg-white/10 [&_.prose_code]:text-blue-200 [&_.prose_pre]:bg-white/10">
-                <MarkdownOutput content={selfAudit} />
-              </div>
             </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold tracking-tight">Cold Critic Analysis</h3>
-                <p className="max-w-md text-sm leading-relaxed text-slate-400">
-                  Run an adversarial self-audit to identify logical gaps, bias, or potential
-                  prompt-injection vulnerabilities in your final output.
-                </p>
-              </div>
-              <button
-                onClick={handleRunSelfAudit}
-                disabled={auditLoading}
-                className="flex items-center gap-2 rounded-xl bg-[var(--pm-primary)] px-6 py-3 text-sm font-bold text-white shadow-xl transition-all hover:bg-blue-700 disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-sm">troubleshoot</span>
-                {auditLoading ? 'Running…' : 'Run Full Audit'}
-              </button>
-            </>
-          )}
-        </div>
-        {/* Decorative glow */}
-        <div className="absolute -bottom-10 -right-10 h-40 w-40 blur-[80px] bg-[var(--pm-primary)] opacity-20" />
-      </section>
+            <div className="[&_article]:text-slate-200 [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white [&_h4]:text-white [&_strong]:text-white [&_a]:text-blue-300 [&_code]:bg-white/10 [&_code]:text-blue-200 [&_pre]:bg-white/10 [&_li]:text-slate-300 [&_p]:text-slate-300">
+              <MarkdownOutput content={selfAudit} />
+            </div>
+          </div>
+          <div className="absolute -bottom-10 -right-10 h-40 w-40 blur-[80px] bg-[var(--pm-primary)] opacity-20 pointer-events-none" />
+        </section>
+      ) : (
+        <section className="relative overflow-hidden rounded-2xl bg-slate-900 p-8 text-white">
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold tracking-tight">Cold Critic Analysis</h3>
+              <p className="max-w-md text-sm leading-relaxed text-slate-400">
+                Run an adversarial self-audit to identify logical gaps, bias, or potential
+                prompt-injection vulnerabilities in your final output.
+              </p>
+            </div>
+            <button
+              onClick={handleRunSelfAudit}
+              disabled={auditLoading}
+              className="flex items-center gap-2 rounded-xl bg-[var(--pm-primary)] px-6 py-3 text-sm font-bold text-white shadow-xl transition-all hover:bg-blue-700 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-sm">troubleshoot</span>
+              {auditLoading ? 'Running…' : 'Run Full Audit'}
+            </button>
+          </div>
+          <div className="absolute -bottom-10 -right-10 h-40 w-40 blur-[80px] bg-[var(--pm-primary)] opacity-20 pointer-events-none" />
+        </section>
+      )}
 
       {/* 6. Footer actions */}
       <footer className="flex items-center justify-between border-t border-[var(--outline-variant)] border-opacity-20 pt-12">
