@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session } from '@/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
 
@@ -80,75 +81,87 @@ const initialState = {
   customName: '',
   customPreamble: '',
   customTone: '',
-  assembled: null,
+  assembled: null as AssembledPrompt | null,
   promptEdited: '',
   systemPrompt: '',
-  iterations: [],
-  currentOutput: null,
-  currentEval: null,
-  suggestions: [],
-  realignmentPrompt: null,
+  iterations: [] as Iteration[],
+  currentOutput: null as string | null,
+  currentEval: null as EvaluationResult | null,
+  suggestions: [] as string[],
+  realignmentPrompt: null as string | null,
   model: DEFAULT_MODEL,
   finalized: false,
-  selfAudit: null,
+  selfAudit: null as string | null,
   sessionSaved: false,
-  error: null,
+  error: null as string | null,
   loading: false,
-  constraintPresets: [],
-  formatPresets: [],
+  constraintPresets: [] as string[],
+  formatPresets: [] as string[],
   onboardingSeen: false,
   showScaffolding: false,
 };
 
-export const useSessionStore = create<SessionState>((set) => ({
-  ...initialState,
+export const useSessionStore = create<SessionState>()(
+  persist(
+    (set) => ({
+      ...initialState,
 
-  setPhase: (phase) => set({ phase }),
-  setObjective: (objective) => set({ objective }),
-  setAudience: (audience) => set({ audience }),
-  setConstraints: (constraints) => set({ constraints }),
-  setOutputFormat: (outputFormat) => set({ outputFormat }),
-  setMode: (mode) => set({ mode }),
-  setCustomMode: (customName, customPreamble, customTone) =>
-    set({ customName, customPreamble, customTone }),
-  setAssembled: (assembled) =>
-    set({ assembled, promptEdited: assembled.user_prompt, systemPrompt: assembled.system_prompt }),
-  setPromptEdited: (promptEdited) => set({ promptEdited }),
-  setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
-  appendIteration: (iteration, suggestions) =>
-    set((state) => ({
-      iterations: [...state.iterations, iteration],
-      currentOutput: iteration.output,
-      currentEval: iteration.evaluation,
-      suggestions,
-    })),
-  setRealignmentPrompt: (realignmentPrompt) => set({ realignmentPrompt }),
-  setModel: (model) => set({ model }),
-  setSelfAudit: (selfAudit) => set({ selfAudit }),
-  setSessionSaved: (sessionSaved) => set({ sessionSaved }),
-  setError: (error) => set({ error }),
-  setLoading: (loading) => set({ loading }),
-  setConstraintPresets: (constraintPresets) => set({ constraintPresets }),
-  setFormatPresets: (formatPresets) => set({ formatPresets }),
-  setOnboardingSeen: (onboardingSeen) => set({ onboardingSeen }),
-  setShowScaffolding: (showScaffolding) => set({ showScaffolding }),
-  finalize: () => set({ finalized: true, phase: 'summary' }),
-  resetSession: () => set({ ...initialState }),
-  carryLessonsForward: (objective, constraints) =>
-    set({ ...initialState, objective, constraints }),
-  loadSession: (session) =>
-    set({
-      objective: session.objective,
-      audience: session.audience,
-      constraints: session.constraints,
-      outputFormat: session.output_format,
-      mode: session.mode,
-      model: session.model || DEFAULT_MODEL,
-      iterations: session.iterations,
-      finalized: session.finalized,
-      currentOutput: session.iterations.length > 0 ? session.iterations[session.iterations.length - 1].output : null,
-      currentEval: session.iterations.length > 0 ? session.iterations[session.iterations.length - 1].evaluation : null,
-      phase: session.finalized ? 'summary' : 'output',
-      sessionSaved: true,
+      setPhase: (phase) => set({ phase }),
+      setObjective: (objective) => set({ objective }),
+      setAudience: (audience) => set({ audience }),
+      setConstraints: (constraints) => set({ constraints }),
+      setOutputFormat: (outputFormat) => set({ outputFormat }),
+      setMode: (mode) => set({ mode }),
+      setCustomMode: (customName, customPreamble, customTone) =>
+        set({ customName, customPreamble, customTone }),
+      setAssembled: (assembled) =>
+        set({ assembled, promptEdited: assembled.user_prompt, systemPrompt: assembled.system_prompt }),
+      setPromptEdited: (promptEdited) => set({ promptEdited }),
+      setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
+      appendIteration: (iteration, suggestions) =>
+        set((state) => ({
+          iterations: [...state.iterations, iteration],
+          currentOutput: iteration.output,
+          currentEval: iteration.evaluation,
+          suggestions,
+        })),
+      setRealignmentPrompt: (realignmentPrompt) => set({ realignmentPrompt }),
+      setModel: (model) => set({ model }),
+      setSelfAudit: (selfAudit) => set({ selfAudit }),
+      setSessionSaved: (sessionSaved) => set({ sessionSaved }),
+      setError: (error) => set({ error }),
+      setLoading: (loading) => set({ loading }),
+      setConstraintPresets: (constraintPresets) => set({ constraintPresets }),
+      setFormatPresets: (formatPresets) => set({ formatPresets }),
+      setOnboardingSeen: (onboardingSeen) => set({ onboardingSeen }),
+      setShowScaffolding: (showScaffolding) => set({ showScaffolding }),
+      finalize: () => set({ finalized: true, phase: 'summary' }),
+      resetSession: () => set({ ...initialState }),
+      carryLessonsForward: (objective, constraints) =>
+        set({ ...initialState, objective, constraints }),
+      loadSession: (session) =>
+        set({
+          objective: session.objective,
+          audience: session.audience,
+          constraints: session.constraints,
+          outputFormat: session.output_format,
+          mode: session.mode,
+          model: session.model || DEFAULT_MODEL,
+          iterations: session.iterations,
+          finalized: session.finalized,
+          currentOutput: session.iterations.length > 0 ? session.iterations[session.iterations.length - 1].output : null,
+          currentEval: session.iterations.length > 0 ? session.iterations[session.iterations.length - 1].evaluation : null,
+          phase: session.finalized ? 'summary' : 'output',
+          sessionSaved: true,
+        }),
     }),
-}));
+    {
+      name: 'pm-session',
+      // Don't persist transient UI state
+      partialize: (state) => {
+        const { error, loading, ...persisted } = state;
+        return persisted;
+      },
+    }
+  )
+);
