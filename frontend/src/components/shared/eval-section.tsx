@@ -15,7 +15,7 @@ export function EvalSection({ evaluation }: EvalSectionProps) {
         <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-6">
           Quality Scores
         </h3>
-        <div className="grid grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <ScoreBadge label="Alignment" score={evaluation.alignment.score} />

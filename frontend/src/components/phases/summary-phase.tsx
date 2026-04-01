@@ -164,7 +164,7 @@ export function SummaryPhase() {
       </section>
 
       {/* 2. Metric Cards */}
-      <section className="grid grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-6 bg-white rounded-xl shadow-ambient transition-all hover:scale-[1.01]">
           <span className="material-symbols-outlined text-[var(--pm-primary)] mb-3 block text-[20px]">
             architecture
@@ -257,7 +257,7 @@ export function SummaryPhase() {
             </summary>
 
             <div className="p-6 pt-0 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left column */}
                 <div className="space-y-3">
                   <label className="text-[10px] uppercase font-bold text-[var(--outline)]">

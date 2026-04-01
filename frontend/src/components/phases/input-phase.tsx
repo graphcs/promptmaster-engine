@@ -248,7 +248,7 @@ export function InputPhase() {
       </div>
 
       {/* Objective + Audience — 3 col grid */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Objective textarea — 2/3 */}
         <div className="col-span-2 space-y-2" data-tutorial="objective">
           <label

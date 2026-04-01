@@ -67,7 +67,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   });
 
   return (
-    <aside className="w-[260px] h-screen fixed left-0 top-0 bg-slate-100 flex flex-col p-4 gap-y-4 z-50">
+    <aside className="w-[260px] md:w-[260px] h-screen md:fixed md:left-0 md:top-0 bg-slate-100 flex flex-col p-4 gap-y-4 z-50 overflow-y-auto">
       {/* Brand */}
       <div className="px-2 mb-4">
         <h1 className="text-lg font-semibold tracking-tighter text-slate-900">
