@@ -322,8 +322,8 @@ export function SummaryPhase() {
           <div className="absolute -bottom-10 -right-10 h-40 w-40 blur-[80px] bg-[var(--pm-primary)] opacity-20 pointer-events-none" />
         </section>
       ) : (
-        <section className="relative overflow-hidden rounded-2xl bg-slate-900 p-8 text-white">
-          <div className="relative z-10 flex items-center justify-between">
+        <section className="relative overflow-hidden rounded-2xl bg-slate-900 p-6 sm:p-8 text-white">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="space-y-2">
               <h3 className="text-xl font-bold tracking-tight">Cold Critic Analysis</h3>
               <p className="max-w-md text-sm leading-relaxed text-slate-400">
@@ -334,7 +334,7 @@ export function SummaryPhase() {
             <button
               onClick={handleRunSelfAudit}
               disabled={auditLoading}
-              className="flex items-center gap-2 rounded-xl bg-[var(--pm-primary)] px-6 py-3 text-sm font-bold text-white shadow-xl transition-all hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--pm-primary)] px-6 h-12 text-sm font-bold text-white shadow-xl transition-all hover:bg-blue-700 disabled:opacity-50 shrink-0"
             >
               <span className="material-symbols-outlined text-sm">troubleshoot</span>
               {auditLoading ? 'Running…' : 'Run Full Audit'}
@@ -345,11 +345,11 @@ export function SummaryPhase() {
       )}
 
       {/* 6. Footer actions */}
-      <footer className="flex items-center justify-between border-t border-[var(--outline-variant)] border-opacity-20 pt-12">
+      <footer className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[var(--outline-variant)] border-opacity-20 pt-12">
         <button
           onClick={handleHardReset}
           disabled={hardResetLoading}
-          className="flex items-center gap-2 px-6 py-3 border border-[var(--outline-variant)] bg-white text-sm font-semibold text-[var(--on-surface)] rounded-xl hover:bg-[var(--surface-container-low)] hover:border-[var(--pm-primary)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="flex items-center justify-center gap-2 px-6 h-12 border border-[var(--outline-variant)] bg-white text-sm font-semibold text-[var(--on-surface)] rounded-xl hover:bg-[var(--surface-container-low)] hover:border-[var(--pm-primary)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Summarize lessons from this session and start fresh with them as context"
         >
           <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
@@ -358,7 +358,7 @@ export function SummaryPhase() {
 
         <button
           onClick={() => resetSession()}
-          className="rounded-xl bg-[var(--pm-primary)] px-10 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="flex items-center justify-center h-12 rounded-xl bg-[var(--pm-primary)] px-10 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           Start New Session
         </button>
