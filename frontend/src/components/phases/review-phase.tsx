@@ -17,6 +17,9 @@ export function ReviewPhase() {
   const outputFormat = useSessionStore((s) => s.outputFormat);
   const mode = useSessionStore((s) => s.mode);
   const model = useSessionStore((s) => s.model);
+  const customName = useSessionStore((s) => s.customName);
+  const customPreamble = useSessionStore((s) => s.customPreamble);
+  const customTone = useSessionStore((s) => s.customTone);
 
   const setPromptEdited = useSessionStore((s) => s.setPromptEdited);
   const setShowScaffolding = useSessionStore((s) => s.setShowScaffolding);
@@ -37,6 +40,11 @@ export function ReviewPhase() {
         constraints,
         output_format: outputFormat,
         mode,
+        ...(mode === 'custom' ? {
+          custom_name: customName,
+          custom_preamble: customPreamble,
+          custom_tone: customTone,
+        } : {}),
       };
 
       const result = await api.runIteration({

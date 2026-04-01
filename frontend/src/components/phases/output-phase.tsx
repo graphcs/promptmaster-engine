@@ -31,6 +31,9 @@ export function OutputPhase() {
   const outputFormat = useSessionStore((s) => s.outputFormat);
   const mode = useSessionStore((s) => s.mode);
   const model = useSessionStore((s) => s.model);
+  const customName = useSessionStore((s) => s.customName);
+  const customPreamble = useSessionStore((s) => s.customPreamble);
+  const customTone = useSessionStore((s) => s.customTone);
 
   const setPhase = useSessionStore((s) => s.setPhase);
   const setError = useSessionStore((s) => s.setError);
@@ -58,6 +61,11 @@ export function OutputPhase() {
         constraints,
         output_format: outputFormat,
         mode,
+        ...(mode === 'custom' ? {
+          custom_name: customName,
+          custom_preamble: customPreamble,
+          custom_tone: customTone,
+        } : {}),
       };
 
       const result = await api.buildRealignment({ inputs, evaluation: currentEval, model });
@@ -81,6 +89,11 @@ export function OutputPhase() {
         constraints,
         output_format: outputFormat,
         mode,
+        ...(mode === 'custom' ? {
+          custom_name: customName,
+          custom_preamble: customPreamble,
+          custom_tone: customTone,
+        } : {}),
       };
 
       const result = await api.buildPrompt(inputs);
