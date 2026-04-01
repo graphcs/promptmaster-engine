@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,9 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +45,28 @@ export default function LoginPage() {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+    setError(null);
+    setResetLoading(true);
+    try {
+      const supabase = createClient();
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      });
+      if (resetError) throw resetError;
+      setResetSent(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset email.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="bg-[var(--surface)] text-[var(--on-surface)] flex min-h-screen items-center justify-center p-6">
       <main className="w-full max-w-[420px] space-y-12">
@@ -58,100 +84,174 @@ export default function LoginPage() {
           className="bg-white rounded-xl p-8 space-y-6"
           style={{ boxShadow: '0px 4px 20px rgba(25, 28, 30, 0.04)' }}
         >
-          <form onSubmit={handleSignIn} className="space-y-5">
-            {/* Error state */}
-            {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+          {forgotMode ? (
+            /* Forgot Password Form */
+            <form onSubmit={handleResetPassword} className="space-y-5">
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
 
-            {/* Email Field */}
-            <div className="space-y-2">
-              <label
-                className="block text-xs font-medium text-[var(--on-surface-variant)] uppercase tracking-wider"
-                htmlFor="email"
-              >
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                name="email"
-                placeholder="name@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                className="w-full px-4 py-3 bg-[var(--surface-container-low)] border-none rounded-lg text-[var(--on-surface)] text-sm focus:ring-2 focus:ring-[var(--pm-primary)]/40 focus:bg-white transition-all duration-200 outline-none placeholder:text-[var(--outline)]/60"
-              />
-            </div>
+              {resetSent ? (
+                <div className="space-y-4 text-center py-4">
+                  <span className="material-symbols-outlined text-[var(--pm-primary)] text-[40px]">mark_email_read</span>
+                  <p className="text-sm text-[var(--on-surface)]">
+                    Password reset link sent to <strong>{email}</strong>
+                  </p>
+                  <p className="text-xs text-[var(--on-surface-variant)]">
+                    Check your inbox and follow the link to reset your password.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotMode(false); setResetSent(false); setError(null); }}
+                    className="text-sm text-[var(--pm-primary)] font-medium hover:underline"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-[var(--on-surface)]">Reset your password</h3>
+                    <p className="text-xs text-[var(--on-surface-variant)]">
+                      Enter your email and we&apos;ll send you a link to reset your password.
+                    </p>
+                  </div>
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
+                  <div className="space-y-2">
+                    <label
+                      className="block text-xs font-medium text-[var(--on-surface-variant)] uppercase tracking-wider"
+                      htmlFor="reset-email"
+                    >
+                      Email Address
+                    </label>
+                    <input
+                      id="reset-email"
+                      type="email"
+                      placeholder="name@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      autoComplete="email"
+                      className="w-full px-4 py-3 bg-[var(--surface-container-low)] border-none rounded-lg text-[var(--on-surface)] text-sm focus:ring-2 focus:ring-[var(--pm-primary)]/40 focus:bg-white transition-all duration-200 outline-none placeholder:text-[var(--outline)]/60"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="w-full py-3 px-4 bg-[var(--pm-primary)] text-white font-semibold rounded-lg hover:bg-[var(--pm-primary-container)] active:scale-[0.98] transition-all duration-200 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setForgotMode(false); setError(null); }}
+                    className="w-full text-center text-sm text-[var(--on-surface-variant)] hover:text-[var(--pm-primary)] transition-colors"
+                  >
+                    Back to Sign In
+                  </button>
+                </>
+              )}
+            </form>
+          ) : (
+            /* Login Form */
+            <form onSubmit={handleSignIn} className="space-y-5">
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-2">
                 <label
                   className="block text-xs font-medium text-[var(--on-surface-variant)] uppercase tracking-wider"
-                  htmlFor="password"
+                  htmlFor="email"
                 >
-                  Password
+                  Email Address
                 </label>
-                <a
-                  className="text-xs text-[var(--pm-primary)] hover:underline transition-all"
-                  href="#"
-                >
-                  Forgot password?
-                </a>
-              </div>
-              <div className="relative">
                 <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="email"
+                  type="email"
+                  name="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="current-password"
+                  autoComplete="email"
                   className="w-full px-4 py-3 bg-[var(--surface-container-low)] border-none rounded-lg text-[var(--on-surface)] text-sm focus:ring-2 focus:ring-[var(--pm-primary)]/40 focus:bg-white transition-all duration-200 outline-none placeholder:text-[var(--outline)]/60"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--outline)] hover:text-[var(--on-surface-variant)]"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                    {showPassword ? 'visibility_off' : 'visibility'}
-                  </span>
-                </button>
               </div>
-            </div>
 
-            {/* Submit Action */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-4 bg-[var(--pm-primary)] text-white font-semibold rounded-lg hover:bg-[var(--pm-primary-container)] active:scale-[0.98] transition-all duration-200 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label
+                    className="block text-xs font-medium text-[var(--on-surface-variant)] uppercase tracking-wider"
+                    htmlFor="password"
+                  >
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotMode(true); setError(null); }}
+                    className="text-xs text-[var(--pm-primary)] hover:underline transition-all"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="w-full px-4 py-3 bg-[var(--surface-container-low)] border-none rounded-lg text-[var(--on-surface)] text-sm focus:ring-2 focus:ring-[var(--pm-primary)]/40 focus:bg-white transition-all duration-200 outline-none placeholder:text-[var(--outline)]/60"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--outline)] hover:text-[var(--on-surface-variant)]"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                      {showPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+              </div>
 
-          {/* Divider */}
-          <div className="relative py-2 flex items-center gap-4">
-            <div className="flex-grow h-[1px] bg-[var(--surface-container-high)]" />
-            <span className="text-[10px] font-bold text-[var(--outline)] uppercase tracking-widest">OR</span>
-            <div className="flex-grow h-[1px] bg-[var(--surface-container-high)]" />
-          </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 bg-[var(--pm-primary)] text-white font-semibold rounded-lg hover:bg-[var(--pm-primary-container)] active:scale-[0.98] transition-all duration-200 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+          )}
 
-          {/* Google Sign In */}
-          <button
-            type="button"
-            disabled={isGoogleLoading}
-            onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-[var(--outline-variant)]/30 text-[var(--on-surface)] font-medium rounded-lg hover:bg-[var(--surface-container-low)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
+          {!forgotMode && (
+            <>
+              {/* Divider */}
+              <div className="relative py-2 flex items-center gap-4">
+                <div className="flex-grow h-[1px] bg-[var(--surface-container-high)]" />
+                <span className="text-[10px] font-bold text-[var(--outline)] uppercase tracking-widest">OR</span>
+                <div className="flex-grow h-[1px] bg-[var(--surface-container-high)]" />
+              </div>
+
+              {/* Google Sign In */}
+              <button
+                type="button"
+                disabled={isGoogleLoading}
+                onClick={handleGoogleSignIn}
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-[var(--outline-variant)]/30 text-[var(--on-surface)] font-medium rounded-lg hover:bg-[var(--surface-container-low)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
             <svg fill="none" height="18" viewBox="0 0 24 24" width="18" aria-hidden="true">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -171,7 +271,9 @@ export default function LoginPage() {
               />
             </svg>
             {isGoogleLoading ? 'Redirecting...' : 'Sign in with Google'}
-          </button>
+              </button>
+            </>
+          )}
         </section>
 
         {/* Footer */}
