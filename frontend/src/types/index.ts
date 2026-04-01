@@ -8,6 +8,9 @@ export interface PMInput {
   constraints: string;
   output_format: string;
   mode: ModeType;
+  custom_name?: string;
+  custom_preamble?: string;
+  custom_tone?: string;
 }
 
 export interface AssembledPrompt {

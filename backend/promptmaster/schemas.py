@@ -16,6 +16,10 @@ class PMInput(BaseModel):
     constraints: str = Field(default="", description="Optional constraints")
     output_format: str = Field(default="", description="Desired output structure (e.g. bullet points, numbered list)")
     mode: ModeType = Field(..., description="Selected operational mode")
+    # Custom mode fields (only used when mode == 'custom')
+    custom_name: str = Field(default="", description="Custom mode persona name")
+    custom_preamble: str = Field(default="", description="Custom mode system preamble")
+    custom_tone: str = Field(default="", description="Custom mode tone")
 
 
 class AssembledPrompt(BaseModel):

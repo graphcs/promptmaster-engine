@@ -157,10 +157,27 @@ export const useSessionStore = create<SessionState>()(
     }),
     {
       name: 'pm-session',
+      // Use sessionStorage: persists across refreshes but clears on tab/browser close
+      storage: {
+        getItem: (name) => {
+          if (typeof window === 'undefined') return null;
+          const value = sessionStorage.getItem(name);
+          return value ? JSON.parse(value) : null;
+        },
+        setItem: (name, value) => {
+          if (typeof window === 'undefined') return;
+          sessionStorage.setItem(name, JSON.stringify(value));
+        },
+        removeItem: (name) => {
+          if (typeof window === 'undefined') return;
+          sessionStorage.removeItem(name);
+        },
+      },
       // Don't persist transient UI state
       partialize: (state) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { error, loading, ...persisted } = state;
-        return persisted;
+        return persisted as unknown as SessionState;
       },
     }
   )

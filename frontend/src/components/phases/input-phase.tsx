@@ -124,6 +124,11 @@ export function InputPhase() {
         constraints: finalConstraints,
         output_format: finalFormat,
         mode,
+        ...(mode === 'custom' ? {
+          custom_name: customName,
+          custom_preamble: customPreamble,
+          custom_tone: customTone,
+        } : {}),
       });
       setAssembled(result);
       setPhase('review');

@@ -17,7 +17,24 @@ def build_prompt(inputs: PMInput) -> AssembledPrompt:
     1. System prompt: mode lock + tone guidance + invisible scaffolding
     2. User prompt: objective + audience + constraints with anchoring
     """
-    mode_config = MODES[inputs.mode]
+    mode_config = dict(MODES[inputs.mode])
+
+    # Inject custom mode fields when mode is 'custom'
+    if inputs.mode == "custom" and (inputs.custom_name or inputs.custom_preamble or inputs.custom_tone):
+        custom_name = inputs.custom_name or "Custom"
+        custom_preamble = inputs.custom_preamble or mode_config["system_preamble"]
+        custom_tone = inputs.custom_tone or mode_config["tone"]
+        mode_config["display_name"] = custom_name
+        mode_config["system_preamble"] = custom_preamble
+        mode_config["tone"] = custom_tone
+        mode_config["user_directive"] = f"Follow your role as {custom_name}. Stay in character."
+        mode_config["scaffolding"] = (
+            "[INTERNAL SCAFFOLDING]\n"
+            f"- You are {custom_name}. Follow the persona precisely.\n"
+            f"- Tone: {custom_tone}\n"
+            "- DRIFT CHECK: Stay true to the custom persona throughout. Do not revert to a generic AI voice\n"
+            "- ANCHOR: Re-read the objective before each section"
+        )
 
     # System prompt: mode lock + scaffolding
     system_prompt = (
