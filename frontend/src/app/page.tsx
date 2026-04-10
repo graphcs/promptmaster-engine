@@ -1,8 +1,8 @@
 'use client';
 
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { SplineScene } from '@/components/ui/splite';
 import { Spotlight } from '@/components/ui/spotlight';
 import { ContainerScroll } from '@/components/ui/container-scroll-animation';
 import { Card } from '@/components/ui/card';
@@ -26,9 +26,47 @@ const PHASES = [
   { step: '05', name: 'Refine', desc: 'Iterate, realign, or finalize — every cycle improves the output.', icon: 'auto_fix_high' },
 ];
 
+/** Lazy-load Spline only when scrolled into view */
+function LazySpline() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [SplineScene, setSplineScene] = useState<React.ComponentType<{ scene: string; className?: string }> | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    import('@/components/ui/splite').then((mod) => setSplineScene(() => mod.SplineScene));
+  }, [visible]);
+
+  return (
+    <div ref={ref} className="w-full h-full">
+      {SplineScene ? (
+        <SplineScene
+          scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
+          className="w-full h-full"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[var(--surface)]">
+    <div className="min-h-screen bg-[#0a0a1a]">
       {/* ===== NAVIGATION ===== */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a1a]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -54,7 +92,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ===== HERO SECTION ===== */}
-      <section className="relative min-h-screen bg-[#0a0a1a] overflow-hidden">
+      <section className="relative min-h-screen overflow-hidden">
         <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#2563eb" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20 flex flex-col lg:flex-row items-center min-h-screen">
@@ -93,31 +131,25 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right: Spline 3D Scene */}
+          {/* Right: Spline 3D Scene (lazy loaded) */}
           <div className="flex-1 relative h-[400px] lg:h-[500px] w-full mt-12 lg:mt-0">
-            <SplineScene
-              scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
-              className="w-full h-full"
-            />
+            <LazySpline />
           </div>
         </div>
-
-        {/* Gradient fade to white */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[var(--surface)] to-transparent" />
       </section>
 
       {/* ===== PRODUCT SHOWCASE (ContainerScroll) ===== */}
-      <section className="bg-[var(--surface)]">
+      <section className="relative">
         <ContainerScroll
           titleComponent={
             <div className="space-y-4">
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--pm-primary)]">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
                 The Interface
               </p>
-              <h2 className="text-4xl md:text-[3.5rem] font-bold text-[var(--on-surface)] leading-tight tracking-tight">
+              <h2 className="text-4xl md:text-[3.5rem] font-bold text-white leading-tight tracking-tight">
                 Not another chatbox.
                 <br />
-                <span className="text-[var(--pm-primary)]">A structured workflow.</span>
+                <span className="text-blue-400">A structured workflow.</span>
               </h2>
             </div>
           }
@@ -129,43 +161,44 @@ export default function LandingPage() {
             width={1400}
             className="mx-auto rounded-2xl object-cover h-full object-left-top"
             draggable={false}
+            priority={false}
           />
         </ContainerScroll>
       </section>
 
       {/* ===== HOW IT WORKS ===== */}
-      <section id="how-it-works" className="py-32 bg-[var(--surface)]">
+      <section id="how-it-works" className="py-32 relative">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20 space-y-4">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--pm-primary)]">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
               How It Works
             </p>
-            <h2 className="text-display text-[var(--on-surface)]">
+            <h2 className="text-4xl md:text-5xl font-semibold text-white tracking-tight">
               Five phases. One aligned output.
             </h2>
-            <p className="text-body text-[var(--on-surface-variant)] max-w-2xl mx-auto">
+            <p className="text-sm text-white/40 max-w-2xl mx-auto leading-relaxed">
               PromptMaster structures every AI interaction into a repeatable loop:
               define, review, execute, evaluate, and refine — until the output
               matches your intent.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {PHASES.map((phase) => (
-              <div key={phase.step} className="relative group">
-                <div className="bg-white rounded-2xl p-6 shadow-ambient hover:shadow-lg transition-all hover:-translate-y-1 h-full space-y-4">
+              <div key={phase.step} className="group">
+                <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:bg-white/[0.06] hover:border-white/10 transition-all hover:-translate-y-1 h-full space-y-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-extrabold text-[var(--pm-primary)] tracking-widest">
+                    <span className="text-[10px] font-extrabold text-blue-400 tracking-widest">
                       {phase.step}
                     </span>
-                    <span className="material-symbols-outlined text-[var(--pm-primary)] text-[20px]">
+                    <span className="material-symbols-outlined text-blue-400 text-[20px]">
                       {phase.icon}
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-[var(--on-surface)]">
+                  <h3 className="text-lg font-bold text-white">
                     {phase.name}
                   </h3>
-                  <p className="text-sm text-[var(--on-surface-variant)] leading-relaxed">
+                  <p className="text-sm text-white/40 leading-relaxed">
                     {phase.desc}
                   </p>
                 </div>
@@ -176,16 +209,16 @@ export default function LandingPage() {
       </section>
 
       {/* ===== MODES ===== */}
-      <section className="py-32 bg-white">
+      <section className="py-32 relative">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20 space-y-4">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--pm-primary)]">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
               8 Modes
             </p>
-            <h2 className="text-display text-[var(--on-surface)]">
+            <h2 className="text-4xl md:text-5xl font-semibold text-white tracking-tight">
               Choose how the AI thinks.
             </h2>
-            <p className="text-body text-[var(--on-surface-variant)] max-w-2xl mx-auto">
+            <p className="text-sm text-white/40 max-w-2xl mx-auto leading-relaxed">
               Each mode locks the AI into a specific persona with tailored tone,
               structure, and invisible scaffolding — so the output matches the
               task, not a generic response.
@@ -196,15 +229,15 @@ export default function LandingPage() {
             {MODES.map((mode) => (
               <Card
                 key={mode.name}
-                className="p-6 bg-[var(--surface-container-low)] border-0 hover:bg-[var(--surface-container)] hover:-translate-y-1 transition-all cursor-default group"
+                className="p-6 bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] hover:border-white/10 hover:-translate-y-1 transition-all cursor-default group"
               >
-                <span className="material-symbols-outlined text-[var(--pm-primary)] text-[28px] mb-4 block group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-blue-400 text-[28px] mb-4 block group-hover:scale-110 transition-transform">
                   {mode.icon}
                 </span>
-                <h3 className="text-sm font-bold text-[var(--on-surface)] mb-1">
+                <h3 className="text-sm font-bold text-white mb-1">
                   {mode.name}
                 </h3>
-                <p className="text-xs text-[var(--on-surface-variant)] leading-relaxed">
+                <p className="text-xs text-white/40 leading-relaxed">
                   {mode.desc}
                 </p>
               </Card>
@@ -214,43 +247,43 @@ export default function LandingPage() {
       </section>
 
       {/* ===== KEY DIFFERENTIATORS ===== */}
-      <section className="py-32 bg-[var(--surface)]">
+      <section className="py-32 relative">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-2xl p-8 shadow-ambient space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--pm-primary)]/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[var(--pm-primary)]">verified</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 space-y-4 hover:bg-white/[0.06] hover:border-white/10 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-blue-400">verified</span>
               </div>
-              <h3 className="text-lg font-bold text-[var(--on-surface)]">
+              <h3 className="text-lg font-bold text-white">
                 Independent Evaluation
               </h3>
-              <p className="text-sm text-[var(--on-surface-variant)] leading-relaxed">
+              <p className="text-sm text-white/40 leading-relaxed">
                 A separate AI call scores every output on alignment, clarity, and
                 drift — the AI never grades itself.
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-ambient space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--pm-primary)]/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[var(--pm-primary)]">target</span>
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 space-y-4 hover:bg-white/[0.06] hover:border-white/10 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-blue-400">target</span>
               </div>
-              <h3 className="text-lg font-bold text-[var(--on-surface)]">
+              <h3 className="text-lg font-bold text-white">
                 Drift Detection
               </h3>
-              <p className="text-sm text-[var(--on-surface-variant)] leading-relaxed">
+              <p className="text-sm text-white/40 leading-relaxed">
                 Every output is checked for scope deviation. When drift is
                 detected, the system triggers a corrective realignment.
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-ambient space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--pm-primary)]/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[var(--pm-primary)]">auto_fix_high</span>
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 space-y-4 hover:bg-white/[0.06] hover:border-white/10 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-blue-400">auto_fix_high</span>
               </div>
-              <h3 className="text-lg font-bold text-[var(--on-surface)]">
+              <h3 className="text-lg font-bold text-white">
                 Iterative Refinement
               </h3>
-              <p className="text-sm text-[var(--on-surface-variant)] leading-relaxed">
+              <p className="text-sm text-white/40 leading-relaxed">
                 Each cycle improves on the last. Actionable suggestions tell you
                 exactly what to change and which action to take next.
               </p>
@@ -260,7 +293,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== CTA ===== */}
-      <section className="py-32 bg-[#0a0a1a] relative overflow-hidden">
+      <section className="py-32 relative overflow-hidden">
         <Spotlight className="-top-40 right-0 md:right-60 md:-top-20" fill="#2563eb" />
         <div className="relative z-10 max-w-3xl mx-auto px-6 text-center space-y-8">
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
@@ -281,7 +314,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="py-12 bg-[#0a0a1a] border-t border-white/5">
+      <footer className="py-12 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img src="/logo.svg" alt="PromptMaster" className="w-6 h-6 rounded" />
