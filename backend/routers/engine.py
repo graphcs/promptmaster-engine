@@ -1,16 +1,19 @@
 """Engine endpoints: prompt building, iteration, realignment, audit."""
 
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from promptmaster.schemas import PMInput, AssembledPrompt, Iteration, EvaluationResult
+from promptmaster.schemas import PMInput, AssembledPrompt, EvaluationResult
 from promptmaster.prompt_builder import build_prompt
 from promptmaster.engine import (
-    run_iteration,
+    generate,
     format_session_summary,
     export_session_json,
     generate_hard_reset_lessons,
     run_self_audit,
 )
+from promptmaster.evaluator import evaluate_output
+from promptmaster.schemas import Iteration
 from promptmaster.realigner import build_realignment_prompt
 from promptmaster.guidance import generate_suggestions
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
@@ -78,23 +81,37 @@ async def api_run_iteration(
     req: RunIterationRequest,
     client: OpenRouterClient = Depends(get_client),
 ) -> RunIterationResponse:
-    """Run one generate-evaluate cycle. 3 LLM calls: generate + evaluate + suggestions."""
+    """Run one generate-evaluate cycle. Generate first, then evaluate + suggestions in parallel."""
     try:
-        iteration = await run_iteration(
+        model = req.model or None
+
+        # Step 1: Generate output (must complete first)
+        output = await generate(
             client=client,
-            inputs=req.inputs,
             prompt_text=req.prompt_text,
             system_text=req.system_text,
-            iteration_number=req.iteration_number,
-            model=req.model or None,
+            model=model,
         )
-        suggestions = await generate_suggestions(
+
+        # Step 2: Run evaluation and suggestions in parallel
+        eval_task = evaluate_output(client, req.inputs, output, model=model)
+        suggestions_task = generate_suggestions(
             client=client,
             inputs=req.inputs,
-            evaluation=iteration.evaluation,
-            output=iteration.output,
-            model=req.model or None,
+            output=output,
+            model=model,
         )
+        evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
+
+        iteration = Iteration(
+            iteration_number=req.iteration_number,
+            prompt_sent=req.prompt_text,
+            system_prompt_used=req.system_text,
+            output=output,
+            mode=req.inputs.mode,
+            evaluation=evaluation,
+        )
+
         return RunIterationResponse(iteration=iteration, suggestions=suggestions)
     except OpenRouterError as e:
         raise HTTPException(status_code=502, detail=f"LLM error: {e}")

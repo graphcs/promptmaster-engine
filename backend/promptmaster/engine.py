@@ -22,6 +22,7 @@ async def generate(
         prompt=prompt_text,
         system=system_text,
         temperature=0.7,
+        max_tokens=4096,
         model=model,
     )
     return content

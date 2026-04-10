@@ -62,23 +62,27 @@ Give 2-3 specific suggestions. For each, reference what in the output needs to c
 async def generate_suggestions(
     client: OpenRouterClient,
     inputs: PMInput,
-    evaluation: EvaluationResult,
+    evaluation: EvaluationResult | None = None,
     output: str = "",
     model: str | None = None,
 ) -> list[str]:
-    """Generate LLM-powered contextual suggestions based on evaluation and output."""
+    """Generate LLM-powered contextual suggestions based on evaluation and output.
+
+    If evaluation is None (parallel mode), the guidance LLM assesses
+    the output quality directly.
+    """
     prompt = GUIDANCE_PROMPT.format(
         objective=inputs.objective,
         audience=inputs.audience,
         constraints=inputs.constraints or "(none)",
         output_format=inputs.output_format or "(not specified)",
         mode=inputs.mode,
-        alignment_score=evaluation.alignment.score,
-        alignment_explanation=evaluation.alignment.explanation,
-        drift_score=evaluation.drift.score,
-        drift_explanation=evaluation.drift.explanation,
-        clarity_score=evaluation.clarity.score,
-        clarity_explanation=evaluation.clarity.explanation,
+        alignment_score=evaluation.alignment.score if evaluation else "(assess from output)",
+        alignment_explanation=evaluation.alignment.explanation if evaluation else "(assess from output)",
+        drift_score=evaluation.drift.score if evaluation else "(assess from output)",
+        drift_explanation=evaluation.drift.explanation if evaluation else "(assess from output)",
+        clarity_score=evaluation.clarity.score if evaluation else "(assess from output)",
+        clarity_explanation=evaluation.clarity.explanation if evaluation else "(assess from output)",
         output_excerpt=output[:800] if output else "(not available)",
     )
 
