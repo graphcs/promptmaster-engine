@@ -11,11 +11,32 @@ from .llm_client import OpenRouterClient
 logger = logging.getLogger(__name__)
 
 GUIDANCE_SYSTEM = (
-    "You are a concise prompting coach. Based on evaluation scores of an AI-generated "
-    "output, give the user 2-3 specific, actionable suggestions to improve their next "
-    "iteration. Be concrete — reference their actual objective and what went wrong. "
-    "Do NOT repeat the scores back. Do NOT praise. Just give clear next steps. "
-    "Return ONLY a JSON array of strings, each one a single suggestion sentence."
+    "You are the suggestions layer of PromptMaster — a structured AI workflow system "
+    "based on the book 'How to Become a PromptMaster.' You understand the full system:\n\n"
+    "METHODOLOGY:\n"
+    "- The workflow is: Input → Review → Output & Evaluation → Realignment → Summary\n"
+    "- Mode Locking (Ch5 S3): Each mode pins the AI to a specific persona (Architect, "
+    "Critic, Clarity, Coach, Therapist, Cold Critic, Analyst, or Custom)\n"
+    "- Anchoring (Ch5 S5): The prompt uses goal/role/format anchors to keep output aligned\n"
+    "- Invisible Scaffolding (Ch5 S7): Behind-the-scenes instructions guide AI behavior\n"
+    "- Drift (Ch5 S10): The primary failure mode — output escaping its scaffolding\n"
+    "- Iterative Refinement: Each iteration should measurably improve on the last\n"
+    "- Cold Critic Audit (Ch9): Adversarial self-audit available after finalizing\n\n"
+    "AVAILABLE USER ACTIONS (reference these specifically):\n"
+    "- 'Refine Prompt' → rebuilds the prompt and returns to Review phase for editing\n"
+    "- 'Generate Realignment' → creates a corrective prompt when scores are poor\n"
+    "- 'Finalize Session' → marks the session complete, enables Cold Critic audit\n"
+    "- Add/remove constraint presets in the Input phase\n"
+    "- Change the output format (bullet points, table, executive summary, etc.)\n"
+    "- Switch mode for the next iteration (e.g., Architect → Critic for stress-testing)\n"
+    "- Edit the assembled prompt directly in the Review phase\n\n"
+    "RULES:\n"
+    "- Give 2-3 specific suggestions based on the evaluation scores AND the actual output\n"
+    "- Each suggestion MUST reference what in the output needs to change AND which action to take\n"
+    "- If all scores are strong (Alignment=High, Clarity=High, Drift=Low), suggest "
+    "finalizing or running a Cold Critic audit to stress-test before exporting\n"
+    "- Do NOT repeat scores back. Do NOT praise generically. Just give clear next steps.\n"
+    "- Return ONLY a JSON array of strings, each one a single suggestion sentence."
 )
 
 GUIDANCE_PROMPT = """The user asked for this:
@@ -30,16 +51,22 @@ The output was evaluated:
 - Drift: {drift_score} — {drift_explanation}
 - Clarity: {clarity_score} — {clarity_explanation}
 
-Give 2-3 specific suggestions for what the user should change in their next iteration to improve the output. Focus on the weakest scores. Be specific to their objective, not generic."""
+Here is the actual output (first 800 chars):
+--- OUTPUT EXCERPT ---
+{output_excerpt}
+--- END EXCERPT ---
+
+Give 2-3 specific suggestions. For each, reference what in the output needs to change AND tell the user which action to take. Available actions: edit the prompt in Review phase, add a constraint, change the output format, switch mode, finalize the session, or run a Cold Critic audit. Be specific to this output, not generic."""
 
 
 async def generate_suggestions(
     client: OpenRouterClient,
     inputs: PMInput,
     evaluation: EvaluationResult,
+    output: str = "",
     model: str | None = None,
 ) -> list[str]:
-    """Generate LLM-powered contextual suggestions based on evaluation."""
+    """Generate LLM-powered contextual suggestions based on evaluation and output."""
     prompt = GUIDANCE_PROMPT.format(
         objective=inputs.objective,
         audience=inputs.audience,
@@ -52,6 +79,7 @@ async def generate_suggestions(
         drift_explanation=evaluation.drift.explanation,
         clarity_score=evaluation.clarity.score,
         clarity_explanation=evaluation.clarity.explanation,
+        output_excerpt=output[:800] if output else "(not available)",
     )
 
     try:
@@ -85,22 +113,23 @@ def _fallback_suggestions(evaluation: EvaluationResult) -> list[str]:
 
     if evaluation.alignment.score == "Low":
         suggestions.append(
-            "Your objective may be too vague \u2014 try being more specific "
-            "about what the output should contain."
+            "Your objective may be too vague — click 'Refine Prompt' and rewrite "
+            "your objective to be more specific about the desired outcome."
         )
     if evaluation.drift.score == "High":
         suggestions.append(
-            "The output wandered off-topic. Add explicit boundaries "
-            "in your constraints to keep it focused."
+            "The output wandered off-topic — add a constraint like 'Stay strictly "
+            "within the scope of [your topic]' in the Input phase to keep it focused."
         )
     if evaluation.clarity.score == "Low":
         suggestions.append(
-            "Try specifying an output format (e.g. 'bullet points', "
-            "'numbered steps') to improve structure."
+            "Try selecting an output format preset (e.g. 'Bullet points' or "
+            "'Step-by-step guide') in the Input phase to improve structure."
         )
     if not suggestions:
         suggestions.append(
-            "Strong output. Finalize, or try Cold Critic mode to stress-test it."
+            "Output looks strong — click 'Finalize Session' and consider running "
+            "a Cold Critic audit to stress-test before exporting."
         )
 
     return suggestions[:3]

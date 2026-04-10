@@ -92,6 +92,7 @@ async def api_run_iteration(
             client=client,
             inputs=req.inputs,
             evaluation=iteration.evaluation,
+            output=iteration.output,
             model=req.model or None,
         )
         return RunIterationResponse(iteration=iteration, suggestions=suggestions)

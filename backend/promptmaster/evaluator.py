@@ -13,9 +13,22 @@ from .llm_client import OpenRouterClient
 logger = logging.getLogger(__name__)
 
 EVALUATOR_SYSTEM = (
-    "You are a fair but rigorous output evaluator. You assess AI-generated content against "
-    "the user's original objective. You are objective and concise. You do not inflate scores, "
-    "but you also give credit where it is earned. Return ONLY valid JSON, no other text."
+    "You are the evaluation layer of PromptMaster — a structured AI workflow system "
+    "based on the book 'How to Become a PromptMaster.' Your role is critical to the "
+    "system's iterative improvement loop: generate → evaluate → correct → improve.\n\n"
+    "You assess AI-generated content against the user's original objective using three "
+    "dimensions. You understand the PromptMaster methodology:\n"
+    "- MODE LOCKING (Ch5 S3): The AI was given a specific persona via system prompt. "
+    "Evaluate whether the output stays in character for that mode.\n"
+    "- ANCHORING (Ch5 S5): The prompt includes goal anchors, role anchors, and format "
+    "anchors. Evaluate whether the output honors these anchors.\n"
+    "- INVISIBLE SCAFFOLDING (Ch5 S7): Behind-the-scenes instructions guide the AI's "
+    "behavior. Drift means the output escaped that scaffolding.\n"
+    "- DRIFT (Ch5 S10): Scope deviation from the objective — covering topics not asked "
+    "for, losing the mode's tone, becoming generic, padding with filler, or fixating on "
+    "tangents. Drift is the primary failure mode in extended AI interactions.\n\n"
+    "You are fair but rigorous. You do not inflate scores, but you give credit where "
+    "earned. Return ONLY valid JSON, no other text."
 )
 
 EVALUATOR_PROMPT = """Evaluate the following AI-generated output against the original request.
@@ -32,16 +45,24 @@ MODE USED: {mode}
 
 Evaluate along three dimensions. For each, assign "Low", "Medium", or "High" and provide exactly one sentence of explanation.
 
-SCORING GUIDELINES:
-- "High" = strong, well-targeted output that clearly meets the bar. Award it when genuinely earned.
-- "Medium" = acceptable but with clear room for improvement.
+SCORING GUIDELINES (be consistent — do not change a score unless the output genuinely changed):
+- "High" = strong, well-targeted output that clearly meets the bar. Award it confidently when earned. If the output addresses the objective, is well-structured, and stays on scope, it deserves "High."
+- "Medium" = acceptable but with clear, specific room for improvement. You MUST name what is lacking.
 - "Low" = significant problems — misses the objective, drifts off-topic, or is poorly structured.
 
-1. ALIGNMENT: Does the output directly address the stated objective for the target audience? "High" = on-target and substantive. "Medium" = addresses the topic but could be more targeted. "Low" = misses the objective, too broad, or the objective itself was too vague.
+IMPORTANT: Do not penalize stylistic variation. Focus on substance, not style.
 
-2. DRIFT: Does the output stay within the scope of the objective? Signs of drift include: covering topics not asked for, adopting a tone inconsistent with the selected mode, becoming generic or verbose, padding with filler, or fixating on tangents. "Low" = focused and relevant. "Medium" = mostly focused but with some unnecessary content. "High" = significant scope deviation or off-topic material.
+1. ALIGNMENT: Does the output directly address the stated objective for the target audience?
+   - Consider: Does it answer what was asked? Is it substantive enough? Does it match the audience's needs?
+   - "High" = on-target and substantive. "Medium" = addresses the topic but misses key aspects. "Low" = misses the objective or is too vague/broad.
 
-3. CLARITY: Is the output well-structured, unambiguous, and complete? "High" = clear, well-organized, easy to follow. "Medium" = understandable but could be tighter. "Low" = confusing, vague, poorly structured, or incomplete.
+2. DRIFT: Did the output escape the PromptMaster scaffolding? Drift is the primary failure mode in AI interactions.
+   - Signs of drift: covering topics NOT asked for, breaking character from the selected mode ({mode}), becoming generic when specificity was needed, padding with filler, fixating on tangents, or losing the mode's required tone.
+   - "Low" = focused and stays within scope (this is GOOD). "Medium" = mostly focused but includes unnecessary content. "High" = significant scope deviation or off-topic material.
+
+3. CLARITY: Is the output well-structured, unambiguous, and complete?
+   - Consider the mode's expected output style: {mode} mode has specific structural expectations.
+   - "High" = clear, well-organized, easy to follow. "Medium" = understandable but could be tighter. "Low" = confusing, vague, or incomplete.
 
 Return JSON in exactly this format:
 {{
@@ -81,7 +102,7 @@ async def evaluate_output(
         result_dict, _usage = await client.generate_json(
             prompt=prompt,
             system=EVALUATOR_SYSTEM,
-            temperature=0.3,
+            temperature=0.15,
             max_tokens=512,
             model=model,
         )
