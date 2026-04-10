@@ -344,21 +344,36 @@ export function SummaryPhase() {
         </section>
       )}
 
-      {/* 6. Footer actions */}
-      <footer className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[var(--outline-variant)] border-opacity-20 pt-12">
-        <button
-          onClick={handleHardReset}
-          disabled={hardResetLoading}
-          className="flex items-center justify-center gap-2 px-6 h-12 border border-[var(--outline-variant)] bg-white text-sm font-semibold text-[var(--on-surface)] rounded-xl hover:bg-[var(--surface-container-low)] hover:border-[var(--pm-primary)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          title="Summarize lessons from this session and start fresh with them as context"
-        >
-          <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
-          {hardResetLoading ? 'Carrying lessons…' : 'Carry Lessons Forward'}
-        </button>
+      {/* 6. Carry Lessons Forward */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 p-6 sm:p-8 border border-blue-100">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[var(--pm-primary)]">auto_fix_high</span>
+              <h3 className="text-lg font-bold tracking-tight text-[var(--on-surface)]">
+                Carry Lessons Forward
+              </h3>
+            </div>
+            <p className="max-w-md text-sm leading-relaxed text-[var(--on-surface-variant)]">
+              Extract key insights and lessons from this session, then start a new session with that context built in — so your next interaction picks up where this one left off.
+            </p>
+          </div>
+          <button
+            onClick={handleHardReset}
+            disabled={hardResetLoading}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[var(--pm-primary)] px-6 h-12 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            {hardResetLoading ? 'Extracting lessons…' : 'Carry Forward'}
+          </button>
+        </div>
+      </section>
 
+      {/* 7. Footer */}
+      <footer className="flex items-center justify-center border-t border-[var(--outline-variant)] border-opacity-20 pt-12">
         <button
           onClick={() => resetSession()}
-          className="flex items-center justify-center h-12 rounded-xl bg-[var(--pm-primary)] px-10 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="flex items-center justify-center h-12 rounded-xl bg-[var(--surface-container-high)] px-10 text-sm font-semibold text-[var(--on-surface)] transition-all hover:bg-[var(--surface-container-highest)] active:scale-[0.98]"
         >
           Start New Session
         </button>
