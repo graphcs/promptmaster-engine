@@ -262,6 +262,9 @@ export function InputPhase() {
           >
             Objective <span className="text-red-500">*</span>
           </label>
+          <p className="text-xs text-[var(--on-surface-variant)]">
+            What are you trying to accomplish or figure out?
+          </p>
           <textarea
             id="objective"
             value={objective}
