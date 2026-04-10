@@ -26,38 +26,43 @@ const PHASES = [
   { step: '05', name: 'Refine', desc: 'Iterate, realign, or finalize — every cycle improves the output.', icon: 'auto_fix_high' },
 ];
 
-/** Lazy-load Spline only when scrolled into view */
+/** Load Spline when visible, UNLOAD when scrolled away to free GPU for scroll animations */
 function LazySpline() {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [inView, setInView] = useState(false);
   const [SplineScene, setSplineScene] = useState<React.ComponentType<{ scene: string; className?: string }> | null>(null);
+  const moduleLoaded = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
-      { rootMargin: '200px' }
+      ([entry]) => setInView(entry.isIntersecting),
+      { rootMargin: '300px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
-    import('@/components/ui/splite').then((mod) => setSplineScene(() => mod.SplineScene));
-  }, [visible]);
+    if (inView && !moduleLoaded.current) {
+      moduleLoaded.current = true;
+      import('@/components/ui/splite').then((mod) => setSplineScene(() => mod.SplineScene));
+    }
+  }, [inView]);
 
   return (
     <div ref={ref} className="w-full h-full">
-      {SplineScene ? (
+      {SplineScene && inView ? (
         <SplineScene
           scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
           className="w-full h-full"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+          {inView && (
+            <div className="w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+          )}
         </div>
       )}
     </div>

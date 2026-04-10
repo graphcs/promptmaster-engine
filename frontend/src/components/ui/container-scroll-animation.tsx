@@ -1,6 +1,14 @@
 "use client";
 import React, { useRef, useMemo } from "react";
-import { useScroll, useTransform, motion, MotionValue } from "framer-motion";
+import {
+  useScroll,
+  useTransform,
+  useSpring,
+  motion,
+  type MotionValue,
+} from "framer-motion";
+
+const SPRING_CONFIG = { stiffness: 100, damping: 30, restDelta: 0.001 };
 
 export const ContainerScroll = ({
   titleComponent,
@@ -31,23 +39,24 @@ export const ContainerScroll = ({
     [isMobile]
   );
 
-  const rotate = useTransform(scrollYProgress, [0, 1], [20, 0]);
-  const scale = useTransform(scrollYProgress, [0, 1], scaleDimensions);
-  const translate = useTransform(scrollYProgress, [0, 1], [0, -100]);
+  // Raw transforms from scroll position
+  const rotateRaw = useTransform(scrollYProgress, [0, 1], [12, 0]);
+  const scaleRaw = useTransform(scrollYProgress, [0, 1], scaleDimensions);
+  const translateRaw = useTransform(scrollYProgress, [0, 1], [0, -80]);
+
+  // Smooth with springs — prevents jank from discrete scroll events
+  const rotate = useSpring(rotateRaw, SPRING_CONFIG);
+  const scale = useSpring(scaleRaw, SPRING_CONFIG);
+  const translate = useSpring(translateRaw, SPRING_CONFIG);
 
   return (
     <div
       className="h-[40rem] md:h-[60rem] flex items-center justify-center relative p-2 md:p-20"
       ref={containerRef}
     >
-      <div
-        className="py-10 md:py-40 w-full relative"
-        style={{
-          perspective: "1000px",
-        }}
-      >
+      <div className="py-10 md:py-40 w-full relative" style={{ perspective: "1000px" }}>
         <Header translate={translate} titleComponent={titleComponent} />
-        <Card rotate={rotate} translate={translate} scale={scale}>
+        <Card rotate={rotate} scale={scale}>
           {children}
         </Card>
       </div>
@@ -55,13 +64,17 @@ export const ContainerScroll = ({
   );
 };
 
-export const Header = ({ translate, titleComponent }: any) => {
+export const Header = ({
+  translate,
+  titleComponent,
+}: {
+  translate: MotionValue<number>;
+  titleComponent: React.ReactNode;
+}) => {
   return (
     <motion.div
-      style={{
-        translateY: translate,
-      }}
-      className="div max-w-5xl mx-auto text-center"
+      style={{ translateY: translate, willChange: "transform" }}
+      className="max-w-5xl mx-auto text-center"
     >
       {titleComponent}
     </motion.div>
@@ -75,7 +88,6 @@ export const Card = ({
 }: {
   rotate: MotionValue<number>;
   scale: MotionValue<number>;
-  translate: MotionValue<number>;
   children: React.ReactNode;
 }) => {
   return (
@@ -84,11 +96,16 @@ export const Card = ({
         rotateX: rotate,
         scale,
         willChange: "transform",
+        backfaceVisibility: "hidden",
+        transformStyle: "preserve-3d",
       }}
-      className="max-w-5xl -mt-12 mx-auto h-[30rem] md:h-[40rem] w-full border-4 border-white/10 p-2 md:p-6 bg-[#111118] rounded-[30px] container-scroll-card"
+      className="max-w-5xl -mt-12 mx-auto h-[30rem] md:h-[40rem] w-full container-scroll-card"
     >
-      <div className="h-full w-full overflow-hidden rounded-2xl bg-[#1a1a2e] md:rounded-2xl md:p-4">
-        {children}
+      {/* Static inner shell — border-radius only here, NOT on the animated parent */}
+      <div className="h-full w-full border-4 border-white/10 bg-[#111118] rounded-[30px] p-2 md:p-6">
+        <div className="h-full w-full overflow-hidden rounded-2xl bg-[#1a1a2e] md:p-4">
+          {children}
+        </div>
       </div>
     </motion.div>
   );
