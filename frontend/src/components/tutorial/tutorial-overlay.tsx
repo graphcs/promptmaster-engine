@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface TutorialStep {
   /** CSS selector for the element to spotlight */
@@ -22,35 +22,57 @@ interface TutorialOverlayProps {
 export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [spotlightRect, setSpotlightRect] = useState<DOMRect | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [tooltipHeight, setTooltipHeight] = useState(220);
 
   const step = steps[currentStep];
 
-  const updateSpotlight = useCallback(() => {
+  // Measure actual tooltip height after each render
+  useEffect(() => {
+    if (tooltipRef.current) {
+      setTooltipHeight(tooltipRef.current.offsetHeight);
+    }
+  }, [currentStep, spotlightRect]);
+
+  const measureTarget = useCallback(() => {
     if (!step || !step.target) {
       setSpotlightRect(null);
       return;
     }
     const el = document.querySelector(step.target);
     if (el) {
-      const rect = el.getBoundingClientRect();
-      setSpotlightRect(rect);
-      // Scroll element into view if needed
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setSpotlightRect(el.getBoundingClientRect());
     } else {
       setSpotlightRect(null);
     }
   }, [step]);
 
+  // Scroll target into view on step change, then re-measure after scroll settles
   useEffect(() => {
-    updateSpotlight();
-    // Recalculate on resize/scroll
-    window.addEventListener('resize', updateSpotlight);
-    window.addEventListener('scroll', updateSpotlight, true);
+    if (!step || !step.target) {
+      setSpotlightRect(null);
+      return;
+    }
+    const el = document.querySelector(step.target);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Re-measure after scroll animation completes
+      const timer = setTimeout(measureTarget, 450);
+      return () => clearTimeout(timer);
+    } else {
+      setSpotlightRect(null);
+    }
+  }, [step, measureTarget]);
+
+  // Recalculate on resize/scroll
+  useEffect(() => {
+    window.addEventListener('resize', measureTarget);
+    window.addEventListener('scroll', measureTarget, true);
     return () => {
-      window.removeEventListener('resize', updateSpotlight);
-      window.removeEventListener('scroll', updateSpotlight, true);
+      window.removeEventListener('resize', measureTarget);
+      window.removeEventListener('scroll', measureTarget, true);
     };
-  }, [updateSpotlight]);
+  }, [measureTarget]);
 
   function handleNext() {
     if (currentStep < steps.length - 1) {
@@ -69,40 +91,38 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
   if (!step) return null;
 
   // Calculate tooltip position with viewport clamping
-  const padding = 12;
+  const gap = 12;
+  const margin = 16;
   const tooltipWidth = 320;
-  const tooltipEstimatedHeight = 220;
   const tooltipStyle: React.CSSProperties = {};
 
   if (spotlightRect) {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // Determine best vertical position: prefer requested, but flip if it overflows
+    // Determine best vertical position: prefer requested, flip if it would overflow
     let placeBelow = step.position === 'bottom' || step.position === 'right' || step.position === 'left';
-    const spaceBelow = vh - spotlightRect.bottom - padding;
-    const spaceAbove = spotlightRect.top - padding;
+    const spaceBelow = vh - spotlightRect.bottom - gap;
+    const spaceAbove = spotlightRect.top - gap;
 
-    if (placeBelow && spaceBelow < tooltipEstimatedHeight && spaceAbove > spaceBelow) {
+    if (placeBelow && spaceBelow < tooltipHeight + margin && spaceAbove > spaceBelow) {
       placeBelow = false;
-    } else if (!placeBelow && spaceAbove < tooltipEstimatedHeight && spaceBelow > spaceAbove) {
+    } else if (!placeBelow && spaceAbove < tooltipHeight + margin && spaceBelow > spaceAbove) {
       placeBelow = true;
     }
 
+    // Always use top — avoids bottom-property math that can push tooltip off-screen
     if (placeBelow) {
-      tooltipStyle.top = Math.min(spotlightRect.bottom + padding, vh - tooltipEstimatedHeight - 16);
+      const top = spotlightRect.bottom + gap;
+      tooltipStyle.top = Math.min(top, vh - tooltipHeight - margin);
     } else {
-      tooltipStyle.bottom = Math.min(vh - spotlightRect.top + padding, vh - 16);
+      const top = spotlightRect.top - gap - tooltipHeight;
+      tooltipStyle.top = Math.max(top, margin);
     }
 
-    // Horizontal: start at element left, but clamp to viewport
-    let left = spotlightRect.left;
-    if (left + tooltipWidth > vw - 16) {
-      left = vw - tooltipWidth - 16;
-    }
-    if (left < 16) {
-      left = 16;
-    }
+    // Horizontal: center on target, clamp to viewport
+    let left = spotlightRect.left + spotlightRect.width / 2 - tooltipWidth / 2;
+    left = Math.max(margin, Math.min(left, vw - tooltipWidth - margin));
     tooltipStyle.left = left;
   }
 
@@ -144,12 +164,13 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
 
       {/* Tooltip card — centered if no spotlight target, positioned otherwise */}
       <div
+        ref={tooltipRef}
         className={`bg-white rounded-2xl shadow-2xl p-5 sm:p-6 transition-all duration-300 ${
           spotlightRect
             ? 'absolute w-[calc(100vw-32px)] sm:w-[320px]'
             : 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-48px)] sm:w-[380px]'
         }`}
-        style={spotlightRect ? { ...tooltipStyle, maxWidth: 'calc(100vw - 32px)' } : {}}
+        style={spotlightRect ? { ...tooltipStyle, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto' } : {}}
       >
         {/* Progress bar */}
         <div className="flex items-center gap-1 mb-4">
