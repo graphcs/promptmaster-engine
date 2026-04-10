@@ -99,7 +99,7 @@ export const Card = ({
         backfaceVisibility: "hidden",
         transformStyle: "preserve-3d",
       }}
-      className="max-w-5xl -mt-12 mx-auto h-[30rem] md:h-[40rem] w-full container-scroll-card"
+      className="max-w-5xl mt-4 md:mt-8 mx-auto h-[30rem] md:h-[40rem] w-full container-scroll-card"
     >
       {/* Static inner shell — border-radius only here, NOT on the animated parent */}
       <div className="h-full w-full border-4 border-white/10 bg-[#111118] rounded-[30px] p-2 md:p-6">

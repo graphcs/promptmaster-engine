@@ -108,12 +108,11 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ===== HERO SECTION ===== */}
+      {/* ===== HERO SECTION (only section with Spotlight) ===== */}
       <section className="relative min-h-screen overflow-hidden">
         <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#2563eb" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20 flex flex-col lg:flex-row items-center min-h-screen">
-          {/* Left: Copy */}
           <div className="flex-1 space-y-8 text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/60 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--pm-primary)] animate-pulse" />
@@ -148,7 +147,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right: Spline 3D Scene (lazy loaded) */}
           <div className="flex-1 relative h-[400px] lg:h-[500px] w-full mt-12 lg:mt-0">
             <LazySpline />
           </div>
@@ -159,7 +157,7 @@ export default function LandingPage() {
       <section className="relative">
         <ContainerScroll
           titleComponent={
-            <div className="space-y-4">
+            <div className="space-y-4 mb-8">
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
                 The Interface
               </p>
@@ -184,8 +182,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== HOW IT WORKS ===== */}
-      <section id="how-it-works" className="py-32 relative overflow-hidden">
-        <Spotlight className="-top-40 -left-20 md:left-40 md:-top-20" fill="#2563eb" />
+      <section id="how-it-works" className="py-32 section-offscreen">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20 space-y-4">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
@@ -203,8 +200,8 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {PHASES.map((phase) => (
-              <div key={phase.step} className="group">
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:bg-white/[0.06] hover:border-white/10 transition-all hover:-translate-y-1 h-full space-y-4">
+              <div key={phase.step}>
+                <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 h-full space-y-4">
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] font-extrabold text-blue-400 tracking-widest">
                       {phase.step}
@@ -227,8 +224,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== MODES ===== */}
-      <section className="py-32 relative overflow-hidden">
-        <Spotlight className="-top-40 -right-20 md:right-40 md:-top-20" fill="#2563eb" />
+      <section className="py-32 section-offscreen">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20 space-y-4">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
@@ -248,9 +244,9 @@ export default function LandingPage() {
             {MODES.map((mode) => (
               <Card
                 key={mode.name}
-                className="p-6 bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] hover:border-white/10 hover:-translate-y-1 transition-all cursor-default group"
+                className="p-6 bg-white/[0.03] border-white/[0.06] cursor-default"
               >
-                <span className="material-symbols-outlined text-blue-400 text-[28px] mb-4 block group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-blue-400 text-[28px] mb-4 block">
                   {mode.icon}
                 </span>
                 <h3 className="text-sm font-bold text-white mb-1">
@@ -266,47 +262,22 @@ export default function LandingPage() {
       </section>
 
       {/* ===== KEY DIFFERENTIATORS ===== */}
-      <section className="py-32 relative">
+      <section className="py-32 section-offscreen">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 space-y-4 hover:bg-white/[0.06] hover:border-white/10 transition-all">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-blue-400">verified</span>
+            {[
+              { icon: 'verified', title: 'Independent Evaluation', desc: 'A separate AI call scores every output on alignment, clarity, and drift — the AI never grades itself.' },
+              { icon: 'target', title: 'Drift Detection', desc: 'Every output is checked for scope deviation. When drift is detected, the system triggers a corrective realignment.' },
+              { icon: 'auto_fix_high', title: 'Iterative Refinement', desc: 'Each cycle improves on the last. Actionable suggestions tell you exactly what to change and which action to take next.' },
+            ].map((item) => (
+              <div key={item.icon} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-blue-400">{item.icon}</span>
+                </div>
+                <h3 className="text-lg font-bold text-white">{item.title}</h3>
+                <p className="text-sm text-white/40 leading-relaxed">{item.desc}</p>
               </div>
-              <h3 className="text-lg font-bold text-white">
-                Independent Evaluation
-              </h3>
-              <p className="text-sm text-white/40 leading-relaxed">
-                A separate AI call scores every output on alignment, clarity, and
-                drift — the AI never grades itself.
-              </p>
-            </div>
-
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 space-y-4 hover:bg-white/[0.06] hover:border-white/10 transition-all">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-blue-400">target</span>
-              </div>
-              <h3 className="text-lg font-bold text-white">
-                Drift Detection
-              </h3>
-              <p className="text-sm text-white/40 leading-relaxed">
-                Every output is checked for scope deviation. When drift is
-                detected, the system triggers a corrective realignment.
-              </p>
-            </div>
-
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 space-y-4 hover:bg-white/[0.06] hover:border-white/10 transition-all">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-blue-400">auto_fix_high</span>
-              </div>
-              <h3 className="text-lg font-bold text-white">
-                Iterative Refinement
-              </h3>
-              <p className="text-sm text-white/40 leading-relaxed">
-                Each cycle improves on the last. Actionable suggestions tell you
-                exactly what to change and which action to take next.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>

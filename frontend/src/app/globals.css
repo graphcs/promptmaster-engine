@@ -186,6 +186,12 @@
   border-radius: 3px;
 }
 
+/* === Off-screen section rendering skip (massive perf win on long pages) === */
+.section-offscreen {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+}
+
 /* === Container Scroll Card (GPU-optimized) === */
 .container-scroll-card {
   box-shadow:
