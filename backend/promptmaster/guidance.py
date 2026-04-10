@@ -111,8 +111,14 @@ async def generate_suggestions(
         return _fallback_suggestions(evaluation)
 
 
-def _fallback_suggestions(evaluation: EvaluationResult) -> list[str]:
+def _fallback_suggestions(evaluation: EvaluationResult | None) -> list[str]:
     """Deterministic fallback if the LLM call fails."""
+    if evaluation is None:
+        return [
+            "Review the output and click 'Refine Prompt' to iterate, "
+            "or 'Finalize Session' if it meets your needs."
+        ]
+
     suggestions: list[str] = []
 
     if evaluation.alignment.score == "Low":
