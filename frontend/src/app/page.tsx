@@ -65,6 +65,18 @@ function LazySpline() {
 }
 
 export default function LandingPage() {
+  // Sync body background with landing page dark theme
+  useEffect(() => {
+    const body = document.body;
+    const html = document.documentElement;
+    body.style.backgroundColor = '#0a0a1a';
+    html.style.backgroundColor = '#0a0a1a';
+    return () => {
+      body.style.backgroundColor = '';
+      html.style.backgroundColor = '';
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0a0a1a]">
       {/* ===== NAVIGATION ===== */}
@@ -167,7 +179,8 @@ export default function LandingPage() {
       </section>
 
       {/* ===== HOW IT WORKS ===== */}
-      <section id="how-it-works" className="py-32 relative">
+      <section id="how-it-works" className="py-32 relative overflow-hidden">
+        <Spotlight className="-top-40 -left-20 md:left-40 md:-top-20" fill="#2563eb" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20 space-y-4">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
@@ -209,7 +222,8 @@ export default function LandingPage() {
       </section>
 
       {/* ===== MODES ===== */}
-      <section className="py-32 relative">
+      <section className="py-32 relative overflow-hidden">
+        <Spotlight className="-top-40 -right-20 md:right-40 md:-top-20" fill="#2563eb" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20 space-y-4">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">
