@@ -102,8 +102,8 @@ export default function SignupPage() {
         {/* Branding */}
         <div className="mb-8 text-center">
           <img src="/logo.svg" alt="PromptMaster" className="w-12 h-12 rounded-xl mx-auto mb-4" />
-          <h1 className="text-xl font-bold tracking-tighter text-[#1E293B]">PromptMaster Engine</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Professional AI Workflow</p>
+          <h1 className="text-xl font-bold tracking-tighter text-[#1E293B]">PromptMaster</h1>
+          <p className="mt-1 text-sm text-muted-foreground">A system for thinking with AI</p>
         </div>
 
         <Card className="rounded-xl shadow-sm">

@@ -73,10 +73,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <img src="/logo.svg" alt="PromptMaster" className="w-9 h-9 rounded-lg" />
         <div>
           <h1 className="text-sm font-semibold tracking-tighter text-slate-900">
-            PromptMaster Engine
+            PromptMaster
           </h1>
-          <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold">
-            Professional AI Workflow
+          <p className="text-[10px] text-slate-500 font-medium leading-tight">
+            A system for thinking with AI
           </p>
         </div>
       </div>

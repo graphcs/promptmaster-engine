@@ -11,11 +11,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'PromptMaster Engine',
-    template: '%s | PromptMaster Engine',
+    default: 'PromptMaster',
+    template: '%s | PromptMaster',
   },
   description:
-    'Professional AI workflow platform that structures interactions with LLMs using modes, evaluation, and iterative refinement. Built for analysts, auditors, lawyers, and strategists.',
+    'A system for thinking with AI. Get clearer, more precise results by structuring how you interact with AI — using modes, evaluation, and iterative refinement.',
   keywords: [
     'prompt engineering',
     'AI workflow',
@@ -26,19 +26,19 @@ export const metadata: Metadata = {
     'drift detection',
     'PromptMaster',
   ],
-  authors: [{ name: 'PromptMaster Engine' }],
+  authors: [{ name: 'PromptMaster' }],
   openGraph: {
     type: 'website',
-    title: 'PromptMaster Engine',
+    title: 'PromptMaster',
     description:
-      'Structure your AI interactions for better results. Modes, evaluation, and iterative refinement — not just prompting.',
-    siteName: 'PromptMaster Engine',
+      'A system for thinking with AI. Get clearer, more precise results by structuring how you interact with AI.',
+    siteName: 'PromptMaster',
   },
   twitter: {
     card: 'summary',
-    title: 'PromptMaster Engine',
+    title: 'PromptMaster',
     description:
-      'Professional AI workflow platform with structured prompting, evaluation scoring, and iterative refinement.',
+      'A system for thinking with AI. Get clearer, more precise results by structuring how you interact with AI.',
   },
   icons: {
     icon: '/favicon.svg',

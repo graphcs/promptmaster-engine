@@ -73,8 +73,8 @@ export default function LoginPage() {
         {/* Minimal Branding Anchor */}
         <header className="text-center space-y-2">
           <img src="/logo.svg" alt="PromptMaster" className="w-12 h-12 rounded-xl mx-auto mb-6" />
-          <h1 className="text-[var(--on-surface)] font-bold text-xl tracking-tighter">PromptMaster Engine</h1>
-          <p className="text-[var(--on-surface-variant)] text-sm">Professional AI Workflow</p>
+          <h1 className="text-[var(--on-surface)] font-bold text-xl tracking-tighter">PromptMaster</h1>
+          <p className="text-[var(--on-surface-variant)] text-sm">A system for thinking with AI</p>
         </header>
 
         {/* Login Container Well */}

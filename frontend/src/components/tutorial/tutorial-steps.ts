@@ -40,7 +40,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     target: '[data-tutorial="assemble-btn"]',
     title: 'Assemble Your Prompt',
     description:
-      'Click this to build an optimized prompt from your inputs. PromptMaster adds mode locking, anchoring, and invisible scaffolding behind the scenes.',
+      'Click this to build an optimized prompt from your inputs. PromptMaster structures the request using roles, constraints, and refinement techniques behind the scenes.',
     position: 'top',
   },
   {

@@ -145,11 +145,11 @@ export function InputPhase() {
       {!onboardingSeen && (
         <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100">
           <h2 className="text-sm font-semibold text-[var(--on-surface)] mb-3">
-            Welcome to PromptMaster Engine
+            Welcome to PromptMaster
           </h2>
           <ol className="text-sm text-[var(--on-surface-variant)] space-y-1 mb-4 list-none">
-            <li>1. Pick a mode — choose how the AI should think</li>
-            <li>2. Describe your objective — what do you want the AI to produce?</li>
+            <li>1. Choose a mode — define how the AI approaches the task</li>
+            <li>2. Describe your objective — what outcome are you trying to achieve?</li>
             <li>3. Click Assemble Prompt — the system builds an optimized prompt</li>
           </ol>
           <div className="flex gap-3">
@@ -176,12 +176,12 @@ export function InputPhase() {
 
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-display">Prompt Configuration</h1>
+        <h1 className="text-display">Define Your Request</h1>
         <p className="text-body text-[var(--on-surface-variant)]">
-          Define the persona, objective, and structural constraints for your high-precision AI output.
+          Set your objective, constraints, and perspective to guide the AI's response.
         </p>
         <p className="text-xs text-[var(--on-surface-variant)] italic mb-4">
-          PromptMaster structures your request with mode locking, anchoring, and invisible scaffolding — techniques from the PromptMaster™ methodology.
+          PromptMaster guides the AI's thinking using structured roles, constraints, and iterative refinement.
         </p>
       </div>
 
@@ -207,7 +207,7 @@ export function InputPhase() {
       {/* Mode Grid section */}
       <div className="space-y-4" data-tutorial="mode-grid">
         <h2 className="text-sm font-semibold text-[var(--on-surface)] uppercase tracking-widest">
-          Select Engine Mode
+          Choose a Mode
         </h2>
         <ModeGrid selectedMode={mode} onSelect={(m: ModeType) => setMode(m)} />
 
