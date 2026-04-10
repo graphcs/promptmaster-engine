@@ -98,11 +98,16 @@ async def generate_suggestions(
         # Result should be a list of strings
         if isinstance(result, list):
             return [str(s) for s in result[:3]]
-        # Some models wrap in {"suggestions": [...]}
+        # Some models wrap in {"suggestions": [...]} or similar
         if isinstance(result, dict):
-            for key in ("suggestions", "items", "steps"):
+            # Try known keys first, then any list value
+            for key in ("suggestions", "items", "steps", "recommendations"):
                 if key in result and isinstance(result[key], list):
                     return [str(s) for s in result[key][:3]]
+            # Fall back to first list value found in the dict
+            for value in result.values():
+                if isinstance(value, list) and len(value) > 0:
+                    return [str(s) for s in value[:3]]
 
         logger.warning(f"Unexpected guidance format: {type(result)}")
         return _fallback_suggestions(evaluation)
