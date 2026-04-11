@@ -52,9 +52,19 @@ export function SessionFacts() {
 
       {expanded && (
         <div className="mt-2 space-y-2 pl-2 pr-1">
-          <p className="text-[10px] text-slate-500 leading-relaxed px-1">
-            Pin agreed facts to anchor every prompt. The AI won&apos;t contradict these.
-          </p>
+          <div className="px-1 space-y-1.5">
+            <p className="text-[10px] text-slate-600 leading-relaxed">
+              Pinned facts are injected into <b>every prompt</b> the AI sees as an{' '}
+              <code className="text-[10px] bg-slate-200 px-1 py-0.5 rounded">
+                ESTABLISHED FACTS
+              </code>{' '}
+              block. The AI is told not to contradict them.
+            </p>
+            <p className="text-[10px] text-slate-500 leading-relaxed italic">
+              Use for scope rules, constants, agreed data — e.g., <q>Budget is $50K</q>,{' '}
+              <q>Do not discuss pricing</q>.
+            </p>
+          </div>
 
           {/* Fact list */}
           {hasFacts && (
@@ -74,7 +84,7 @@ export function SessionFacts() {
                     type="button"
                     onClick={() => removeFact(i)}
                     aria-label="Remove fact"
-                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all flex-shrink-0"
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all flex-shrink-0"
                   >
                     <span className="material-symbols-outlined text-[14px]">close</span>
                   </button>

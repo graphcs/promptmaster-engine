@@ -68,15 +68,15 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   });
 
   return (
-    <aside className="w-[260px] md:w-[260px] h-screen md:fixed md:left-0 md:top-0 bg-slate-100 flex flex-col p-4 gap-y-4 z-50 overflow-y-auto">
+    <aside className="w-[280px] md:w-[260px] h-screen md:fixed md:left-0 md:top-0 bg-slate-100 flex flex-col p-4 gap-y-4 z-50 overflow-y-auto sidebar-scroll">
       {/* Brand */}
-      <div className="px-2 mb-4 flex items-center gap-3">
-        <img src="/logo.svg" alt="PromptMaster" className="w-9 h-9 rounded-lg" />
-        <div>
-          <h1 className="text-sm font-semibold tracking-tighter text-slate-900">
+      <div className="px-2 mb-4 flex items-center gap-3 min-w-0">
+        <img src="/logo.svg" alt="PromptMaster" className="w-9 h-9 rounded-lg flex-shrink-0" />
+        <div className="min-w-0">
+          <h1 className="text-sm font-semibold tracking-tighter text-slate-900 truncate">
             PromptMaster
           </h1>
-          <p className="text-[10px] text-slate-500 font-medium leading-tight">
+          <p className="text-[10px] text-slate-500 font-medium leading-tight truncate">
             A system for thinking with AI
           </p>
         </div>
