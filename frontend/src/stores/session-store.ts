@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session } from '@/types';
+import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating } from '@/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
 
 interface SessionState {
@@ -61,6 +61,7 @@ interface SessionState {
   setPromptEdited: (prompt: string) => void;
   setSystemPrompt: (prompt: string) => void;
   appendIteration: (iteration: Iteration, suggestions: string[]) => void;
+  setIterationRating: (iterationNumber: number, rating: UserRating | null) => void;
   setRealignmentPrompt: (prompt: string | null) => void;
   setModel: (model: string) => void;
   setSelfAudit: (audit: string) => void;
@@ -136,6 +137,12 @@ export const useSessionStore = create<SessionState>()(
           currentOutput: iteration.output,
           currentEval: iteration.evaluation,
           suggestions,
+        })),
+      setIterationRating: (iterationNumber, rating) =>
+        set((state) => ({
+          iterations: state.iterations.map((it) =>
+            it.iteration_number === iterationNumber ? { ...it, user_rating: rating } : it
+          ),
         })),
       setRealignmentPrompt: (realignmentPrompt) => set({ realignmentPrompt }),
       setModel: (model) => set({ model }),

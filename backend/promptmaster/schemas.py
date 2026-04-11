@@ -62,6 +62,10 @@ class Iteration(BaseModel):
         default=None,
         description="Where this iteration came from: 'initial', 'refine', 'realignment', 'challenge', 'self_audit', 'drift_alert', 'refine_shorter', etc.",
     )
+    user_rating: Literal["positive", "negative"] | None = Field(
+        default=None,
+        description="User's explicit rating of this iteration — 'positive' (strong) or 'negative' (poor), or None if unrated.",
+    )
 
 
 class PromptTemplate(BaseModel):

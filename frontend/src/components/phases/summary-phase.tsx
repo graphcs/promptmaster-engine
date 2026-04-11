@@ -268,9 +268,15 @@ export function SummaryPhase() {
                   <CustomSelect
                     value={String(leftIdx)}
                     onChange={(v) => setLeftIdx(Number(v))}
-                    options={iterations.map((_, i) => ({
+                    options={iterations.map((it, i) => ({
                       value: String(i),
-                      label: `Iteration ${i + 1}${i === iterations.length - 1 ? ' (Latest)' : ''}`,
+                      label: `Iteration ${i + 1}${
+                        it.user_rating === 'positive'
+                          ? ' 👍'
+                          : it.user_rating === 'negative'
+                          ? ' 👎'
+                          : ''
+                      }${i === iterations.length - 1 ? ' (Latest)' : ''}`,
                     }))}
                   />
                   <div className="min-h-[200px] max-h-[400px] overflow-y-auto rounded-xl bg-white p-6 border border-[var(--outline-variant)]/10 custom-scrollbar">
@@ -290,9 +296,15 @@ export function SummaryPhase() {
                   <CustomSelect
                     value={String(rightIdx)}
                     onChange={(v) => setRightIdx(Number(v))}
-                    options={iterations.map((_, i) => ({
+                    options={iterations.map((it, i) => ({
                       value: String(i),
-                      label: `Iteration ${i + 1}${i === 0 ? ' (First)' : ''}`,
+                      label: `Iteration ${i + 1}${
+                        it.user_rating === 'positive'
+                          ? ' 👍'
+                          : it.user_rating === 'negative'
+                          ? ' 👎'
+                          : ''
+                      }${i === 0 ? ' (First)' : ''}`,
                     }))}
                   />
                   <div className="min-h-[200px] max-h-[400px] overflow-y-auto rounded-xl bg-white p-6 border border-[var(--outline-variant)]/10 custom-scrollbar">

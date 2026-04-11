@@ -32,6 +32,15 @@ def _label_trigger(source: str | None) -> str:
     return _TRIGGER_LABELS.get(source, source)
 
 
+def _label_rating(rating: str | None) -> str:
+    """Format user rating for inclusion in session history."""
+    if rating == "positive":
+        return "USER RATED: STRONG (user liked this iteration)"
+    if rating == "negative":
+        return "USER RATED: POOR (user disliked this iteration)"
+    return ""
+
+
 def format_session_history(
     iterations: list[Iteration],
     max_chars_per_output: int = 180,
@@ -51,6 +60,14 @@ def format_session_history(
         return "Session history: this is the first iteration."
 
     lines = [f"Session history: {len(iterations)} iteration(s) so far."]
+    has_any_rating = any(it.user_rating for it in iterations)
+    if has_any_rating:
+        lines.append(
+            "NOTE: The user has explicitly rated some iterations STRONG or POOR. "
+            "Treat these ratings as direct signal about their preferences. "
+            "Favor approaches from STRONG iterations; avoid repeating approaches from POOR iterations."
+        )
+
     for it in iterations:
         mode_label = MODES.get(it.mode, {}).get("display_name", it.mode)
         trigger_label = _label_trigger(it.trigger_source)
@@ -64,12 +81,17 @@ def format_session_history(
         else:
             score_line = "diagnostic critique (no eval)"
 
+        rating_suffix = ""
+        rating_label = _label_rating(it.user_rating)
+        if rating_label:
+            rating_suffix = f" [{rating_label}]"
+
         excerpt = (it.output or "").strip().replace("\n", " ")
         if len(excerpt) > max_chars_per_output:
             excerpt = excerpt[:max_chars_per_output] + "…"
 
         lines.append(
-            f"- Iteration {it.iteration_number} ({mode_label}, {trigger_label}): {score_line}.\n"
+            f"- Iteration {it.iteration_number} ({mode_label}, {trigger_label}): {score_line}.{rating_suffix}\n"
             f'  Output excerpt: "{excerpt}"'
         )
     return "\n".join(lines)

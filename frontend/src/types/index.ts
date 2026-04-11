@@ -31,6 +31,8 @@ export interface EvaluationResult {
   clarity: DimensionScore;
 }
 
+export type UserRating = 'positive' | 'negative';
+
 export interface Iteration {
   iteration_number: number;
   prompt_sent: string;
@@ -39,6 +41,7 @@ export interface Iteration {
   mode: ModeType;
   evaluation: EvaluationResult | null;
   trigger_source?: string | null;
+  user_rating?: UserRating | null;
 }
 
 export interface PromptTemplate {

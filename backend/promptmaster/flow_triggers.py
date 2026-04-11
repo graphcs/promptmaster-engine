@@ -55,7 +55,10 @@ _PROMPTMASTER_CONTEXT = (
     "'How to Become a PromptMaster' by Sean Moran. The user interacts via a 5-phase loop: "
     "Input → Review → Output & Evaluation → Realignment → Summary. "
     "The system uses Mode Locking, Anchoring, and Invisible Scaffolding to keep the AI aligned, "
-    "and a separate evaluator LLM to detect drift."
+    "and a separate evaluator LLM to detect drift.\n\n"
+    "USER RATINGS: The session history may show iterations rated STRONG or POOR by the user. "
+    "These are direct signals about their taste. When producing new output or critique, actively "
+    "preserve what made STRONG iterations work and avoid repeating the patterns of POOR ones."
 )
 
 

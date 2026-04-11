@@ -66,7 +66,19 @@ export function OutputPhase() {
   const setRealignmentPrompt = useSessionStore((s) => s.setRealignmentPrompt);
   const setAssembled = useSessionStore((s) => s.setAssembled);
   const appendIteration = useSessionStore((s) => s.appendIteration);
+  const setIterationRating = useSessionStore((s) => s.setIterationRating);
   const finalize = useSessionStore((s) => s.finalize);
+
+  // The most recent iteration is the "current" one on screen
+  const currentIteration = iterations[iterations.length - 1];
+  const currentRating = currentIteration?.user_rating ?? null;
+
+  function handleRate(rating: 'positive' | 'negative') {
+    if (!currentIteration) return;
+    // Toggle off if clicking the same rating; otherwise set it
+    const next = currentRating === rating ? null : rating;
+    setIterationRating(currentIteration.iteration_number, next);
+  }
 
   const [realignLoading, setRealignLoading] = useState(false);
   const [refineLoading, setRefineLoading] = useState(false);
@@ -272,12 +284,57 @@ export function OutputPhase() {
           <span className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
             Generated Output
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {/* Thumbs up */}
+            <button
+              type="button"
+              onClick={() => handleRate('positive')}
+              disabled={!currentIteration}
+              title="Mark as strong — the AI will preserve what worked here"
+              aria-label="Mark as strong"
+              aria-pressed={currentRating === 'positive'}
+              className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                currentRating === 'positive'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)]'
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+            >
+              <span
+                className="material-symbols-outlined text-[18px]"
+                style={currentRating === 'positive' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+              >
+                thumb_up
+              </span>
+            </button>
+
+            {/* Thumbs down */}
+            <button
+              type="button"
+              onClick={() => handleRate('negative')}
+              disabled={!currentIteration}
+              title="Mark as poor — the AI will avoid repeating this"
+              aria-label="Mark as poor"
+              aria-pressed={currentRating === 'negative'}
+              className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                currentRating === 'negative'
+                  ? 'bg-red-100 text-red-700'
+                  : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)]'
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+            >
+              <span
+                className="material-symbols-outlined text-[18px]"
+                style={currentRating === 'negative' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+              >
+                thumb_down
+              </span>
+            </button>
+
+            {/* Copy */}
             <button
               type="button"
               onClick={handleCopy}
               title="Copy to clipboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)] transition-colors ml-1"
             >
               <span className="material-symbols-outlined text-[16px]">
                 {copied ? 'check' : 'content_copy'}
@@ -658,16 +715,37 @@ export function OutputPhase() {
             {iterations.map((iter) => {
               const modeLabel = MODE_DISPLAY[iter.mode]?.display_name ?? iter.mode;
               const isExpanded = !!expandedIterations[iter.iteration_number];
+              const rating = iter.user_rating;
               return (
                 <div key={iter.iteration_number} className="px-8 py-5">
                   {/* Iteration header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-[var(--on-surface)]">
-                      Iteration {iter.iteration_number} ({modeLabel})
-                    </span>
-                    {iter.evaluation && (
-                      <div className="flex items-center gap-2">
-                        {(['alignment', 'drift', 'clarity'] as const).map((dim) => {
+                  <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-[var(--on-surface)]">
+                        Iteration {iter.iteration_number} ({modeLabel})
+                      </span>
+                      {rating && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            rating === 'positive'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                          title={rating === 'positive' ? 'User marked as strong' : 'User marked as poor'}
+                        >
+                          <span
+                            className="material-symbols-outlined text-[12px]"
+                            style={{ fontVariationSettings: "'FILL' 1" }}
+                          >
+                            {rating === 'positive' ? 'thumb_up' : 'thumb_down'}
+                          </span>
+                          {rating === 'positive' ? 'Strong' : 'Poor'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {iter.evaluation &&
+                        (['alignment', 'drift', 'clarity'] as const).map((dim) => {
                           const score = iter.evaluation![dim].score;
                           return (
                             <span
@@ -678,21 +756,73 @@ export function OutputPhase() {
                             </span>
                           );
                         })}
-                      </div>
-                    )}
+                    </div>
                   </div>
 
-                  {/* Expandable output */}
-                  <button
-                    type="button"
-                    onClick={() => toggleIteration(iter.iteration_number)}
-                    className="flex items-center gap-1.5 text-xs text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors mb-2"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      {isExpanded ? 'expand_less' : 'expand_more'}
-                    </span>
-                    {isExpanded ? 'Hide output' : 'Show output'}
-                  </button>
+                  {/* Rate + expand controls */}
+                  <div className="flex items-center gap-4 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleIteration(iter.iteration_number)}
+                      className="flex items-center gap-1.5 text-xs text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        {isExpanded ? 'expand_less' : 'expand_more'}
+                      </span>
+                      {isExpanded ? 'Hide output' : 'Show output'}
+                    </button>
+
+                    <div className="flex items-center gap-1 text-[var(--on-surface-variant)]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIterationRating(
+                            iter.iteration_number,
+                            rating === 'positive' ? null : 'positive'
+                          )
+                        }
+                        title="Mark as strong"
+                        aria-label="Mark as strong"
+                        aria-pressed={rating === 'positive'}
+                        className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+                          rating === 'positive'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'hover:bg-[var(--surface-container-low)]'
+                        }`}
+                      >
+                        <span
+                          className="material-symbols-outlined text-[16px]"
+                          style={rating === 'positive' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                        >
+                          thumb_up
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIterationRating(
+                            iter.iteration_number,
+                            rating === 'negative' ? null : 'negative'
+                          )
+                        }
+                        title="Mark as poor"
+                        aria-label="Mark as poor"
+                        aria-pressed={rating === 'negative'}
+                        className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+                          rating === 'negative'
+                            ? 'bg-red-100 text-red-700'
+                            : 'hover:bg-[var(--surface-container-low)]'
+                        }`}
+                      >
+                        <span
+                          className="material-symbols-outlined text-[16px]"
+                          style={rating === 'negative' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                        >
+                          thumb_down
+                        </span>
+                      </button>
+                    </div>
+                  </div>
 
                   {isExpanded && (
                     <div className="mt-2 p-4 bg-[var(--surface-container-low)] rounded-lg">

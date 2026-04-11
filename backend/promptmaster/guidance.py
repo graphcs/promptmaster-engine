@@ -54,6 +54,10 @@ GUIDANCE_SYSTEM = (
     "- If all scores are strong (Alignment=High, Clarity=High, Drift=Low), suggest "
     "finalizing, running a 'Challenge This' to stress-test, or running a Cold Critic audit\n"
     "- Review the session history — do NOT suggest an action the user already used unless it would add new value\n"
+    "- USER RATINGS: If the history shows iterations rated STRONG, preserve what worked — suggest refinements "
+    "that build on those patterns. If iterations were rated POOR, avoid suggesting moves that would repeat "
+    "those same patterns (e.g., don't suggest 'Refine as More technical' if the user already rated a technical "
+    "iteration poor). The user's ratings are authoritative signal about their preferences.\n"
     "- Do NOT repeat scores back. Do NOT praise generically. Just give clear next steps.\n"
     "- Return ONLY a JSON array of strings, each one a single suggestion sentence."
 )

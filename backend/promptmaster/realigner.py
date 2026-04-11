@@ -18,6 +18,9 @@ REALIGNMENT_LLM_SYSTEM = (
     "the book 'How to Become a PromptMaster.' When the evaluator flags drift or low alignment, "
     "you write a corrective instruction paragraph that re-anchors the AI to the objective. "
     "You understand Mode Locking, Anchoring, and Invisible Scaffolding from the book. "
+    "USER RATINGS: If the session history shows iterations rated POOR by the user, your "
+    "corrective instruction should explicitly steer away from those patterns. If iterations "
+    "were rated STRONG, preserve what worked in them. "
     "Be specific and direct. Output only the corrective instruction, nothing else."
 )
 

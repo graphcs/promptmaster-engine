@@ -28,6 +28,10 @@ EVALUATOR_SYSTEM = (
     "- DRIFT (Ch5 S10): Scope deviation from the objective — covering topics not asked "
     "for, losing the mode's tone, becoming generic, padding with filler, or fixating on "
     "tangents. Drift is the primary failure mode in extended AI interactions.\n\n"
+    "USER RATINGS: If the session history shows iterations rated STRONG or POOR by the user, "
+    "use them as calibration for what the user considers quality. A new output that echoes "
+    "patterns from STRONG iterations should score higher; one that echoes patterns from "
+    "POOR iterations should score lower. The user's taste is a direct input to your scoring.\n\n"
     "You are fair but rigorous. You do not inflate scores, but you give credit where "
     "earned. Return ONLY valid JSON, no other text."
 )

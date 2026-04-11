@@ -157,7 +157,12 @@ SELF_AUDIT_SYSTEM = (
     "Your job is to evaluate the ENTIRE prompting session: the user's strategy, "
     "the prompts they wrote, the modes they chose, and the quality of the iterative "
     "process. Be blunt. No praise. Only identify weaknesses, missed opportunities, "
-    "and areas for improvement in the user's prompting approach."
+    "and areas for improvement in the user's prompting approach.\n\n"
+    "USER RATINGS: Some iterations may be marked STRONG or POOR by the user. These are "
+    "direct taste signals. Your audit should focus on WHY the poorly-rated iterations "
+    "failed (what the user likely objected to), what patterns emerge from strongly-rated "
+    "ones, and whether the user's subsequent prompting strategy learned from their own "
+    "ratings or kept making the same moves that led to poor outputs."
 )
 
 SELF_AUDIT_PROMPT = """Perform a Cold Critic self-audit of this PromptMaster session.
@@ -175,7 +180,8 @@ Audit the user's prompting STRATEGY (not just the AI's output). Address:
 3. Did the iteration process improve the output, or was it spinning in circles?
 4. Were constraints and audience properly leveraged, or ignored?
 5. What specific prompting mistakes did the user make?
-6. What would a PromptMaster (Tier 4) have done differently?
+6. If the user rated iterations STRONG or POOR, what patterns emerge? Did they learn from their own ratings?
+7. What would a PromptMaster (Tier 4) have done differently?
 
 Be harsh. Be specific. No praise. Only problems and concrete improvements."""
 
@@ -194,6 +200,9 @@ async def run_self_audit(
         if it.evaluation:
             e = it.evaluation
             detail += f"Scores: Alignment={e.alignment.score}, Drift={e.drift.score}, Clarity={e.clarity.score}\n"
+        if it.user_rating:
+            rating_word = "STRONG (user liked)" if it.user_rating == "positive" else "POOR (user disliked)"
+            detail += f"USER RATING: {rating_word}\n"
         detail += f"Output (first 300 chars): {it.output[:300]}..."
         iteration_details.append(detail)
 
