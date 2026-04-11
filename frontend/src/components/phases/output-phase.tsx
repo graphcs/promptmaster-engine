@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
 import { needsRealignment, downloadFile } from '@/lib/utils';
@@ -63,6 +63,26 @@ export function OutputPhase() {
   const [flowLoading, setFlowLoading] = useState<FlowTriggerType | 'check_intent' | 'ask_questions' | null>(null);
   const [inspection, setInspection] = useState<InspectionState>({ kind: 'none' });
   const [refineMenuOpen, setRefineMenuOpen] = useState(false);
+  const refineMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close refine dropdown on outside click or Escape
+  useEffect(() => {
+    if (!refineMenuOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (refineMenuRef.current && !refineMenuRef.current.contains(e.target as Node)) {
+        setRefineMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setRefineMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [refineMenuOpen]);
 
   const shouldRealign = currentEval ? needsRealignment(currentEval) : false;
   const driftDetected = currentEval && (currentEval.drift.score === 'High' || currentEval.drift.score === 'Medium');
@@ -137,17 +157,22 @@ export function OutputPhase() {
       .map((q, i) => `Q: ${q}\nA: ${inspection.answers[i] || '(no answer)'}`)
       .join('\n\n');
     const augmentedConstraints = constraints
-      ? `${constraints}\n\nAdditional clarifications:\n${qaContext}`
-      : `Additional clarifications:\n${qaContext}`;
+      ? `${constraints}\n\nAdditional clarifications provided by the user:\n${qaContext}`
+      : `Additional clarifications provided by the user:\n${qaContext}`;
+
     setError(null);
     setFlowLoading('ask_questions');
     try {
-      const result = await api.flowTrigger({
-        inputs: { ...buildInputs(), constraints: augmentedConstraints },
-        current_output: currentOutput,
-        trigger: 'refine_concrete',
+      // Build a fresh prompt with the augmented constraints and run a standard iteration.
+      // This way the clarifications are treated as real constraints, not forced through a
+      // refinement lens (shorter/technical/concrete/etc.).
+      const augmentedInputs = { ...buildInputs(), constraints: augmentedConstraints };
+      const assembled = await api.buildPrompt(augmentedInputs);
+      const result = await api.runIteration({
+        inputs: augmentedInputs,
+        prompt_text: assembled.user_prompt,
+        system_text: assembled.system_prompt,
         iteration_number: iterations.length + 1,
-        evaluation: currentEval,
         model,
       });
       appendIteration(result.iteration, result.suggestions);
@@ -367,7 +392,7 @@ export function OutputPhase() {
           </button>
 
           {/* Refine as... dropdown */}
-          <div className="relative">
+          <div className="relative" ref={refineMenuRef}>
             <button
               type="button"
               onClick={() => setRefineMenuOpen((v) => !v)}

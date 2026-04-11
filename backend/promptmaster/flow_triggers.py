@@ -94,19 +94,28 @@ def build_self_audit_response_prompt(inputs: PMInput, current_output: str) -> tu
 def build_drift_alert_prompt(
     inputs: PMInput, current_output: str, evaluation: EvaluationResult | None
 ) -> tuple[str, str]:
-    """Call Out Drift Directly (Ch2 S15) — explicit drift correction."""
-    mode_config = MODES[inputs.mode]
+    """Call Out Drift Directly (Ch2 S15) — explicit drift correction.
+
+    Reuses build_prompt() to get the correct mode-locked system prompt,
+    including custom mode's custom_preamble and custom_tone.
+    """
+    mode_display = (
+        inputs.custom_name or "Custom"
+        if inputs.mode == "custom"
+        else MODES[inputs.mode]["display_name"]
+    )
     drift_reason = (
         evaluation.drift.explanation
         if evaluation and evaluation.drift.score != "Low"
         else "The previous answer wandered off the core objective."
     )
+
+    base = build_prompt(inputs)
     system = (
-        f"{mode_config['system_preamble']}\n\n"
-        f"TONE GUIDANCE: {mode_config['tone']}\n\n"
-        "The previous answer drifted from the user's objective. You are being called back to the "
-        "anchor. Re-read the objective carefully. Produce a new answer that stays tightly within scope. "
-        "Do not repeat the drift patterns that were flagged."
+        f"{base.system_prompt}\n\n"
+        "DRIFT ALERT: The previous answer drifted from the user's objective. "
+        "You are being called back to the anchor. Re-read the objective carefully. "
+        "Produce a new answer that stays tightly within scope. Do not repeat the drift patterns that were flagged."
     )
     user = (
         "STOP. The previous answer drifted from the objective.\n\n"
@@ -119,8 +128,8 @@ def build_drift_alert_prompt(
     if inputs.output_format.strip():
         user += f"Format: {inputs.output_format}\n"
     user += (
-        "\nRe-answer the objective now. Stay strictly within scope. Do not repeat the drift patterns above. "
-        f"Operate as {mode_config['display_name']} Mode throughout."
+        f"\nRe-answer the objective now. Stay strictly within scope. Do not repeat the drift patterns above. "
+        f"Operate as {mode_display} Mode throughout."
     )
     return system, user
 

@@ -91,6 +91,12 @@ class FlowInspectRequest(BaseModel):
     model: str = ""
 
 
+class FlowInspectResponse(BaseModel):
+    kind: FlowInspectType
+    text: str | None = None
+    questions: list[str] | None = None
+
+
 # --- Endpoints ---
 
 @router.post("/build-prompt")
@@ -169,6 +175,22 @@ async def api_flow_trigger(
             model=model,
         )
 
+        # Diagnostic triggers (challenge, self_audit) produce critiques, not
+        # candidate answers. Scoring them against the original objective yields
+        # misleading Low scores, so skip the eval pipeline for them.
+        is_diagnostic = req.trigger in ("challenge", "self_audit")
+
+        if is_diagnostic:
+            iteration = Iteration(
+                iteration_number=req.iteration_number,
+                prompt_sent=prompt_text,
+                system_prompt_used=system_text,
+                output=output,
+                mode=req.inputs.mode,
+                evaluation=None,
+            )
+            return RunIterationResponse(iteration=iteration, suggestions=[])
+
         # Evaluate + suggestions in parallel
         eval_task = evaluate_output(client, req.inputs, output, model=model)
         suggestions_task = generate_suggestions(
@@ -197,7 +219,7 @@ async def api_flow_trigger(
 async def api_flow_inspect(
     req: FlowInspectRequest,
     client: OpenRouterClient = Depends(get_client),
-) -> dict:
+) -> FlowInspectResponse:
     """Lightweight inspection calls: Check Intent (Shadow Prompt) or Ask Questions (Reverse Q&A).
 
     No iteration is created — just returns insight text or a list of questions.
@@ -211,7 +233,7 @@ async def api_flow_inspect(
                 current_output=req.current_output,
                 model=model,
             )
-            return {"kind": "check_intent", "text": text}
+            return FlowInspectResponse(kind="check_intent", text=text)
         if req.inspection == "ask_questions":
             questions = await run_ask_questions(
                 client=client,
@@ -219,7 +241,7 @@ async def api_flow_inspect(
                 current_output=req.current_output,
                 model=model,
             )
-            return {"kind": "ask_questions", "questions": questions}
+            return FlowInspectResponse(kind="ask_questions", questions=questions)
         raise HTTPException(status_code=400, detail=f"Unknown inspection type: {req.inspection}")
     except OpenRouterError as e:
         raise HTTPException(status_code=502, detail=f"LLM error: {e}")
