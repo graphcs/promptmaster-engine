@@ -41,6 +41,10 @@ class RunIterationRequest(BaseModel):
     system_text: str
     iteration_number: int
     model: str = ""
+    # Prior iterations in this session (for LLM context)
+    iteration_history: list[Iteration] = []
+    # Where this iteration came from: 'initial', 'refine', 'realignment'
+    source: str = "initial"
 
 
 class RunIterationResponse(BaseModel):
@@ -51,6 +55,7 @@ class RunIterationResponse(BaseModel):
 class RealignmentRequest(BaseModel):
     inputs: PMInput
     evaluation: EvaluationResult
+    iteration_history: list[Iteration] = []
     model: str = ""
 
 
@@ -81,6 +86,7 @@ class FlowTriggerRequest(BaseModel):
     trigger: FlowTriggerType
     iteration_number: int
     evaluation: EvaluationResult | None = None
+    iteration_history: list[Iteration] = []
     model: str = ""
 
 
@@ -88,6 +94,7 @@ class FlowInspectRequest(BaseModel):
     inputs: PMInput
     current_output: str
     inspection: FlowInspectType
+    iteration_history: list[Iteration] = []
     model: str = ""
 
 
@@ -113,6 +120,7 @@ async def api_run_iteration(
     """Run one generate-evaluate cycle. Generate first, then evaluate + suggestions in parallel."""
     try:
         model = req.model or None
+        history = req.iteration_history
 
         # Step 1: Generate output (must complete first)
         output = await generate(
@@ -123,11 +131,12 @@ async def api_run_iteration(
         )
 
         # Step 2: Run evaluation and suggestions in parallel
-        eval_task = evaluate_output(client, req.inputs, output, model=model)
+        eval_task = evaluate_output(client, req.inputs, output, iterations=history, model=model)
         suggestions_task = generate_suggestions(
             client=client,
             inputs=req.inputs,
             output=output,
+            iterations=history,
             model=model,
         )
         evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
@@ -139,6 +148,7 @@ async def api_run_iteration(
             output=output,
             mode=req.inputs.mode,
             evaluation=evaluation,
+            trigger_source=req.source,
         )
 
         return RunIterationResponse(iteration=iteration, suggestions=suggestions)
@@ -158,13 +168,15 @@ async def api_flow_trigger(
     """
     try:
         model = req.model or None
+        history = req.iteration_history
 
-        # Build the flow trigger prompt
+        # Build the flow trigger prompt (with session history context)
         system_text, prompt_text = build_flow_trigger_prompt(
             inputs=req.inputs,
             current_output=req.current_output,
             trigger=req.trigger,
             evaluation=req.evaluation,
+            iterations=history,
         )
 
         # Generate
@@ -188,15 +200,17 @@ async def api_flow_trigger(
                 output=output,
                 mode=req.inputs.mode,
                 evaluation=None,
+                trigger_source=req.trigger,
             )
             return RunIterationResponse(iteration=iteration, suggestions=[])
 
         # Evaluate + suggestions in parallel
-        eval_task = evaluate_output(client, req.inputs, output, model=model)
+        eval_task = evaluate_output(client, req.inputs, output, iterations=history, model=model)
         suggestions_task = generate_suggestions(
             client=client,
             inputs=req.inputs,
             output=output,
+            iterations=history,
             model=model,
         )
         evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
@@ -208,6 +222,7 @@ async def api_flow_trigger(
             output=output,
             mode=req.inputs.mode,
             evaluation=evaluation,
+            trigger_source=req.trigger,
         )
 
         return RunIterationResponse(iteration=iteration, suggestions=suggestions)
@@ -226,11 +241,13 @@ async def api_flow_inspect(
     """
     try:
         model = req.model or None
+        history = req.iteration_history
         if req.inspection == "check_intent":
             text = await run_check_intent(
                 client=client,
                 inputs=req.inputs,
                 current_output=req.current_output,
+                iterations=history,
                 model=model,
             )
             return FlowInspectResponse(kind="check_intent", text=text)
@@ -239,6 +256,7 @@ async def api_flow_inspect(
                 client=client,
                 inputs=req.inputs,
                 current_output=req.current_output,
+                iterations=history,
                 model=model,
             )
             return FlowInspectResponse(kind="ask_questions", questions=questions)
@@ -258,6 +276,7 @@ async def api_build_realignment(
             client=client,
             inputs=req.inputs,
             evaluation=req.evaluation,
+            iterations=req.iteration_history,
             model=req.model or None,
         )
         return RealignmentResponse(realignment_prompt=prompt)

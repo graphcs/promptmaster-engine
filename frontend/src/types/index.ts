@@ -37,6 +37,7 @@ export interface Iteration {
   output: string;
   mode: ModeType;
   evaluation: EvaluationResult | null;
+  trigger_source?: string | null;
 }
 
 export interface PromptTemplate {

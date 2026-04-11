@@ -6,16 +6,19 @@ Implements the hybrid model:
 """
 
 import logging
-from .schemas import PMInput, EvaluationResult
+from .schemas import PMInput, EvaluationResult, Iteration
 from .modes import MODES
 from .llm_client import OpenRouterClient
+from .session_context import format_session_history
 
 logger = logging.getLogger(__name__)
 
 REALIGNMENT_LLM_SYSTEM = (
-    "You are a prompt engineering assistant. Your job is to write a corrective "
-    "instruction paragraph that will help an AI get back on track. Be specific "
-    "and direct. Output only the corrective instruction, nothing else."
+    "You are the realignment layer of PromptMaster — a structured AI workflow system based on "
+    "the book 'How to Become a PromptMaster.' When the evaluator flags drift or low alignment, "
+    "you write a corrective instruction paragraph that re-anchors the AI to the objective. "
+    "You understand Mode Locking, Anchoring, and Invisible Scaffolding from the book. "
+    "Be specific and direct. Output only the corrective instruction, nothing else."
 )
 
 REALIGNMENT_LLM_PROMPT = """The AI produced output that failed evaluation. A decisive correction is needed.
@@ -25,6 +28,8 @@ MODE: {mode}
 ALIGNMENT SCORE: {alignment_score} — {alignment_explanation}
 DRIFT SCORE: {drift_score} — {drift_explanation}
 CLARITY SCORE: {clarity_score} — {clarity_explanation}
+
+{session_history}
 
 Write a 2-3 sentence corrective instruction that:
 1. Opens with a clear break signal (e.g. "Stop. Reset." or "This missed the mark.")
@@ -58,6 +63,7 @@ async def build_realignment_prompt(
     client: OpenRouterClient,
     inputs: PMInput,
     evaluation: EvaluationResult,
+    iterations: list[Iteration] | None = None,
     model: str | None = None,
 ) -> str:
     """Build a realignment prompt using the hybrid model.
@@ -101,6 +107,7 @@ async def build_realignment_prompt(
         drift_explanation=evaluation.drift.explanation,
         clarity_score=evaluation.clarity.score,
         clarity_explanation=evaluation.clarity.explanation,
+        session_history=format_session_history(iterations or []),
     )
 
     try:

@@ -7,8 +7,9 @@ Returns qualitative scores (Low/Medium/High) with one-sentence explanations.
 """
 
 import logging
-from .schemas import PMInput, EvaluationResult, DimensionScore
+from .schemas import PMInput, EvaluationResult, DimensionScore, Iteration
 from .llm_client import OpenRouterClient
+from .session_context import format_session_history
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,11 @@ CONSTRAINTS: {constraints}
 REQUESTED FORMAT: {output_format}
 MODE USED: {mode}
 
---- BEGIN OUTPUT ---
+{session_history}
+
+--- BEGIN CURRENT OUTPUT (the one you are evaluating) ---
 {output}
---- END OUTPUT ---
+--- END CURRENT OUTPUT ---
 
 Evaluate along three dimensions. For each, assign "Low", "Medium", or "High" and provide exactly one sentence of explanation.
 
@@ -76,6 +79,7 @@ async def evaluate_output(
     client: OpenRouterClient,
     inputs: PMInput,
     output: str,
+    iterations: list[Iteration] | None = None,
     model: str | None = None,
 ) -> EvaluationResult:
     """Run evaluation as a separate LLM call.
@@ -84,6 +88,7 @@ async def evaluate_output(
         client: OpenRouterClient instance (reused from generation)
         inputs: Original user inputs
         output: The generated output to evaluate
+        iterations: Prior iterations in this session (for context)
         model: Optional model override
 
     Returns:
@@ -96,6 +101,7 @@ async def evaluate_output(
         output_format=inputs.output_format or "(not specified)",
         mode=inputs.mode,
         output=output,
+        session_history=format_session_history(iterations or []),
     )
 
     try:

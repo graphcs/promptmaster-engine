@@ -55,6 +55,10 @@ class Iteration(BaseModel):
     output: str = Field(..., description="LLM response text")
     mode: ModeType = Field(...)
     evaluation: EvaluationResult | None = Field(default=None)
+    trigger_source: str | None = Field(
+        default=None,
+        description="Where this iteration came from: 'initial', 'refine', 'realignment', 'challenge', 'self_audit', 'drift_alert', 'refine_shorter', etc.",
+    )
 
 
 class PromptTemplate(BaseModel):

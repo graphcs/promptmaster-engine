@@ -36,6 +36,8 @@ export const api = {
     prompt_text: string;
     system_text: string;
     iteration_number: number;
+    iteration_history?: Iteration[];
+    source?: string;
     model?: string;
   }): Promise<{ iteration: Iteration; suggestions: string[] }> {
     return apiFetch('/api/run-iteration', {
@@ -47,6 +49,7 @@ export const api = {
   async buildRealignment(req: {
     inputs: PMInput;
     evaluation: EvaluationResult;
+    iteration_history?: Iteration[];
     model?: string;
   }): Promise<{ realignment_prompt: string }> {
     return apiFetch('/api/build-realignment', {
@@ -61,6 +64,7 @@ export const api = {
     trigger: FlowTriggerType;
     iteration_number: number;
     evaluation?: EvaluationResult | null;
+    iteration_history?: Iteration[];
     model?: string;
   }): Promise<{ iteration: Iteration; suggestions: string[] }> {
     return apiFetch('/api/flow-trigger', {
@@ -73,6 +77,7 @@ export const api = {
     inputs: PMInput;
     current_output: string;
     inspection: FlowInspectType;
+    iteration_history?: Iteration[];
     model?: string;
   }): Promise<FlowInspectResult> {
     return apiFetch('/api/flow-inspect', {

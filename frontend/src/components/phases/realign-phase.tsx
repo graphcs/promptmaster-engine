@@ -51,6 +51,8 @@ export function RealignPhase() {
         prompt_text: localPrompt,
         system_text: systemPrompt,
         iteration_number: iterations.length + 1,
+        iteration_history: iterations,
+        source: 'realignment',
         model,
       });
 

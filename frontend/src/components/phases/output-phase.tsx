@@ -114,6 +114,7 @@ export function OutputPhase() {
         trigger,
         iteration_number: iterations.length + 1,
         evaluation: currentEval,
+        iteration_history: iterations,
         model,
       });
       appendIteration(result.iteration, result.suggestions);
@@ -133,6 +134,7 @@ export function OutputPhase() {
         inputs: buildInputs(),
         current_output: currentOutput,
         inspection: inspectionKind,
+        iteration_history: iterations,
         model,
       });
       if (result.kind === 'check_intent') {
@@ -173,6 +175,8 @@ export function OutputPhase() {
         prompt_text: assembled.user_prompt,
         system_text: assembled.system_prompt,
         iteration_number: iterations.length + 1,
+        iteration_history: iterations,
+        source: 'ask_questions',
         model,
       });
       appendIteration(result.iteration, result.suggestions);
@@ -189,7 +193,12 @@ export function OutputPhase() {
     setError(null);
     setRealignLoading(true);
     try {
-      const result = await api.buildRealignment({ inputs: buildInputs(), evaluation: currentEval, model });
+      const result = await api.buildRealignment({
+        inputs: buildInputs(),
+        evaluation: currentEval,
+        iteration_history: iterations,
+        model,
+      });
       setRealignmentPrompt(result.realignment_prompt);
       setPhase('realign');
     } catch (err) {

@@ -52,6 +52,8 @@ export function ReviewPhase() {
         prompt_text: promptEdited,
         system_text: systemPrompt,
         iteration_number: iterations.length + 1,
+        iteration_history: iterations,
+        source: iterations.length === 0 ? 'initial' : 'refine',
         model,
       });
 
