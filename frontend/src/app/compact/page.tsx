@@ -60,14 +60,11 @@ export default function CompactPage() {
     <div className="min-h-screen bg-[var(--surface)]">
       {/* Header */}
       <header className="border-b border-[var(--outline-variant)]/20 bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-6 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-6 py-6 flex items-center">
           <Link href="/session" className="flex items-center gap-2 text-sm text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors">
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Back to session
           </Link>
-          <span className="text-[10px] uppercase tracking-widest font-bold text-[var(--pm-primary)]">
-            Chapter 10
-          </span>
         </div>
       </header>
 
@@ -121,16 +118,13 @@ export default function CompactPage() {
       </section>
 
       {/* Footer */}
-      <footer className="max-w-3xl mx-auto px-6 pb-20 text-center space-y-4">
+      <footer className="max-w-3xl mx-auto px-6 pb-20 text-center space-y-6">
         <p className="text-sm italic text-[var(--on-surface-variant)] leading-relaxed">
           Prompt with purpose. Design with clarity. Lead with ethics.
           <br />
           And never stop learning.
         </p>
-        <p className="text-xs text-[var(--outline)]">
-          From <em>&ldquo;How to Become a PromptMaster&rdquo;</em> — Chapter 10
-        </p>
-        <div className="pt-6">
+        <div>
           <Link
             href="/session"
             className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--pm-primary)] text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-all"

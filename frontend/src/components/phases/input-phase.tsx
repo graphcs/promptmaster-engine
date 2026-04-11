@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
-import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, EXAMPLES, PROMPT_STACKS, type PromptStack } from '@/lib/constants';
+import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, PROMPT_STACKS, type PromptStack } from '@/lib/constants';
 import { ModeGrid } from '@/components/shared/mode-grid';
 import { ConstraintPills } from '@/components/shared/constraint-pills';
 import { CustomSelect } from '@/components/shared/custom-select';
@@ -62,13 +62,6 @@ export function InputPhase() {
     } else {
       setFormatPresets([...formatPresets, preset]);
     }
-  }
-
-  function handleFillExample(example: (typeof EXAMPLES)[number]) {
-    setObjective(example.objective);
-    setAudience(example.audience);
-    setConstraints(example.constraints);
-    setMode(example.mode);
   }
 
   function handlePickStack(stack: PromptStack) {
@@ -173,12 +166,13 @@ export function InputPhase() {
             <button
               type="button"
               onClick={() => {
-                handleFillExample(EXAMPLES[0]);
+                const researchStack = PROMPT_STACKS.find((s) => s.id === 'research');
+                if (researchStack) handlePickStack(researchStack);
                 setOnboardingSeen(true);
               }}
               className="px-4 py-2 bg-[var(--pm-primary)] text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-all"
             >
-              Try an example
+              Try a Stack
             </button>
             <button
               type="button"
@@ -202,26 +196,7 @@ export function InputPhase() {
         </p>
       </div>
 
-      {/* Example quick-fill buttons */}
-      <div className="space-y-3">
-        <p className="text-xs font-medium text-[var(--on-surface-variant)]">
-          Start with an example (click any to auto-fill):
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {EXAMPLES.map((example) => (
-            <button
-              key={example.label}
-              type="button"
-              onClick={() => handleFillExample(example)}
-              className="px-3 py-2 bg-white text-[var(--on-surface-variant)] text-xs font-medium rounded-lg hover:bg-[var(--surface-container-high)] transition-all border border-[var(--outline-variant)]/20 text-left"
-            >
-              {example.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Prompt Stacks (Ch5 S6) */}
+      {/* Prompt Stacks */}
       <div className="space-y-3">
         <div className="flex items-baseline justify-between">
           <div>
@@ -229,7 +204,7 @@ export function InputPhase() {
               Prompt Stacks
             </h2>
             <p className="text-xs text-[var(--on-surface-variant)] mt-0.5">
-              Predefined multi-step workflows from the book (Ch5 S6). Pick one to prefill your setup and see the planned layers.
+              Multi-step workflows for common tasks. Pick one to prefill your setup and see the planned steps.
             </p>
           </div>
           {activeStack && (
@@ -272,11 +247,8 @@ export function InputPhase() {
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-[var(--pm-primary)] text-[18px]">layers</span>
               <h3 className="text-sm font-bold text-[var(--on-surface)]">
-                {activeStack.name} — Planned Layers
+                {activeStack.name} — Planned Steps
               </h3>
-              <span className="text-[10px] text-[var(--on-surface-variant)] italic">
-                ({activeStack.book_ref})
-              </span>
             </div>
             <ol className="space-y-2">
               {activeStack.steps.map((step, i) => (

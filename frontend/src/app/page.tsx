@@ -311,7 +311,7 @@ export default function LandingPage() {
             <span className="text-sm text-white/40">PromptMaster</span>
           </div>
           <p className="text-xs text-white/30">
-            Built on the methodology from &ldquo;How to Become a PromptMaster&rdquo;
+            A structured system for thinking with AI
           </p>
         </div>
       </footer>

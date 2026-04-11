@@ -34,7 +34,7 @@ export function SessionFacts() {
         type="button"
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2 text-slate-600 text-sm font-medium hover:bg-slate-200/50 rounded-lg transition-colors"
-        title="Session Facts (Information Anchors, Ch5 S5) — pinned facts that anchor the AI across iterations"
+        title="Pinned facts that anchor every prompt — the AI will not contradict them across iterations"
       >
         <span className="flex items-center gap-3">
           <span className="material-symbols-outlined text-[20px]">push_pin</span>

@@ -328,7 +328,7 @@ export function OutputPhase() {
           <div>
             <h3 className="text-sm font-bold text-[var(--on-surface)]">Flow Triggers</h3>
             <p className="text-xs text-[var(--on-surface-variant)] mt-0.5">
-              Advanced techniques from the PromptMaster methodology — one click each.
+              One-click advanced techniques to stress-test, refine, or reframe your output.
             </p>
           </div>
         </div>
