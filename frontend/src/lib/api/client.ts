@@ -1,4 +1,13 @@
-import type { PMInput, AssembledPrompt, Iteration, EvaluationResult, ModeConfig } from '@/types';
+import type {
+  PMInput,
+  AssembledPrompt,
+  Iteration,
+  EvaluationResult,
+  ModeConfig,
+  FlowTriggerType,
+  FlowInspectType,
+  FlowInspectResult,
+} from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -41,6 +50,32 @@ export const api = {
     model?: string;
   }): Promise<{ realignment_prompt: string }> {
     return apiFetch('/api/build-realignment', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async flowTrigger(req: {
+    inputs: PMInput;
+    current_output: string;
+    trigger: FlowTriggerType;
+    iteration_number: number;
+    evaluation?: EvaluationResult | null;
+    model?: string;
+  }): Promise<{ iteration: Iteration; suggestions: string[] }> {
+    return apiFetch('/api/flow-trigger', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async flowInspect(req: {
+    inputs: PMInput;
+    current_output: string;
+    inspection: FlowInspectType;
+    model?: string;
+  }): Promise<FlowInspectResult> {
+    return apiFetch('/api/flow-inspect', {
       method: 'POST',
       body: JSON.stringify(req),
     });

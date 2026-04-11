@@ -88,3 +88,20 @@ export interface TemplateSummary {
   audience: string;
   created_at: string;
 }
+
+// Flow Trigger types — book concepts from Ch1 S13-S14 as one-click features
+export type FlowTriggerType =
+  | 'challenge'
+  | 'self_audit'
+  | 'drift_alert'
+  | 'refine_shorter'
+  | 'refine_technical'
+  | 'refine_concrete'
+  | 'refine_angle'
+  | 'refine_cautious';
+
+export type FlowInspectType = 'check_intent' | 'ask_questions';
+
+export type FlowInspectResult =
+  | { kind: 'check_intent'; text: string }
+  | { kind: 'ask_questions'; questions: string[] };

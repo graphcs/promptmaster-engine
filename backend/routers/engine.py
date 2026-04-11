@@ -16,6 +16,13 @@ from promptmaster.evaluator import evaluate_output
 from promptmaster.schemas import Iteration
 from promptmaster.realigner import build_realignment_prompt
 from promptmaster.guidance import generate_suggestions
+from promptmaster.flow_triggers import (
+    build_flow_trigger_prompt,
+    run_check_intent,
+    run_ask_questions,
+    FlowTriggerType,
+    FlowInspectType,
+)
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from deps import get_client
 
@@ -68,6 +75,22 @@ class ExportRequest(BaseModel):
     model: str = ""
 
 
+class FlowTriggerRequest(BaseModel):
+    inputs: PMInput
+    current_output: str
+    trigger: FlowTriggerType
+    iteration_number: int
+    evaluation: EvaluationResult | None = None
+    model: str = ""
+
+
+class FlowInspectRequest(BaseModel):
+    inputs: PMInput
+    current_output: str
+    inspection: FlowInspectType
+    model: str = ""
+
+
 # --- Endpoints ---
 
 @router.post("/build-prompt")
@@ -113,6 +136,91 @@ async def api_run_iteration(
         )
 
         return RunIterationResponse(iteration=iteration, suggestions=suggestions)
+    except OpenRouterError as e:
+        raise HTTPException(status_code=502, detail=f"LLM error: {e}")
+
+
+@router.post("/flow-trigger")
+async def api_flow_trigger(
+    req: FlowTriggerRequest,
+    client: OpenRouterClient = Depends(get_client),
+) -> RunIterationResponse:
+    """Run a one-click flow trigger (Challenge, Self-Audit, Drift Alert, Refine).
+
+    Builds a pre-configured prompt from the book's Ch1 S13-S14 techniques,
+    then runs the full pipeline: generate -> (evaluate || suggestions).
+    """
+    try:
+        model = req.model or None
+
+        # Build the flow trigger prompt
+        system_text, prompt_text = build_flow_trigger_prompt(
+            inputs=req.inputs,
+            current_output=req.current_output,
+            trigger=req.trigger,
+            evaluation=req.evaluation,
+        )
+
+        # Generate
+        output = await generate(
+            client=client,
+            prompt_text=prompt_text,
+            system_text=system_text,
+            model=model,
+        )
+
+        # Evaluate + suggestions in parallel
+        eval_task = evaluate_output(client, req.inputs, output, model=model)
+        suggestions_task = generate_suggestions(
+            client=client,
+            inputs=req.inputs,
+            output=output,
+            model=model,
+        )
+        evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
+
+        iteration = Iteration(
+            iteration_number=req.iteration_number,
+            prompt_sent=prompt_text,
+            system_prompt_used=system_text,
+            output=output,
+            mode=req.inputs.mode,
+            evaluation=evaluation,
+        )
+
+        return RunIterationResponse(iteration=iteration, suggestions=suggestions)
+    except OpenRouterError as e:
+        raise HTTPException(status_code=502, detail=f"LLM error: {e}")
+
+
+@router.post("/flow-inspect")
+async def api_flow_inspect(
+    req: FlowInspectRequest,
+    client: OpenRouterClient = Depends(get_client),
+) -> dict:
+    """Lightweight inspection calls: Check Intent (Shadow Prompt) or Ask Questions (Reverse Q&A).
+
+    No iteration is created — just returns insight text or a list of questions.
+    """
+    try:
+        model = req.model or None
+        if req.inspection == "check_intent":
+            text = await run_check_intent(
+                client=client,
+                inputs=req.inputs,
+                current_output=req.current_output,
+                model=model,
+            )
+            return {"kind": "check_intent", "text": text}
+        if req.inspection == "ask_questions":
+            questions = await run_ask_questions(
+                client=client,
+                inputs=req.inputs,
+                current_output=req.current_output,
+                model=model,
+            )
+            return {"kind": "ask_questions", "questions": questions}
+        raise HTTPException(status_code=400, detail=f"Unknown inspection type: {req.inspection}")
     except OpenRouterError as e:
         raise HTTPException(status_code=502, detail=f"LLM error: {e}")
 

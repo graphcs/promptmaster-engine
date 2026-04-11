@@ -7,9 +7,22 @@ import { needsRealignment, downloadFile } from '@/lib/utils';
 import { EvalSection } from '@/components/shared/eval-section';
 import { SuggestionsList } from '@/components/shared/suggestions-list';
 import { MODE_DISPLAY } from '@/lib/constants';
-import type { ModeType, ScoreLevel } from '@/types';
+import type { ModeType, ScoreLevel, FlowTriggerType, PMInput } from '@/types';
 import { MarkdownOutput } from '@/components/shared/markdown-output';
 import { CustomSelect } from '@/components/shared/custom-select';
+
+type InspectionState =
+  | { kind: 'none' }
+  | { kind: 'check_intent'; text: string }
+  | { kind: 'ask_questions'; questions: string[]; answers: string[] };
+
+const REFINE_OPTIONS: Array<{ value: FlowTriggerType; label: string }> = [
+  { value: 'refine_shorter', label: 'Shorter' },
+  { value: 'refine_technical', label: 'More technical' },
+  { value: 'refine_concrete', label: 'More concrete' },
+  { value: 'refine_angle', label: 'Different angle' },
+  { value: 'refine_cautious', label: 'More cautious' },
+];
 
 function scoreBadgeClass(dim: string, score: ScoreLevel): string {
   const isDrift = dim === 'drift';
@@ -40,35 +53,118 @@ export function OutputPhase() {
   const setMode = useSessionStore((s) => s.setMode);
   const setRealignmentPrompt = useSessionStore((s) => s.setRealignmentPrompt);
   const setAssembled = useSessionStore((s) => s.setAssembled);
+  const appendIteration = useSessionStore((s) => s.appendIteration);
   const finalize = useSessionStore((s) => s.finalize);
 
   const [realignLoading, setRealignLoading] = useState(false);
   const [refineLoading, setRefineLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expandedIterations, setExpandedIterations] = useState<Record<number, boolean>>({});
+  const [flowLoading, setFlowLoading] = useState<FlowTriggerType | 'check_intent' | 'ask_questions' | null>(null);
+  const [inspection, setInspection] = useState<InspectionState>({ kind: 'none' });
+  const [refineMenuOpen, setRefineMenuOpen] = useState(false);
 
   const shouldRealign = currentEval ? needsRealignment(currentEval) : false;
+  const driftDetected = currentEval && (currentEval.drift.score === 'High' || currentEval.drift.score === 'Medium');
+
+  function buildInputs(): PMInput {
+    return {
+      objective,
+      audience,
+      constraints,
+      output_format: outputFormat,
+      mode,
+      ...(mode === 'custom' ? {
+        custom_name: customName,
+        custom_preamble: customPreamble,
+        custom_tone: customTone,
+      } : {}),
+    };
+  }
+
+  async function handleFlowTrigger(trigger: FlowTriggerType) {
+    if (!currentOutput) return;
+    setError(null);
+    setFlowLoading(trigger);
+    setRefineMenuOpen(false);
+    try {
+      const result = await api.flowTrigger({
+        inputs: buildInputs(),
+        current_output: currentOutput,
+        trigger,
+        iteration_number: iterations.length + 1,
+        evaluation: currentEval,
+        model,
+      });
+      appendIteration(result.iteration, result.suggestions);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Flow trigger failed.');
+    } finally {
+      setFlowLoading(null);
+    }
+  }
+
+  async function handleFlowInspect(inspectionKind: 'check_intent' | 'ask_questions') {
+    if (!currentOutput) return;
+    setError(null);
+    setFlowLoading(inspectionKind);
+    try {
+      const result = await api.flowInspect({
+        inputs: buildInputs(),
+        current_output: currentOutput,
+        inspection: inspectionKind,
+        model,
+      });
+      if (result.kind === 'check_intent') {
+        setInspection({ kind: 'check_intent', text: result.text });
+      } else {
+        setInspection({
+          kind: 'ask_questions',
+          questions: result.questions,
+          answers: Array(result.questions.length).fill(''),
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Inspection failed.');
+    } finally {
+      setFlowLoading(null);
+    }
+  }
+
+  async function handleIterateWithAnswers() {
+    if (inspection.kind !== 'ask_questions' || !currentOutput) return;
+    const qaContext = inspection.questions
+      .map((q, i) => `Q: ${q}\nA: ${inspection.answers[i] || '(no answer)'}`)
+      .join('\n\n');
+    const augmentedConstraints = constraints
+      ? `${constraints}\n\nAdditional clarifications:\n${qaContext}`
+      : `Additional clarifications:\n${qaContext}`;
+    setError(null);
+    setFlowLoading('ask_questions');
+    try {
+      const result = await api.flowTrigger({
+        inputs: { ...buildInputs(), constraints: augmentedConstraints },
+        current_output: currentOutput,
+        trigger: 'refine_concrete',
+        iteration_number: iterations.length + 1,
+        evaluation: currentEval,
+        model,
+      });
+      appendIteration(result.iteration, result.suggestions);
+      setInspection({ kind: 'none' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to iterate with answers.');
+    } finally {
+      setFlowLoading(null);
+    }
+  }
 
   async function handleGenerateRealignment() {
     if (!currentEval) return;
     setError(null);
     setRealignLoading(true);
-
     try {
-      const inputs = {
-        objective,
-        audience,
-        constraints,
-        output_format: outputFormat,
-        mode,
-        ...(mode === 'custom' ? {
-          custom_name: customName,
-          custom_preamble: customPreamble,
-          custom_tone: customTone,
-        } : {}),
-      };
-
-      const result = await api.buildRealignment({ inputs, evaluation: currentEval, model });
+      const result = await api.buildRealignment({ inputs: buildInputs(), evaluation: currentEval, model });
       setRealignmentPrompt(result.realignment_prompt);
       setPhase('realign');
     } catch (err) {
@@ -81,22 +177,8 @@ export function OutputPhase() {
   async function handleRefinePrompt() {
     setError(null);
     setRefineLoading(true);
-
     try {
-      const inputs = {
-        objective,
-        audience,
-        constraints,
-        output_format: outputFormat,
-        mode,
-        ...(mode === 'custom' ? {
-          custom_name: customName,
-          custom_preamble: customPreamble,
-          custom_tone: customTone,
-        } : {}),
-      };
-
-      const result = await api.buildPrompt(inputs);
+      const result = await api.buildPrompt(buildInputs());
       setMode(mode);
       setAssembled(result);
       setPhase('review');
@@ -122,7 +204,7 @@ export function OutputPhase() {
     setExpandedIterations((prev) => ({ ...prev, [num]: !prev[num] }));
   }
 
-  const anyLoading = realignLoading || refineLoading;
+  const anyLoading = realignLoading || refineLoading || flowLoading !== null;
 
   return (
     <div className="space-y-10">
@@ -189,6 +271,210 @@ export function OutputPhase() {
         These scores come from a separate evaluator — a second AI call that independently checks the output against
         your original objective, not the AI grading itself.
       </p>
+
+      {/* ===== FLOW TRIGGERS (book techniques Ch1 S13-S14) ===== */}
+      <div className="bg-white rounded-xl shadow-ambient p-6 space-y-4">
+        <div className="flex items-baseline justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-[var(--on-surface)]">Flow Triggers</h3>
+            <p className="text-xs text-[var(--on-surface-variant)] mt-0.5">
+              Advanced techniques from the PromptMaster methodology — one click each.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {/* Challenge This */}
+          <button
+            type="button"
+            onClick={() => handleFlowTrigger('challenge')}
+            disabled={anyLoading || !currentOutput}
+            title="Argue the opposite view and stress-test the previous answer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {flowLoading === 'challenge' ? (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+            ) : (
+              <span className="material-symbols-outlined text-[16px]">gavel</span>
+            )}
+            Challenge This
+          </button>
+
+          {/* Self-Audit */}
+          <button
+            type="button"
+            onClick={() => handleFlowTrigger('self_audit')}
+            disabled={anyLoading || !currentOutput}
+            title="Ask the AI to audit its own response and fix gaps"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {flowLoading === 'self_audit' ? (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+            ) : (
+              <span className="material-symbols-outlined text-[16px]">fact_check</span>
+            )}
+            Self-Audit
+          </button>
+
+          {/* Drift Alert (only when drift detected) */}
+          {driftDetected && (
+            <button
+              type="button"
+              onClick={() => handleFlowTrigger('drift_alert')}
+              disabled={anyLoading || !currentOutput}
+              title="Explicitly call out drift and re-anchor to the objective"
+              className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900 rounded-lg hover:bg-amber-100 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {flowLoading === 'drift_alert' ? (
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-900 border-t-transparent" />
+              ) : (
+                <span className="material-symbols-outlined text-[16px]">warning</span>
+              )}
+              Drift Alert
+            </button>
+          )}
+
+          {/* Check Intent (Shadow Prompt) */}
+          <button
+            type="button"
+            onClick={() => handleFlowInspect('check_intent')}
+            disabled={anyLoading || !currentOutput}
+            title="Ask the AI to infer what you really want"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {flowLoading === 'check_intent' ? (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+            ) : (
+              <span className="material-symbols-outlined text-[16px]">visibility</span>
+            )}
+            Check Intent
+          </button>
+
+          {/* Ask Questions (Reverse Q&A) */}
+          <button
+            type="button"
+            onClick={() => handleFlowInspect('ask_questions')}
+            disabled={anyLoading || !currentOutput}
+            title="Let the AI ask you clarifying questions"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {flowLoading === 'ask_questions' ? (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+            ) : (
+              <span className="material-symbols-outlined text-[16px]">quiz</span>
+            )}
+            Ask Questions
+          </button>
+
+          {/* Refine as... dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setRefineMenuOpen((v) => !v)}
+              disabled={anyLoading || !currentOutput}
+              title="Iterate with a specific single constraint"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {REFINE_OPTIONS.some((o) => o.value === flowLoading) ? (
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+              ) : (
+                <span className="material-symbols-outlined text-[16px]">tune</span>
+              )}
+              Refine as…
+              <span className="material-symbols-outlined text-[16px]">expand_more</span>
+            </button>
+            {refineMenuOpen && (
+              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-[var(--outline-variant)]/30 overflow-hidden z-20">
+                {REFINE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleFlowTrigger(option.value)}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-[var(--on-surface)] hover:bg-[var(--surface-container-low)] transition-colors"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Inspection Result Panel */}
+        {inspection.kind === 'check_intent' && (
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600 text-[18px]">visibility</span>
+                <span className="text-xs font-bold text-blue-900 uppercase tracking-widest">Inferred Intent</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspection({ kind: 'none' })}
+                className="text-blue-600 hover:text-blue-800"
+                aria-label="Close"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+            <div className="text-sm text-[var(--on-surface)] leading-relaxed">
+              <MarkdownOutput content={inspection.text} />
+            </div>
+          </div>
+        )}
+
+        {inspection.kind === 'ask_questions' && (
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600 text-[18px]">quiz</span>
+                <span className="text-xs font-bold text-blue-900 uppercase tracking-widest">Clarifying Questions</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspection({ kind: 'none' })}
+                className="text-blue-600 hover:text-blue-800"
+                aria-label="Close"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+            {inspection.questions.length === 0 ? (
+              <p className="text-sm text-[var(--on-surface-variant)]">No questions returned.</p>
+            ) : (
+              <div className="space-y-3">
+                {inspection.questions.map((q, i) => (
+                  <div key={i} className="space-y-1">
+                    <p className="text-sm font-medium text-[var(--on-surface)]">
+                      {i + 1}. {q}
+                    </p>
+                    <input
+                      type="text"
+                      value={inspection.answers[i]}
+                      onChange={(e) => {
+                        const newAnswers = [...inspection.answers];
+                        newAnswers[i] = e.target.value;
+                        setInspection({ ...inspection, answers: newAnswers });
+                      }}
+                      placeholder="Your answer…"
+                      className="w-full bg-white rounded-lg border border-[var(--outline-variant)]/40 px-3 py-2 text-sm text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]"
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleIterateWithAnswers}
+                  disabled={anyLoading || inspection.answers.every((a) => !a.trim())}
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--pm-primary)] text-white text-xs font-bold rounded-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-[16px]">electric_bolt</span>
+                  Iterate with these answers
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Action row */}
       <div className="flex flex-wrap items-center gap-4 pt-2">
