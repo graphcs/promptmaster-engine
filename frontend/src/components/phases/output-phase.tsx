@@ -14,7 +14,18 @@ import { CustomSelect } from '@/components/shared/custom-select';
 type InspectionState =
   | { kind: 'none' }
   | { kind: 'check_intent'; text: string }
+  | { kind: 'confirm_understanding'; text: string }
+  | { kind: 'analyze_pattern'; text: string }
   | { kind: 'ask_questions'; questions: string[]; answers: string[] };
+
+const INSPECTION_PANEL_META: Record<
+  'check_intent' | 'confirm_understanding' | 'analyze_pattern',
+  { icon: string; label: string }
+> = {
+  check_intent: { icon: 'visibility', label: 'Inferred Intent' },
+  confirm_understanding: { icon: 'record_voice_over', label: 'Understanding Restated' },
+  analyze_pattern: { icon: 'insights', label: 'Pattern Analysis' },
+};
 
 const REFINE_OPTIONS: Array<{ value: FlowTriggerType; label: string }> = [
   { value: 'refine_shorter', label: 'Shorter' },
@@ -47,6 +58,7 @@ export function OutputPhase() {
   const customName = useSessionStore((s) => s.customName);
   const customPreamble = useSessionStore((s) => s.customPreamble);
   const customTone = useSessionStore((s) => s.customTone);
+  const sessionFacts = useSessionStore((s) => s.sessionFacts);
 
   const setPhase = useSessionStore((s) => s.setPhase);
   const setError = useSessionStore((s) => s.setError);
@@ -60,7 +72,7 @@ export function OutputPhase() {
   const [refineLoading, setRefineLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expandedIterations, setExpandedIterations] = useState<Record<number, boolean>>({});
-  const [flowLoading, setFlowLoading] = useState<FlowTriggerType | 'check_intent' | 'ask_questions' | null>(null);
+  const [flowLoading, setFlowLoading] = useState<FlowTriggerType | 'check_intent' | 'confirm_understanding' | 'analyze_pattern' | 'ask_questions' | null>(null);
   const [inspection, setInspection] = useState<InspectionState>({ kind: 'none' });
   const [refineMenuOpen, setRefineMenuOpen] = useState(false);
   const refineMenuRef = useRef<HTMLDivElement>(null);
@@ -94,6 +106,7 @@ export function OutputPhase() {
       constraints,
       output_format: outputFormat,
       mode,
+      session_facts: sessionFacts,
       ...(mode === 'custom' ? {
         custom_name: customName,
         custom_preamble: customPreamble,
@@ -125,7 +138,9 @@ export function OutputPhase() {
     }
   }
 
-  async function handleFlowInspect(inspectionKind: 'check_intent' | 'ask_questions') {
+  async function handleFlowInspect(
+    inspectionKind: 'check_intent' | 'confirm_understanding' | 'analyze_pattern' | 'ask_questions'
+  ) {
     if (!currentOutput) return;
     setError(null);
     setFlowLoading(inspectionKind);
@@ -137,14 +152,15 @@ export function OutputPhase() {
         iteration_history: iterations,
         model,
       });
-      if (result.kind === 'check_intent') {
-        setInspection({ kind: 'check_intent', text: result.text });
-      } else {
+      if (result.kind === 'ask_questions') {
         setInspection({
           kind: 'ask_questions',
           questions: result.questions,
           answers: Array(result.questions.length).fill(''),
         });
+      } else {
+        // All other kinds are text-based inspection panels
+        setInspection({ kind: result.kind, text: result.text });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Inspection failed.');
@@ -350,6 +366,22 @@ export function OutputPhase() {
             Self-Audit
           </button>
 
+          {/* Reframe (Ch4 S10 Commanding the Frame) */}
+          <button
+            type="button"
+            onClick={() => handleFlowTrigger('reframe')}
+            disabled={anyLoading || !currentOutput}
+            title="Tier 4 meta-move: question whether the problem is framed correctly"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {flowLoading === 'reframe' ? (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+            ) : (
+              <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
+            )}
+            Reframe
+          </button>
+
           {/* Drift Alert (only when drift detected) */}
           {driftDetected && (
             <button
@@ -382,6 +414,38 @@ export function OutputPhase() {
               <span className="material-symbols-outlined text-[16px]">visibility</span>
             )}
             Check Intent
+          </button>
+
+          {/* Confirm Understanding (Clarifying Prompt, Ch6 S3.1) */}
+          <button
+            type="button"
+            onClick={() => handleFlowInspect('confirm_understanding')}
+            disabled={anyLoading || !currentOutput}
+            title="Ask the AI to restate your goal in its own words to verify it heard correctly"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {flowLoading === 'confirm_understanding' ? (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+            ) : (
+              <span className="material-symbols-outlined text-[16px]">record_voice_over</span>
+            )}
+            Confirm Understanding
+          </button>
+
+          {/* Analyze My Pattern (Mode Switch for Reflection, Ch6 S3.3) */}
+          <button
+            type="button"
+            onClick={() => handleFlowInspect('analyze_pattern')}
+            disabled={anyLoading || !currentOutput}
+            title="Ask the AI to observe patterns in how you have been prompting this session"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {flowLoading === 'analyze_pattern' ? (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
+            ) : (
+              <span className="material-symbols-outlined text-[16px]">insights</span>
+            )}
+            Analyze My Pattern
           </button>
 
           {/* Ask Questions (Reverse Q&A) */}
@@ -434,13 +498,19 @@ export function OutputPhase() {
           </div>
         </div>
 
-        {/* Inspection Result Panel */}
-        {inspection.kind === 'check_intent' && (
+        {/* Inspection Result Panel (text-based inspections) */}
+        {(inspection.kind === 'check_intent' ||
+          inspection.kind === 'confirm_understanding' ||
+          inspection.kind === 'analyze_pattern') && (
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600 text-[18px]">visibility</span>
-                <span className="text-xs font-bold text-blue-900 uppercase tracking-widest">Inferred Intent</span>
+                <span className="material-symbols-outlined text-blue-600 text-[18px]">
+                  {INSPECTION_PANEL_META[inspection.kind].icon}
+                </span>
+                <span className="text-xs font-bold text-blue-900 uppercase tracking-widest">
+                  {INSPECTION_PANEL_META[inspection.kind].label}
+                </span>
               </div>
               <button
                 type="button"

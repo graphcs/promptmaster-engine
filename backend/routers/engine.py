@@ -19,6 +19,8 @@ from promptmaster.guidance import generate_suggestions
 from promptmaster.flow_triggers import (
     build_flow_trigger_prompt,
     run_check_intent,
+    run_confirm_understanding,
+    run_analyze_pattern,
     run_ask_questions,
     FlowTriggerType,
     FlowInspectType,
@@ -187,10 +189,10 @@ async def api_flow_trigger(
             model=model,
         )
 
-        # Diagnostic triggers (challenge, self_audit) produce critiques, not
-        # candidate answers. Scoring them against the original objective yields
-        # misleading Low scores, so skip the eval pipeline for them.
-        is_diagnostic = req.trigger in ("challenge", "self_audit")
+        # Diagnostic triggers (challenge, self_audit, reframe) produce critiques
+        # or meta-analyses, not candidate answers. Scoring them against the
+        # original objective yields misleading Low scores, so skip the eval pipeline.
+        is_diagnostic = req.trigger in ("challenge", "self_audit", "reframe")
 
         if is_diagnostic:
             iteration = Iteration(
@@ -251,6 +253,24 @@ async def api_flow_inspect(
                 model=model,
             )
             return FlowInspectResponse(kind="check_intent", text=text)
+        if req.inspection == "confirm_understanding":
+            text = await run_confirm_understanding(
+                client=client,
+                inputs=req.inputs,
+                current_output=req.current_output,
+                iterations=history,
+                model=model,
+            )
+            return FlowInspectResponse(kind="confirm_understanding", text=text)
+        if req.inspection == "analyze_pattern":
+            text = await run_analyze_pattern(
+                client=client,
+                inputs=req.inputs,
+                current_output=req.current_output,
+                iterations=history,
+                model=model,
+            )
+            return FlowInspectResponse(kind="analyze_pattern", text=text)
         if req.inspection == "ask_questions":
             questions = await run_ask_questions(
                 client=client,

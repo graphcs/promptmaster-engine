@@ -11,6 +11,7 @@ export interface PMInput {
   custom_name?: string;
   custom_preamble?: string;
   custom_tone?: string;
+  session_facts?: string[];
 }
 
 export interface AssembledPrompt {
@@ -90,10 +91,11 @@ export interface TemplateSummary {
   created_at: string;
 }
 
-// Flow Trigger types — book concepts from Ch1 S13-S14 as one-click features
+// Flow Trigger types — book concepts from Ch1 S13-S14, Ch4 S10, Ch6 S3
 export type FlowTriggerType =
   | 'challenge'
   | 'self_audit'
+  | 'reframe'
   | 'drift_alert'
   | 'refine_shorter'
   | 'refine_technical'
@@ -101,8 +103,14 @@ export type FlowTriggerType =
   | 'refine_angle'
   | 'refine_cautious';
 
-export type FlowInspectType = 'check_intent' | 'ask_questions';
+export type FlowInspectType =
+  | 'check_intent'
+  | 'confirm_understanding'
+  | 'analyze_pattern'
+  | 'ask_questions';
 
 export type FlowInspectResult =
   | { kind: 'check_intent'; text: string }
+  | { kind: 'confirm_understanding'; text: string }
+  | { kind: 'analyze_pattern'; text: string }
   | { kind: 'ask_questions'; questions: string[] };

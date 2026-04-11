@@ -20,6 +20,7 @@ export function ReviewPhase() {
   const customName = useSessionStore((s) => s.customName);
   const customPreamble = useSessionStore((s) => s.customPreamble);
   const customTone = useSessionStore((s) => s.customTone);
+  const sessionFacts = useSessionStore((s) => s.sessionFacts);
 
   const setPromptEdited = useSessionStore((s) => s.setPromptEdited);
   const setShowScaffolding = useSessionStore((s) => s.setShowScaffolding);
@@ -40,6 +41,7 @@ export function ReviewPhase() {
         constraints,
         output_format: outputFormat,
         mode,
+        session_facts: sessionFacts,
         ...(mode === 'custom' ? {
           custom_name: customName,
           custom_preamble: customPreamble,

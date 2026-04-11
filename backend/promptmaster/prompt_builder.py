@@ -45,8 +45,16 @@ def build_prompt(inputs: PMInput) -> AssembledPrompt:
 
     # User prompt: natural language with embedded anchoring
     # Book principle (Ch5 S9 / Ch8): weave context into flowing text, not label-heavy form dumps.
-    # Three compact paragraphs: task → context → mode directive.
     parts = [inputs.objective]
+
+    # Session Facts / Information Anchors (Ch5 S5) — pin agreed facts so the AI
+    # can't contradict them. Injected as a bulleted "established facts" block.
+    facts = [f for f in (inputs.session_facts or []) if f.strip()]
+    if facts:
+        facts_block = "ESTABLISHED FACTS (anchor on these — do not contradict):\n" + "\n".join(
+            f"- {fact}" for fact in facts
+        )
+        parts.append(facts_block)
 
     context_pieces = []
     if inputs.audience:

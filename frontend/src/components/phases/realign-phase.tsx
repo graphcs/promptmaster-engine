@@ -16,6 +16,7 @@ export function RealignPhase() {
   const customName = useSessionStore((s) => s.customName);
   const customPreamble = useSessionStore((s) => s.customPreamble);
   const customTone = useSessionStore((s) => s.customTone);
+  const sessionFacts = useSessionStore((s) => s.sessionFacts);
   const systemPrompt = useSessionStore((s) => s.systemPrompt);
   const iterations = useSessionStore((s) => s.iterations);
   const realignmentPrompt = useSessionStore((s) => s.realignmentPrompt);
@@ -39,6 +40,7 @@ export function RealignPhase() {
         constraints,
         output_format: outputFormat,
         mode,
+        session_facts: sessionFacts,
         ...(mode === 'custom' ? {
           custom_name: customName,
           custom_preamble: customPreamble,

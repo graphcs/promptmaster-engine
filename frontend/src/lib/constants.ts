@@ -20,6 +20,7 @@ export const CONSTRAINT_PRESETS = [
   'Avoid speculation',
   'Use formal tone',
   'Be concise and direct',
+  'Cite sources for factual claims',
 ];
 
 export const FORMAT_PRESETS = [
@@ -30,6 +31,126 @@ export const FORMAT_PRESETS = [
   'Step-by-step guide',
   'Executive summary',
   'Q&A format',
+];
+
+/**
+ * Prompt Stacks (Ch5 S6) — predefined multi-step workflows.
+ *
+ * Each stack is a "protocol" — a layered sequence of prompts that together
+ * form a robust framework. Users pick a stack on the Input phase; it prefills
+ * the first step (mode + objective placeholder + constraints) and shows the
+ * full planned sequence as a guide.
+ *
+ * Book reference: "PromptMasters often have libraries of 'prompt protocols'
+ * which are essentially predesigned stacks."
+ */
+export interface PromptStack {
+  id: string;
+  name: string;
+  description: string;
+  book_ref: string;
+  // Initial configuration for the first iteration
+  initial: {
+    mode: ModeType;
+    objective_placeholder: string;
+    constraints: string;
+    output_format: string;
+  };
+  // Planned steps — shown as a guide so user knows what to do next
+  steps: Array<{ label: string; hint: string }>;
+}
+
+export const PROMPT_STACKS: PromptStack[] = [
+  {
+    id: 'research',
+    name: 'Research Stack',
+    description: 'Structured research with outline → expansion → refinement',
+    book_ref: 'Ch5 S6',
+    initial: {
+      mode: 'architect',
+      objective_placeholder: 'Research [topic] for [purpose]',
+      constraints: 'Start with a hierarchical outline. Do not write final prose yet.',
+      output_format: 'Numbered outline with sub-sections and dependency notes',
+    },
+    steps: [
+      { label: 'Layer 1 — Outline', hint: 'Get a hierarchical outline. Switch to Architect mode if not already.' },
+      { label: 'Layer 2 — Expand sections', hint: 'Use "Refine as… More concrete" to expand each section with examples.' },
+      { label: 'Layer 3 — Critic pass', hint: 'Use "Challenge This" to stress-test the research for gaps and bias.' },
+      { label: 'Layer 4 — Final draft', hint: 'Use "Refine as… More cautious" or switch modes for the final prose.' },
+    ],
+  },
+  {
+    id: 'strategy',
+    name: 'Strategy Stack',
+    description: 'Frame → options → trade-offs → recommendation',
+    book_ref: 'Ch5 S12 (resilient framework example)',
+    initial: {
+      mode: 'analyst',
+      objective_placeholder: 'Develop a strategy for [goal] given [constraints]',
+      constraints: 'List 3-5 distinct strategic options. Do not recommend yet.',
+      output_format: 'Numbered list of options with one-line framing for each',
+    },
+    steps: [
+      { label: 'Layer 1 — Frame options', hint: 'Generate distinct strategic options without recommending.' },
+      { label: 'Layer 2 — Trade-offs', hint: 'Use "Refine as… More concrete" to expand each with pros/cons.' },
+      { label: 'Layer 3 — Stress test', hint: 'Switch to Cold Critic mode or use "Challenge This" on the top option.' },
+      { label: 'Layer 4 — Final recommendation', hint: 'Use "Refine as… More cautious" to add caveats before finalizing.' },
+    ],
+  },
+  {
+    id: 'decision',
+    name: 'Decision Stack',
+    description: 'Facts → alternatives → evaluation → recommendation',
+    book_ref: 'Ch5 S6 (book: "decision D1, assumptions A1..A5")',
+    initial: {
+      mode: 'analyst',
+      objective_placeholder: 'Help me decide: [decision] — key consideration is [criterion]',
+      constraints: 'Start by listing established facts and assumptions explicitly.',
+      output_format: 'Two sections: "Known Facts" and "Key Assumptions"',
+    },
+    steps: [
+      { label: 'Layer 1 — Facts & assumptions', hint: 'Establish the shared knowledge base. Pin the facts to Session Facts.' },
+      { label: 'Layer 2 — Alternatives', hint: 'Refine prompt to generate 3 alternatives grounded in those facts.' },
+      { label: 'Layer 3 — Evaluate each', hint: 'Use "Refine as… More cautious" to evaluate each with risks and trade-offs.' },
+      { label: 'Layer 4 — Recommend', hint: 'Finalize with the recommendation and rationale tied to the facts.' },
+    ],
+  },
+  {
+    id: 'writing',
+    name: 'Writing Stack',
+    description: 'Draft → critique → refine → finalize',
+    book_ref: 'Ch5 S6 (layered stability)',
+    initial: {
+      mode: 'clarity',
+      objective_placeholder: 'Write a [document type] about [topic] for [audience]',
+      constraints: 'Produce a first draft focused on clarity. Length appropriate to audience.',
+      output_format: 'Short paragraphs with clear section headings',
+    },
+    steps: [
+      { label: 'Layer 1 — First draft', hint: 'Get a clarity-focused first draft.' },
+      { label: 'Layer 2 — Critique', hint: 'Use "Challenge This" or switch to Critic mode to find weak points.' },
+      { label: 'Layer 3 — Refine', hint: 'Use "Refine as… More concrete" or "Different angle" based on critique.' },
+      { label: 'Layer 4 — Self-audit', hint: 'Use "Self-Audit" to verify the final draft addresses the original objective.' },
+    ],
+  },
+  {
+    id: 'debug',
+    name: 'Debug Stack',
+    description: 'Symptoms → hypotheses → test each → fix',
+    book_ref: 'Ch3 S17 (multi-prompt systems)',
+    initial: {
+      mode: 'analyst',
+      objective_placeholder: 'Debug: [symptom / unexpected behavior] in [system / context]',
+      constraints: 'List observable symptoms precisely. Avoid guessing causes yet.',
+      output_format: 'Numbered symptom list with reproducibility notes',
+    },
+    steps: [
+      { label: 'Layer 1 — Symptoms', hint: 'List everything observable. Pin key facts to Session Facts.' },
+      { label: 'Layer 2 — Hypotheses', hint: 'Refine prompt to generate 3-5 hypotheses that fit the symptoms.' },
+      { label: 'Layer 3 — Test each', hint: 'Use "Challenge This" or switch to Cold Critic to stress-test hypotheses.' },
+      { label: 'Layer 4 — Fix', hint: 'Finalize with the fix rooted in the most likely hypothesis.' },
+    ],
+  },
 ];
 
 export const EXAMPLES: Array<{ label: string; objective: string; audience: string; constraints: string; mode: ModeType }> = [

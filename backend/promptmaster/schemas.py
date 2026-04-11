@@ -20,6 +20,9 @@ class PMInput(BaseModel):
     custom_name: str = Field(default="", description="Custom mode persona name")
     custom_preamble: str = Field(default="", description="Custom mode system preamble")
     custom_tone: str = Field(default="", description="Custom mode tone")
+    # Session Facts (Information Anchors, Ch5 S5) — pinned facts that anchor
+    # the conversation's knowledge and get injected into every prompt.
+    session_facts: list[str] = Field(default_factory=list, description="Pinned facts that anchor the session")
 
 
 class AssembledPrompt(BaseModel):

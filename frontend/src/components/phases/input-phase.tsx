@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
-import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, EXAMPLES } from '@/lib/constants';
+import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, EXAMPLES, PROMPT_STACKS, type PromptStack } from '@/lib/constants';
 import { ModeGrid } from '@/components/shared/mode-grid';
 import { ConstraintPills } from '@/components/shared/constraint-pills';
 import { CustomSelect } from '@/components/shared/custom-select';
@@ -23,6 +23,9 @@ export function InputPhase() {
   const customName = useSessionStore((s) => s.customName);
   const customPreamble = useSessionStore((s) => s.customPreamble);
   const customTone = useSessionStore((s) => s.customTone);
+  const sessionFacts = useSessionStore((s) => s.sessionFacts);
+  const activeStackId = useSessionStore((s) => s.activeStackId);
+  const setActiveStack = useSessionStore((s) => s.setActiveStack);
 
   const setObjective = useSessionStore((s) => s.setObjective);
   const setAudience = useSessionStore((s) => s.setAudience);
@@ -67,6 +70,19 @@ export function InputPhase() {
     setConstraints(example.constraints);
     setMode(example.mode);
   }
+
+  function handlePickStack(stack: PromptStack) {
+    setActiveStack(stack.id);
+    setMode(stack.initial.mode);
+    // Only overwrite objective if empty (don't clobber user's work)
+    if (!objective.trim()) {
+      setObjective(stack.initial.objective_placeholder);
+    }
+    setConstraints(stack.initial.constraints);
+    setOutputFormat(stack.initial.output_format);
+  }
+
+  const activeStack = activeStackId ? PROMPT_STACKS.find((s) => s.id === activeStackId) : null;
 
   async function handleSaveTemplate() {
     if (!user || !templateName.trim()) return;
@@ -124,6 +140,7 @@ export function InputPhase() {
         constraints: finalConstraints,
         output_format: finalFormat,
         mode,
+        session_facts: sessionFacts,
         ...(mode === 'custom' ? {
           custom_name: customName,
           custom_preamble: customPreamble,
@@ -202,6 +219,87 @@ export function InputPhase() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Prompt Stacks (Ch5 S6) */}
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--on-surface)] uppercase tracking-widest">
+              Prompt Stacks
+            </h2>
+            <p className="text-xs text-[var(--on-surface-variant)] mt-0.5">
+              Predefined multi-step workflows from the book (Ch5 S6). Pick one to prefill your setup and see the planned layers.
+            </p>
+          </div>
+          {activeStack && (
+            <button
+              type="button"
+              onClick={() => setActiveStack(null)}
+              className="text-xs text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors"
+            >
+              Clear stack
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+          {PROMPT_STACKS.map((stack) => {
+            const isActive = stack.id === activeStackId;
+            return (
+              <button
+                key={stack.id}
+                type="button"
+                onClick={() => handlePickStack(stack)}
+                className={`px-3 py-3 text-left rounded-lg border transition-all ${
+                  isActive
+                    ? 'bg-[var(--pm-primary)]/10 border-[var(--pm-primary)] ring-1 ring-[var(--pm-primary)]'
+                    : 'bg-white border-[var(--outline-variant)]/20 hover:bg-[var(--surface-container-high)]'
+                }`}
+              >
+                <div className="text-xs font-bold text-[var(--on-surface)]">{stack.name}</div>
+                <div className="text-[10px] text-[var(--on-surface-variant)] mt-0.5 leading-snug">
+                  {stack.description}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Stack Guide */}
+        {activeStack && (
+          <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-5 space-y-3 mt-2">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[var(--pm-primary)] text-[18px]">layers</span>
+              <h3 className="text-sm font-bold text-[var(--on-surface)]">
+                {activeStack.name} — Planned Layers
+              </h3>
+              <span className="text-[10px] text-[var(--on-surface-variant)] italic">
+                ({activeStack.book_ref})
+              </span>
+            </div>
+            <ol className="space-y-2">
+              {activeStack.steps.map((step, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--pm-primary)] text-white text-[11px] font-bold flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold text-[var(--on-surface)]">
+                      {step.label}
+                    </div>
+                    <div className="text-[11px] text-[var(--on-surface-variant)] leading-relaxed mt-0.5">
+                      {step.hint}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="text-[10px] text-[var(--on-surface-variant)] italic pt-1">
+              The stack guide will stay visible as you iterate — use it as a roadmap.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Mode Grid section */}

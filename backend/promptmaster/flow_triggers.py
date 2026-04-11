@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 FlowTriggerType = Literal[
     "challenge",
     "self_audit",
+    "reframe",
     "drift_alert",
     "refine_shorter",
     "refine_technical",
@@ -36,7 +37,12 @@ FlowTriggerType = Literal[
     "refine_cautious",
 ]
 
-FlowInspectType = Literal["check_intent", "ask_questions"]
+FlowInspectType = Literal[
+    "check_intent",
+    "confirm_understanding",
+    "analyze_pattern",
+    "ask_questions",
+]
 
 
 # ============================================================================
@@ -79,6 +85,43 @@ def build_challenge_prompt(
         "3. **Missing perspectives** — what important angles were ignored?\n"
         "4. **Opposite view** — what would a well-reasoned argument against this answer look like?\n"
         "Be specific. Reference exact claims or sentences from the previous answer."
+    )
+    return system, user
+
+
+def build_reframe_prompt(
+    inputs: PMInput, current_output: str, iterations: list[Iteration] | None = None
+) -> tuple[str, str]:
+    """Commanding the Frame (Ch4 S10) — Tier 4 reframing meta-move.
+
+    Instead of micro-optimizing the current answer, question whether the
+    problem is framed correctly in the first place.
+    """
+    mode_config = MODES[inputs.mode]
+    system = (
+        f"{_PROMPTMASTER_CONTEXT}\n\n"
+        f"You are operating in PromptMaster Reframe Mode, a Tier 4 meta-move (Ch4 S10 "
+        f"'Commanding the Frame'). You are building on {mode_config['display_name']} Mode.\n\n"
+        "You just produced an answer that addressed the user's stated objective. Lower tiers "
+        "refine the answer; Tier 4 reframes the PROBLEM. Your task now is to step back one level "
+        "and ask: is the user solving the right problem? Is there a higher-level framing that "
+        "would make the current question obsolete?\n\n"
+        "Do not produce a refined answer. Produce a structured reframing analysis."
+    )
+    user = (
+        f"Original objective: {inputs.objective}\n\n"
+        f"{format_session_history(iterations or [])}\n\n"
+        f"--- CURRENT ANSWER (working within the existing frame) ---\n{current_output}\n--- END CURRENT ANSWER ---\n\n"
+        "Now reframe. Structure your response as:\n\n"
+        "**1. Frame Critique** — Is the current question framed correctly? What does this framing "
+        "quietly assume? What does it exclude?\n\n"
+        "**2. Alternative Framings** — List 2-3 meaningfully different ways the user could frame "
+        "this problem. For each, state what it would change about the answer.\n\n"
+        "**3. The Reframe** — Propose ONE specific reframe that would make the current answer "
+        "obsolete in a good way. State the new framing as a one-sentence question or directive.\n\n"
+        "**4. What to Do Next** — Tell the user exactly how to apply this reframe in PromptMaster: "
+        "e.g., 'Click Refine Prompt and replace your objective with: [new objective]'.\n\n"
+        "Be specific, not abstract. Reference the actual content of the current answer."
     )
     return system, user
 
@@ -206,6 +249,8 @@ def build_flow_trigger_prompt(
         return build_challenge_prompt(inputs, current_output, iterations)
     if trigger == "self_audit":
         return build_self_audit_response_prompt(inputs, current_output, iterations)
+    if trigger == "reframe":
+        return build_reframe_prompt(inputs, current_output, iterations)
     if trigger == "drift_alert":
         return build_drift_alert_prompt(inputs, current_output, evaluation, iterations)
     if trigger in REFINE_CONSTRAINTS:
@@ -246,6 +291,73 @@ Now answer two questions:
 **2. Implicit Expectations** — List 2-3 specific things the user might be implicitly expecting that they did NOT state explicitly. These are things that could cause friction if the output misses them.
 
 Be specific and insightful. Avoid generic commentary."""
+
+
+CONFIRM_UNDERSTANDING_SYSTEM = (
+    f"{_PROMPTMASTER_CONTEXT}\n\n"
+    "You are the understanding confirmation layer (Ch6 S3.1 'The Clarifying Prompt'). "
+    "The user wants to verify that you heard their request correctly. Restate their goal "
+    "and approach in your OWN words — not fancy, just clear. If you catch any ambiguity "
+    "in what they asked, flag it so they can correct you. This is NOT about inferring hidden "
+    "meaning (that's Check Intent). This is about playing back what they literally asked, "
+    "so mismatches surface early."
+)
+
+CONFIRM_UNDERSTANDING_PROMPT = """A user is working through a PromptMaster session:
+
+Objective (stated): {objective}
+Audience: {audience}
+Mode: {mode}
+Constraints: {constraints}
+Format: {output_format}
+
+{session_history}
+
+The AI just produced this output:
+---
+{current_output}
+---
+
+Now do two things:
+
+**1. Restated Goal** — In 2-3 plain sentences, restate what you understand the user is trying to accomplish. Use your own words. Do NOT infer hidden goals — just play back what they asked.
+
+**2. Ambiguities Found** — List any ambiguities in the request that caused you to guess. If there were none, say so. If there were some, be specific about what you assumed and what they should clarify.
+
+Keep it concrete. Do not add philosophical commentary."""
+
+
+ANALYZE_PATTERN_SYSTEM = (
+    f"{_PROMPTMASTER_CONTEXT}\n\n"
+    "You are the pattern analysis layer (Ch6 S3.3 'Mode Switch for Reflection'). "
+    "The user wants you to step back and observe HOW they have been prompting — not "
+    "what they asked, but the patterns in their style, structure, and decisions. "
+    "This is observational, not adversarial (Cold Critic is adversarial). "
+    "Identify 3-4 specific patterns you see in how they've been directing the session. "
+    "Some can be strengths, some can be gaps. Be specific and non-judgmental."
+)
+
+ANALYZE_PATTERN_PROMPT = """A user has been working through this PromptMaster session:
+
+Objective: {objective}
+Audience: {audience}
+Mode: {mode}
+Constraints: {constraints}
+
+{session_history}
+
+The latest output:
+---
+{current_output}
+---
+
+Now step back and observe the user's prompting patterns. Structure your response as:
+
+**Patterns Observed** — List 3-4 specific patterns in how the user has been directing this session. Examples might be: "You tend to set specific constraints upfront but rarely revise them mid-session" or "You iterate toward concrete examples rather than structural outlines" or "You haven't changed modes even though the objective shifted." Be observational, not judgmental.
+
+**One Actionable Insight** — Pick ONE pattern that, if adjusted, would most improve their session. State it as a specific behavioral change they could try next iteration.
+
+Be specific. Reference actual iterations in the history when making points."""
 
 
 ASK_QUESTIONS_SYSTEM = (
@@ -295,6 +407,59 @@ async def run_check_intent(
         system=CHECK_INTENT_SYSTEM,
         temperature=0.3,
         max_tokens=512,
+        model=model,
+    )
+    return content.strip()
+
+
+async def run_confirm_understanding(
+    client: OpenRouterClient,
+    inputs: PMInput,
+    current_output: str,
+    iterations: list[Iteration] | None = None,
+    model: str | None = None,
+) -> str:
+    """Clarifying Prompt (Ch6 S3.1) — AI restates user's goal in its own words."""
+    prompt = CONFIRM_UNDERSTANDING_PROMPT.format(
+        objective=inputs.objective,
+        audience=inputs.audience,
+        mode=MODES[inputs.mode]["display_name"],
+        constraints=inputs.constraints or "(none)",
+        output_format=inputs.output_format or "(not specified)",
+        current_output=current_output[:1500],
+        session_history=format_session_history(iterations or []),
+    )
+    content, _usage = await client.generate(
+        prompt=prompt,
+        system=CONFIRM_UNDERSTANDING_SYSTEM,
+        temperature=0.2,
+        max_tokens=512,
+        model=model,
+    )
+    return content.strip()
+
+
+async def run_analyze_pattern(
+    client: OpenRouterClient,
+    inputs: PMInput,
+    current_output: str,
+    iterations: list[Iteration] | None = None,
+    model: str | None = None,
+) -> str:
+    """Mode Switch for Reflection (Ch6 S3.3) — AI observes user's prompting patterns."""
+    prompt = ANALYZE_PATTERN_PROMPT.format(
+        objective=inputs.objective,
+        audience=inputs.audience,
+        mode=MODES[inputs.mode]["display_name"],
+        constraints=inputs.constraints or "(none)",
+        current_output=current_output[:1500],
+        session_history=format_session_history(iterations or []),
+    )
+    content, _usage = await client.generate(
+        prompt=prompt,
+        system=ANALYZE_PATTERN_SYSTEM,
+        temperature=0.3,
+        max_tokens=640,
         model=model,
     )
     return content.strip()

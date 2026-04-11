@@ -25,6 +25,7 @@ export function SummaryPhase() {
   const selfAudit = useSessionStore((s) => s.selfAudit);
   const sessionSaved = useSessionStore((s) => s.sessionSaved);
   const setSessionSaved = useSessionStore((s) => s.setSessionSaved);
+  const sessionFacts = useSessionStore((s) => s.sessionFacts);
 
   const { user } = useAuth();
 
@@ -73,6 +74,7 @@ export function SummaryPhase() {
     constraints,
     output_format: outputFormat,
     mode,
+    session_facts: sessionFacts,
   };
 
   async function handleDownloadSummary() {

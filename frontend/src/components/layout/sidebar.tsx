@@ -11,6 +11,7 @@ import { TierBadge } from '@/components/sidebar/tier-badge';
 import { SessionModal } from '@/components/shared/session-modal';
 import { TemplateModal } from '@/components/shared/template-modal';
 import { CustomSelect } from '@/components/shared/custom-select';
+import { SessionFacts } from '@/components/shared/session-facts';
 import { useTutorial } from '@/components/tutorial/tutorial-provider';
 import type { Phase } from '@/types';
 
@@ -140,6 +141,9 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <TierBadge tier={tier} />
       </div>
 
+      {/* Session Facts (Information Anchors, Ch5 S5) */}
+      <SessionFacts />
+
       {/* Library Nav (authenticated only) */}
       {user && (
         <div className="px-1 space-y-1">
@@ -163,7 +167,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       )}
 
       {/* Settings */}
-      <div className="px-1">
+      <div className="px-1 space-y-1">
         <button
           type="button"
           onClick={() => { replay(); onNavigate?.(); }}
@@ -172,6 +176,14 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <span className="material-symbols-outlined text-[20px]">school</span>
           Replay Tutorial
         </button>
+        <Link
+          href="/compact"
+          className="w-full flex items-center gap-3 px-3 py-2 text-slate-600 text-sm font-medium hover:bg-slate-200/50 rounded-lg transition-colors"
+          onClick={() => onNavigate?.()}
+        >
+          <span className="material-symbols-outlined text-[20px]">gavel</span>
+          The Compact
+        </Link>
       </div>
 
       <hr className="border-slate-200" />

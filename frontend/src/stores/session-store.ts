@@ -43,6 +43,12 @@ interface SessionState {
   onboardingSeen: boolean;
   showScaffolding: boolean;
 
+  // Session Facts / Information Anchors (Ch5 S5)
+  sessionFacts: string[];
+
+  // Active Prompt Stack (Ch5 S6) — id from PROMPT_STACKS
+  activeStackId: string | null;
+
   // Actions
   setPhase: (phase: Phase) => void;
   setObjective: (objective: string) => void;
@@ -65,6 +71,10 @@ interface SessionState {
   setFormatPresets: (presets: string[]) => void;
   setOnboardingSeen: (seen: boolean) => void;
   setShowScaffolding: (show: boolean) => void;
+  addSessionFact: (fact: string) => void;
+  removeSessionFact: (index: number) => void;
+  clearSessionFacts: () => void;
+  setActiveStack: (id: string | null) => void;
   finalize: () => void;
   resetSession: () => void;
   carryLessonsForward: (objective: string, constraints: string) => void;
@@ -99,6 +109,8 @@ const initialState = {
   formatPresets: [] as string[],
   onboardingSeen: false,
   showScaffolding: false,
+  sessionFacts: [] as string[],
+  activeStackId: null as string | null,
 };
 
 export const useSessionStore = create<SessionState>()(
@@ -135,6 +147,14 @@ export const useSessionStore = create<SessionState>()(
       setFormatPresets: (formatPresets) => set({ formatPresets }),
       setOnboardingSeen: (onboardingSeen) => set({ onboardingSeen }),
       setShowScaffolding: (showScaffolding) => set({ showScaffolding }),
+      addSessionFact: (fact) =>
+        set((state) => ({ sessionFacts: [...state.sessionFacts, fact] })),
+      removeSessionFact: (index) =>
+        set((state) => ({
+          sessionFacts: state.sessionFacts.filter((_, i) => i !== index),
+        })),
+      clearSessionFacts: () => set({ sessionFacts: [] }),
+      setActiveStack: (activeStackId) => set({ activeStackId }),
       finalize: () => set({ finalized: true, phase: 'summary' }),
       resetSession: () => set({ ...initialState }),
       carryLessonsForward: (objective, constraints) =>
