@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
-import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, PROMPT_STACKS, type PromptStack } from '@/lib/constants';
+import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, EXAMPLES, PROMPT_STACKS, type PromptStack } from '@/lib/constants';
 import { ModeGrid } from '@/components/shared/mode-grid';
 import { ConstraintPills } from '@/components/shared/constraint-pills';
 import { CustomSelect } from '@/components/shared/custom-select';
@@ -73,6 +73,13 @@ export function InputPhase() {
     }
     setConstraints(stack.initial.constraints);
     setOutputFormat(stack.initial.output_format);
+  }
+
+  function handleFillExample(example: (typeof EXAMPLES)[number]) {
+    setObjective(example.objective);
+    setAudience(example.audience);
+    setConstraints(example.constraints);
+    setMode(example.mode);
   }
 
   const activeStack = activeStackId ? PROMPT_STACKS.find((s) => s.id === activeStackId) : null;
@@ -166,13 +173,12 @@ export function InputPhase() {
             <button
               type="button"
               onClick={() => {
-                const researchStack = PROMPT_STACKS.find((s) => s.id === 'research');
-                if (researchStack) handlePickStack(researchStack);
+                handleFillExample(EXAMPLES[0]);
                 setOnboardingSeen(true);
               }}
               className="px-4 py-2 bg-[var(--pm-primary)] text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-all"
             >
-              Try a Stack
+              Try an example
             </button>
             <button
               type="button"
@@ -194,6 +200,25 @@ export function InputPhase() {
         <p className="text-xs text-[var(--on-surface-variant)] italic mb-4">
           PromptMaster guides the AI's thinking using structured roles, constraints, and iterative refinement.
         </p>
+      </div>
+
+      {/* Example quick-fill buttons */}
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-[var(--on-surface-variant)]">
+          Start with an example (click any to auto-fill):
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {EXAMPLES.map((example) => (
+            <button
+              key={example.label}
+              type="button"
+              onClick={() => handleFillExample(example)}
+              className="px-3 py-2 bg-white text-[var(--on-surface-variant)] text-xs font-medium rounded-lg hover:bg-[var(--surface-container-high)] transition-all border border-[var(--outline-variant)]/20 text-left"
+            >
+              {example.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Prompt Stacks */}
