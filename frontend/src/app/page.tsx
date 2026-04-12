@@ -114,11 +114,6 @@ export default function LandingPage() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20 flex flex-col lg:flex-row items-center min-h-screen">
           <div className="flex-1 space-y-8 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/60 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--pm-primary)] animate-pulse" />
-              A system for thinking with AI
-            </div>
-
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/40 leading-[1.1]">
               Stop prompting.
               <br />
