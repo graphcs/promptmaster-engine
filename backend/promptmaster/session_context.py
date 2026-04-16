@@ -23,6 +23,7 @@ _TRIGGER_LABELS = {
     "refine_angle": "Refine: Different angle",
     "refine_cautious": "Refine: More cautious",
     "ask_questions": "Ask Questions follow-up",
+    "conversation": "Conversation follow-up",
 }
 
 

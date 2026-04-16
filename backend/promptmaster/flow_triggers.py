@@ -240,6 +240,52 @@ def build_refine_prompt(
     return system, user
 
 
+def build_conversation_prompt(
+    inputs: PMInput,
+    current_output: str,
+    user_message: str,
+    iterations: list[Iteration] | None = None,
+) -> tuple[str, str]:
+    """Conversation Bridge — user sends a free-form follow-up on the output.
+
+    Unlike flow triggers (which have pre-defined prompts), this lets the user
+    interact naturally with the output: ask follow-ups, challenge specific parts,
+    or request deeper exploration.
+    """
+    base = build_prompt(inputs)
+    mode_display = (
+        inputs.custom_name or "Custom"
+        if inputs.mode == "custom"
+        else MODES[inputs.mode]["display_name"]
+    )
+
+    system = (
+        f"{_PROMPTMASTER_CONTEXT}\n\n"
+        f"{base.system_prompt}\n\n"
+        "CONVERSATION BRIDGE: The user is interacting directly with the previous output. "
+        "They may be asking a follow-up question, challenging a specific point, requesting "
+        "more depth on a section, or giving new direction. Respond to their message while "
+        "maintaining alignment with the original objective. Do not repeat the previous output "
+        "verbatim — produce a new, focused response that addresses what the user asked."
+    )
+    user = (
+        f"Original objective: {inputs.objective}\n"
+        f"Audience: {inputs.audience}\n"
+    )
+    if inputs.constraints.strip():
+        user += f"Constraints: {inputs.constraints}\n"
+    if inputs.output_format.strip():
+        user += f"Format: {inputs.output_format}\n"
+    user += (
+        f"\n{format_session_history(iterations or [])}\n\n"
+        f"--- CURRENT OUTPUT (what the user is responding to) ---\n{current_output}\n--- END CURRENT OUTPUT ---\n\n"
+        f"--- USER'S MESSAGE ---\n{user_message}\n--- END USER'S MESSAGE ---\n\n"
+        f"Respond to the user's message. Stay in {mode_display} Mode. "
+        "Keep your response aligned with the original objective."
+    )
+    return system, user
+
+
 def build_flow_trigger_prompt(
     inputs: PMInput,
     current_output: str,
