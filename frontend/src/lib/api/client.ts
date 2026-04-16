@@ -86,6 +86,20 @@ export const api = {
     });
   },
 
+  async conversationBridge(req: {
+    inputs: PMInput;
+    current_output: string;
+    user_message: string;
+    iteration_number: number;
+    iteration_history?: Iteration[];
+    model?: string;
+  }): Promise<{ iteration: Iteration; suggestions: string[] }> {
+    return apiFetch('/api/conversation-bridge', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
   async runSelfAudit(req: {
     inputs: PMInput;
     iterations: Iteration[];
