@@ -18,6 +18,7 @@ from promptmaster.realigner import build_realignment_prompt
 from promptmaster.guidance import generate_suggestions
 from promptmaster.flow_triggers import (
     build_flow_trigger_prompt,
+    build_conversation_prompt,
     run_check_intent,
     run_confirm_understanding,
     run_analyze_pattern,
@@ -104,6 +105,15 @@ class FlowInspectResponse(BaseModel):
     kind: FlowInspectType
     text: str | None = None
     questions: list[str] | None = None
+
+
+class ConversationBridgeRequest(BaseModel):
+    inputs: PMInput
+    current_output: str
+    user_message: str
+    iteration_number: int
+    iteration_history: list[Iteration] = []
+    model: str = ""
 
 
 # --- Endpoints ---
@@ -281,6 +291,61 @@ async def api_flow_inspect(
             )
             return FlowInspectResponse(kind="ask_questions", questions=questions)
         raise HTTPException(status_code=400, detail=f"Unknown inspection type: {req.inspection}")
+    except OpenRouterError as e:
+        raise HTTPException(status_code=502, detail=f"LLM error: {e}")
+
+
+@router.post("/conversation-bridge")
+async def api_conversation_bridge(
+    req: ConversationBridgeRequest,
+    client: OpenRouterClient = Depends(get_client),
+) -> RunIterationResponse:
+    """Conversation Bridge — user sends a free-form follow-up on the output.
+
+    Builds a context-rich prompt from the user's message + session history,
+    then runs the full pipeline: generate -> (evaluate || suggestions) in parallel.
+    """
+    try:
+        model = req.model or None
+        history = req.iteration_history
+
+        system_text, prompt_text = build_conversation_prompt(
+            inputs=req.inputs,
+            current_output=req.current_output,
+            user_message=req.user_message,
+            iterations=history,
+        )
+
+        # Generate
+        output = await generate(
+            client=client,
+            prompt_text=prompt_text,
+            system_text=system_text,
+            model=model,
+        )
+
+        # Evaluate + suggestions in parallel
+        eval_task = evaluate_output(client, req.inputs, output, iterations=history, model=model)
+        suggestions_task = generate_suggestions(
+            client=client,
+            inputs=req.inputs,
+            output=output,
+            iterations=history,
+            model=model,
+        )
+        evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
+
+        iteration = Iteration(
+            iteration_number=req.iteration_number,
+            prompt_sent=prompt_text,
+            system_prompt_used=system_text,
+            output=output,
+            mode=req.inputs.mode,
+            evaluation=evaluation,
+            trigger_source="conversation",
+        )
+
+        return RunIterationResponse(iteration=iteration, suggestions=suggestions)
     except OpenRouterError as e:
         raise HTTPException(status_code=502, detail=f"LLM error: {e}")
 
