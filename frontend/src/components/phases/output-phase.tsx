@@ -89,6 +89,9 @@ export function OutputPhase() {
   const [refineMenuOpen, setRefineMenuOpen] = useState(false);
   const refineMenuRef = useRef<HTMLDivElement>(null);
 
+  const [conversationMessage, setConversationMessage] = useState('');
+  const [conversationLoading, setConversationLoading] = useState(false);
+
   // Close refine dropdown on outside click or Escape
   useEffect(() => {
     if (!refineMenuOpen) return;
@@ -262,11 +265,33 @@ export function OutputPhase() {
     }
   }
 
+  async function handleConversationBridge() {
+    if (!currentOutput || !conversationMessage.trim()) return;
+    setError(null);
+    setConversationLoading(true);
+    try {
+      const result = await api.conversationBridge({
+        inputs: buildInputs(),
+        current_output: currentOutput,
+        user_message: conversationMessage.trim(),
+        iteration_number: iterations.length + 1,
+        iteration_history: iterations,
+        model,
+      });
+      appendIteration(result.iteration, result.suggestions);
+      setConversationMessage('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Conversation follow-up failed.');
+    } finally {
+      setConversationLoading(false);
+    }
+  }
+
   function toggleIteration(num: number) {
     setExpandedIterations((prev) => ({ ...prev, [num]: !prev[num] }));
   }
 
-  const anyLoading = realignLoading || refineLoading || flowLoading !== null;
+  const anyLoading = realignLoading || refineLoading || flowLoading !== null || conversationLoading;
 
   return (
     <div className="space-y-10">
@@ -349,6 +374,52 @@ export function OutputPhase() {
           <p className="text-sm text-[var(--on-surface-variant)] italic">No output available.</p>
         )}
       </div>
+
+      {/* Conversation Bridge — free-form follow-up */}
+      {currentOutput && (
+        <div className="bg-white rounded-xl shadow-ambient p-6 space-y-3">
+          <label className="block text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
+            Continue the conversation
+          </label>
+          <textarea
+            value={conversationMessage}
+            onChange={(e) => setConversationMessage(e.target.value)}
+            placeholder="Ask a follow-up, challenge a specific point, or go deeper..."
+            rows={3}
+            disabled={anyLoading}
+            className="w-full bg-[var(--surface-container-low)] rounded-lg px-4 py-3 text-sm text-[var(--on-surface)] placeholder:text-[var(--outline)]/60 focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]/40 focus:bg-white transition-all duration-200 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                handleConversationBridge();
+              }
+            }}
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-[var(--on-surface-variant)]">
+              Cmd+Enter to send
+            </span>
+            <button
+              type="button"
+              onClick={handleConversationBridge}
+              disabled={anyLoading || !conversationMessage.trim()}
+              className="flex items-center gap-2 px-5 py-2 bg-[var(--pm-primary)] text-white text-xs font-bold rounded-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {conversationLoading ? (
+                <>
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Sending…
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-[16px]">send</span>
+                  Send
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Mode switch for next iteration */}
       <div className="bg-white rounded-xl shadow-ambient p-6">
