@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
 import { CONSTRAINT_PRESETS, FORMAT_PRESETS, AUDIENCE_OPTIONS, EXAMPLES, PROMPT_STACKS, type PromptStack } from '@/lib/constants';
@@ -9,6 +9,14 @@ import { ConstraintPills } from '@/components/shared/constraint-pills';
 import { CustomSelect } from '@/components/shared/custom-select';
 import { useAuth } from '@/hooks/use-auth';
 import { saveTemplate } from '@/lib/supabase/templates';
+import {
+  listPresets,
+  addPreset,
+  deletePreset,
+  listLocalPresets,
+  addLocalPreset,
+  removeLocalPreset,
+} from '@/lib/supabase/presets';
 import type { ModeType, PromptTemplate } from '@/types';
 
 export function InputPhase() {
@@ -26,6 +34,15 @@ export function InputPhase() {
   const sessionFacts = useSessionStore((s) => s.sessionFacts);
   const activeStackId = useSessionStore((s) => s.activeStackId);
   const setActiveStack = useSessionStore((s) => s.setActiveStack);
+
+  const customConstraintPresets = useSessionStore((s) => s.customConstraintPresets);
+  const customFormatPresets = useSessionStore((s) => s.customFormatPresets);
+  const setCustomConstraintPresets = useSessionStore((s) => s.setCustomConstraintPresets);
+  const setCustomFormatPresets = useSessionStore((s) => s.setCustomFormatPresets);
+  const addCustomConstraintPreset = useSessionStore((s) => s.addCustomConstraintPreset);
+  const removeCustomConstraintPreset = useSessionStore((s) => s.removeCustomConstraintPreset);
+  const addCustomFormatPreset = useSessionStore((s) => s.addCustomFormatPreset);
+  const removeCustomFormatPreset = useSessionStore((s) => s.removeCustomFormatPreset);
 
   const setObjective = useSessionStore((s) => s.setObjective);
   const setAudience = useSessionStore((s) => s.setAudience);
@@ -47,6 +64,29 @@ export function InputPhase() {
   const [templateSaved, setTemplateSaved] = useState(false);
 
   const { user } = useAuth();
+
+  useEffect(() => {
+    async function loadCustomPresets() {
+      if (user) {
+        try {
+          const presets = await listPresets();
+          setCustomConstraintPresets(
+            presets.filter((p) => p.type === 'constraint').map((p) => p.label)
+          );
+          setCustomFormatPresets(
+            presets.filter((p) => p.type === 'format').map((p) => p.label)
+          );
+        } catch {
+          setCustomConstraintPresets(listLocalPresets('constraint'));
+          setCustomFormatPresets(listLocalPresets('format'));
+        }
+      } else {
+        setCustomConstraintPresets(listLocalPresets('constraint'));
+        setCustomFormatPresets(listLocalPresets('format'));
+      }
+    }
+    loadCustomPresets();
+  }, [user, setCustomConstraintPresets, setCustomFormatPresets]);
 
   function handleToggleConstraintPreset(preset: string) {
     if (constraintPresets.includes(preset)) {
@@ -80,6 +120,50 @@ export function InputPhase() {
     setAudience(example.audience);
     setConstraints(example.constraints);
     setMode(example.mode);
+  }
+
+  async function handleAddCustomConstraint(label: string) {
+    addCustomConstraintPreset(label);
+    if (user) {
+      try { await addPreset('constraint', label, user.id); } catch { /* stored in store already */ }
+    } else {
+      addLocalPreset('constraint', label);
+    }
+  }
+
+  async function handleRemoveCustomConstraint(label: string) {
+    removeCustomConstraintPreset(label);
+    if (user) {
+      try {
+        const presets = await listPresets('constraint');
+        const preset = presets.find((p) => p.label === label);
+        if (preset) await deletePreset(preset.id);
+      } catch { /* already removed from store */ }
+    } else {
+      removeLocalPreset('constraint', label);
+    }
+  }
+
+  async function handleAddCustomFormat(label: string) {
+    addCustomFormatPreset(label);
+    if (user) {
+      try { await addPreset('format', label, user.id); } catch { /* stored in store already */ }
+    } else {
+      addLocalPreset('format', label);
+    }
+  }
+
+  async function handleRemoveCustomFormat(label: string) {
+    removeCustomFormatPreset(label);
+    if (user) {
+      try {
+        const presets = await listPresets('format');
+        const preset = presets.find((p) => p.label === label);
+        if (preset) await deletePreset(preset.id);
+      } catch { /* already removed from store */ }
+    } else {
+      removeLocalPreset('format', label);
+    }
   }
 
   const activeStack = activeStackId ? PROMPT_STACKS.find((s) => s.id === activeStackId) : null;
@@ -424,6 +508,9 @@ export function InputPhase() {
           presets={CONSTRAINT_PRESETS}
           selected={constraintPresets}
           onToggle={handleToggleConstraintPreset}
+          customPresets={customConstraintPresets}
+          onAddCustom={handleAddCustomConstraint}
+          onRemoveCustom={handleRemoveCustomConstraint}
         />
       </div>
 
@@ -453,6 +540,9 @@ export function InputPhase() {
           presets={FORMAT_PRESETS}
           selected={formatPresets}
           onToggle={handleToggleFormatPreset}
+          customPresets={customFormatPresets}
+          onAddCustom={handleAddCustomFormat}
+          onRemoveCustom={handleRemoveCustomFormat}
         />
       </div>
 
