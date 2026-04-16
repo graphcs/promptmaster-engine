@@ -49,6 +49,10 @@ interface SessionState {
   // Active Prompt Stack (Ch5 S6) — id from PROMPT_STACKS
   activeStackId: string | null;
 
+  // User's custom presets (loaded from Supabase or localStorage)
+  customConstraintPresets: string[];
+  customFormatPresets: string[];
+
   // Actions
   setPhase: (phase: Phase) => void;
   setObjective: (objective: string) => void;
@@ -76,6 +80,12 @@ interface SessionState {
   removeSessionFact: (index: number) => void;
   clearSessionFacts: () => void;
   setActiveStack: (id: string | null) => void;
+  setCustomConstraintPresets: (presets: string[]) => void;
+  setCustomFormatPresets: (presets: string[]) => void;
+  addCustomConstraintPreset: (label: string) => void;
+  removeCustomConstraintPreset: (label: string) => void;
+  addCustomFormatPreset: (label: string) => void;
+  removeCustomFormatPreset: (label: string) => void;
   finalize: () => void;
   resetSession: () => void;
   carryLessonsForward: (objective: string, constraints: string) => void;
@@ -112,6 +122,8 @@ const initialState = {
   showScaffolding: false,
   sessionFacts: [] as string[],
   activeStackId: null as string | null,
+  customConstraintPresets: [] as string[],
+  customFormatPresets: [] as string[],
 };
 
 export const useSessionStore = create<SessionState>()(
@@ -162,6 +174,30 @@ export const useSessionStore = create<SessionState>()(
         })),
       clearSessionFacts: () => set({ sessionFacts: [] }),
       setActiveStack: (activeStackId) => set({ activeStackId }),
+      setCustomConstraintPresets: (customConstraintPresets) => set({ customConstraintPresets }),
+      setCustomFormatPresets: (customFormatPresets) => set({ customFormatPresets }),
+      addCustomConstraintPreset: (label) =>
+        set((state) => ({
+          customConstraintPresets: state.customConstraintPresets.includes(label)
+            ? state.customConstraintPresets
+            : [...state.customConstraintPresets, label],
+        })),
+      removeCustomConstraintPreset: (label) =>
+        set((state) => ({
+          customConstraintPresets: state.customConstraintPresets.filter((p) => p !== label),
+          constraintPresets: state.constraintPresets.filter((p) => p !== label),
+        })),
+      addCustomFormatPreset: (label) =>
+        set((state) => ({
+          customFormatPresets: state.customFormatPresets.includes(label)
+            ? state.customFormatPresets
+            : [...state.customFormatPresets, label],
+        })),
+      removeCustomFormatPreset: (label) =>
+        set((state) => ({
+          customFormatPresets: state.customFormatPresets.filter((p) => p !== label),
+          formatPresets: state.formatPresets.filter((p) => p !== label),
+        })),
       finalize: () => set({ finalized: true, phase: 'summary' }),
       resetSession: () => set({ ...initialState }),
       carryLessonsForward: (objective, constraints) =>
