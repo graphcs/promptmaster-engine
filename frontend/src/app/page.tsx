@@ -98,12 +98,6 @@ export default function LandingPage() {
             >
               Sign In
             </Link>
-            <Link
-              href="/session"
-              className="px-5 py-2 bg-[var(--pm-primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all"
-            >
-              Get Started
-            </Link>
           </div>
         </div>
       </nav>
