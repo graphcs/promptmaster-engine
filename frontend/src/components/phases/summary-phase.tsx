@@ -159,7 +159,7 @@ export function SummaryPhase() {
               {iterations.length}
             </div>
             <div className="text-[10px] uppercase font-bold text-[var(--outline)]">
-              {iterations.length === 1 ? 'Iteration' : 'Iterations'}
+              {iterations.length === 1 ? 'Version' : 'Versions'}
             </div>
           </div>
         </div>
@@ -178,7 +178,7 @@ export function SummaryPhase() {
           <span className="material-symbols-outlined text-[var(--pm-primary)] mb-3 block text-[20px]">
             refresh
           </span>
-          <div className="text-sm font-medium text-[var(--outline-variant)] mb-1">Iterations</div>
+          <div className="text-sm font-medium text-[var(--outline-variant)] mb-1">Versions</div>
           <div className="text-xl font-semibold text-[var(--on-surface)]">
             {iterations.length} {iterations.length === 1 ? 'Cycle' : 'Cycles'}
           </div>
@@ -250,7 +250,7 @@ export function SummaryPhase() {
                   compare_arrows
                 </span>
                 <h3 className="text-lg font-semibold tracking-tight text-[var(--on-surface)]">
-                  Iteration Comparison
+                  Version Comparison
                 </h3>
               </div>
               <span className="material-symbols-outlined transition-transform group-open:rotate-180">
@@ -270,7 +270,7 @@ export function SummaryPhase() {
                     onChange={(v) => setLeftIdx(Number(v))}
                     options={iterations.map((it, i) => ({
                       value: String(i),
-                      label: `Iteration ${i + 1}${
+                      label: `Version ${i + 1}${
                         it.user_rating === 'positive'
                           ? ' 👍'
                           : it.user_rating === 'negative'
@@ -298,7 +298,7 @@ export function SummaryPhase() {
                     onChange={(v) => setRightIdx(Number(v))}
                     options={iterations.map((it, i) => ({
                       value: String(i),
-                      label: `Iteration ${i + 1}${
+                      label: `Version ${i + 1}${
                         it.user_rating === 'positive'
                           ? ' 👍'
                           : it.user_rating === 'negative'

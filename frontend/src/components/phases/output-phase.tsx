@@ -682,7 +682,7 @@ export function OutputPhase() {
           onClick={() =>
             downloadFile(
               currentOutput || '',
-              `promptmaster_iteration_${iterations.length}.txt`
+              `promptmaster_version_${iterations.length}.txt`
             )
           }
           className="w-10 h-10 flex items-center justify-center rounded-xl border border-[var(--outline-variant)]/30 hover:bg-[var(--surface-container-low)] transition-all"
