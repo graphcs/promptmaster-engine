@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { TopNav } from '@/components/layout/top-nav';
 import { TutorialProvider } from '@/components/tutorial/tutorial-provider';
@@ -10,18 +10,10 @@ import { useSessionStore } from '@/stores/session-store';
 
 export function SessionShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const phase = useSessionStore((s) => s.phase);
   const chatPanelOpen = useSessionStore((s) => s.chatPanelOpen);
   const toggleChatPanel = useSessionStore((s) => s.toggleChatPanel);
-
-  // Read session_id from sessionStorage if it exists (client-side persistence pattern).
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = sessionStorage.getItem('pm-session-id');
-    setSessionId(stored);
-  }, []);
 
   const showChatRail = phase === 'output' && chatPanelOpen;
 
@@ -59,7 +51,7 @@ export function SessionShell({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* Chat panel — only rendered on Output phase, only when open */}
-        <ChatPanel sessionId={sessionId} />
+        <ChatPanel />
 
         {/* Floating toggle when panel is closed and we're on Output phase */}
         {phase === 'output' && !chatPanelOpen && (

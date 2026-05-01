@@ -19,13 +19,14 @@ function genId(): string {
     : Math.random().toString(36).slice(2);
 }
 
-export function ChatPanel({ sessionId }: { sessionId: string | null }) {
+export function ChatPanel() {
   const phase = useSessionStore((s) => s.phase);
   const iterations = useSessionStore((s) => s.iterations);
   const activeIterationNumber = useSessionStore((s) => s.activeIterationNumber);
   const chatMessages = useSessionStore((s) => s.chatMessages);
   const chatPanelOpen = useSessionStore((s) => s.chatPanelOpen);
   const chatLoading = useSessionStore((s) => s.chatLoading);
+  const sessionId = useSessionStore((s) => s.sessionId);
 
   const objective = useSessionStore((s) => s.objective);
   const audience = useSessionStore((s) => s.audience);

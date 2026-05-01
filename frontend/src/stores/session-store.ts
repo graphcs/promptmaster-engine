@@ -59,6 +59,9 @@ interface SessionState {
   chatPanelOpen: boolean;
   chatLoading: 'send' | 'apply' | 'save' | null;
 
+  // Session ID — generated on first iteration, used for Supabase chat persistence
+  sessionId: string | null;
+
   // Actions
   setPhase: (phase: Phase) => void;
   setObjective: (objective: string) => void;
@@ -141,6 +144,7 @@ const initialState = {
   chatMessages: {} as Record<number, ChatMessage[]>,
   chatPanelOpen: false,
   chatLoading: null as 'send' | 'apply' | 'save' | null,
+  sessionId: null as string | null,
 };
 
 export const useSessionStore = create<SessionState>()(
@@ -161,17 +165,25 @@ export const useSessionStore = create<SessionState>()(
       setPromptEdited: (promptEdited) => set({ promptEdited }),
       setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
       appendIteration: (iteration, suggestions) =>
-        set((state) => ({
-          iterations: [...state.iterations, iteration],
-          currentOutput: iteration.output,
-          currentEval: iteration.evaluation,
-          suggestions,
-          activeIterationNumber: iteration.iteration_number,
-          chatMessages: {
-            ...state.chatMessages,
-            [iteration.iteration_number]: state.chatMessages[iteration.iteration_number] || [],
-          },
-        })),
+        set((state) => {
+          const newSessionId =
+            state.sessionId ??
+            (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+              ? crypto.randomUUID().replace(/-/g, '').slice(0, 8)
+              : Math.random().toString(36).slice(2, 10));
+          return {
+            iterations: [...state.iterations, iteration],
+            currentOutput: iteration.output,
+            currentEval: iteration.evaluation,
+            suggestions,
+            activeIterationNumber: iteration.iteration_number,
+            chatMessages: {
+              ...state.chatMessages,
+              [iteration.iteration_number]: state.chatMessages[iteration.iteration_number] || [],
+            },
+            sessionId: newSessionId,
+          };
+        }),
       setIterationRating: (iterationNumber, rating) =>
         set((state) => ({
           iterations: state.iterations.map((it) =>
@@ -277,6 +289,7 @@ export const useSessionStore = create<SessionState>()(
           sessionSaved: true,
           activeIterationNumber: session.iterations.length > 0 ? session.iterations[session.iterations.length - 1].iteration_number : null,
           chatMessages: {},
+          sessionId: session.session_id,
         }),
     }),
     {
