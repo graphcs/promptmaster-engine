@@ -10,6 +10,7 @@ import { MODE_DISPLAY } from '@/lib/constants';
 import type { ModeType, ScoreLevel, FlowTriggerType, PMInput } from '@/types';
 import { MarkdownOutput } from '@/components/shared/markdown-output';
 import { CustomSelect } from '@/components/shared/custom-select';
+import { InlineToast } from '@/components/shared/inline-toast';
 
 type InspectionState =
   | { kind: 'none' }
@@ -78,13 +79,6 @@ export function OutputPhase() {
   const currentOutput = currentIteration?.output ?? null;
   const currentEval = currentIteration?.evaluation ?? null;
 
-  function handleRate(rating: 'positive' | 'negative') {
-    if (!currentIteration) return;
-    // Toggle off if clicking the same rating; otherwise set it
-    const next = currentRating === rating ? null : rating;
-    setIterationRating(currentIteration.iteration_number, next);
-  }
-
   const [realignLoading, setRealignLoading] = useState(false);
   const [refineLoading, setRefineLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -92,7 +86,21 @@ export function OutputPhase() {
   const [flowLoading, setFlowLoading] = useState<FlowTriggerType | 'check_intent' | 'confirm_understanding' | 'analyze_pattern' | 'ask_questions' | null>(null);
   const [inspection, setInspection] = useState<InspectionState>({ kind: 'none' });
   const [refineMenuOpen, setRefineMenuOpen] = useState(false);
+  const [ratingToast, setRatingToast] = useState<string | null>(null);
   const refineMenuRef = useRef<HTMLDivElement>(null);
+
+  function handleRate(rating: 'positive' | 'negative') {
+    if (!currentIteration) return;
+    const next = currentRating === rating ? null : rating;
+    setIterationRating(currentIteration.iteration_number, next);
+    if (next === 'positive') {
+      setRatingToast("Got it — I'll favor this style going forward.");
+    } else if (next === 'negative') {
+      setRatingToast("Got it — I'll avoid this approach going forward.");
+    } else {
+      setRatingToast('Rating cleared.');
+    }
+  }
 
   // Close refine dropdown on outside click or Escape
   useEffect(() => {
@@ -285,67 +293,72 @@ export function OutputPhase() {
 
       {/* AI Output card */}
       <div className="bg-white rounded-xl shadow-ambient p-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 gap-3">
           <span className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
             Generated Output
           </span>
-          <div className="flex items-center gap-1">
-            {/* Thumbs up */}
-            <button
-              type="button"
-              onClick={() => handleRate('positive')}
-              disabled={!currentIteration}
-              title="Mark as strong — the AI will preserve what worked here"
-              aria-label="Mark as strong"
-              aria-pressed={currentRating === 'positive'}
-              className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-                currentRating === 'positive'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)]'
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
-            >
-              <span
-                className="material-symbols-outlined text-[18px]"
-                style={currentRating === 'positive' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+          <div className="flex items-center gap-2">
+            {ratingToast && (
+              <InlineToast message={ratingToast} onDismiss={() => setRatingToast(null)} />
+            )}
+            <div className="flex items-center gap-1">
+              {/* Thumbs up */}
+              <button
+                type="button"
+                onClick={() => handleRate('positive')}
+                disabled={!currentIteration}
+                title="Mark as strong — the AI will preserve what worked here"
+                aria-label="Mark as strong"
+                aria-pressed={currentRating === 'positive'}
+                className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                  currentRating === 'positive'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)]'
+                } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
-                thumb_up
-              </span>
-            </button>
+                <span
+                  className="material-symbols-outlined text-[18px]"
+                  style={currentRating === 'positive' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                >
+                  thumb_up
+                </span>
+              </button>
 
-            {/* Thumbs down */}
-            <button
-              type="button"
-              onClick={() => handleRate('negative')}
-              disabled={!currentIteration}
-              title="Mark as poor — the AI will avoid repeating this"
-              aria-label="Mark as poor"
-              aria-pressed={currentRating === 'negative'}
-              className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-                currentRating === 'negative'
-                  ? 'bg-red-100 text-red-700'
-                  : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)]'
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
-            >
-              <span
-                className="material-symbols-outlined text-[18px]"
-                style={currentRating === 'negative' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+              {/* Thumbs down */}
+              <button
+                type="button"
+                onClick={() => handleRate('negative')}
+                disabled={!currentIteration}
+                title="Mark as poor — the AI will avoid repeating this"
+                aria-label="Mark as poor"
+                aria-pressed={currentRating === 'negative'}
+                className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                  currentRating === 'negative'
+                    ? 'bg-red-100 text-red-700'
+                    : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)]'
+                } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
-                thumb_down
-              </span>
-            </button>
+                <span
+                  className="material-symbols-outlined text-[18px]"
+                  style={currentRating === 'negative' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                >
+                  thumb_down
+                </span>
+              </button>
 
-            {/* Copy */}
-            <button
-              type="button"
-              onClick={handleCopy}
-              title="Copy to clipboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)] transition-colors ml-1"
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {copied ? 'check' : 'content_copy'}
-              </span>
-              {copied ? 'Copied' : 'Copy'}
-            </button>
+              {/* Copy */}
+              <button
+                type="button"
+                onClick={handleCopy}
+                title="Copy to clipboard"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-low)] transition-colors ml-1"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {copied ? 'check' : 'content_copy'}
+                </span>
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
           </div>
         </div>
         {currentOutput ? (
@@ -800,10 +813,13 @@ export function OutputPhase() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setIterationRating(
-                            iter.iteration_number,
-                            rating === 'positive' ? null : 'positive'
-                          );
+                          const next = rating === 'positive' ? null : 'positive';
+                          setIterationRating(iter.iteration_number, next);
+                          if (next === 'positive') {
+                            setRatingToast("Got it — I'll favor this style going forward.");
+                          } else {
+                            setRatingToast('Rating cleared.');
+                          }
                         }}
                         title="Mark as strong"
                         aria-label="Mark as strong"
@@ -825,10 +841,13 @@ export function OutputPhase() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setIterationRating(
-                            iter.iteration_number,
-                            rating === 'negative' ? null : 'negative'
-                          );
+                          const next = rating === 'negative' ? null : 'negative';
+                          setIterationRating(iter.iteration_number, next);
+                          if (next === 'negative') {
+                            setRatingToast("Got it — I'll avoid this approach going forward.");
+                          } else {
+                            setRatingToast('Rating cleared.');
+                          }
                         }}
                         title="Mark as poor"
                         aria-label="Mark as poor"
