@@ -20,6 +20,7 @@ from promptmaster.evaluator import evaluate_output
 from promptmaster.guidance import generate_suggestions
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from promptmaster.schemas import ChatMessage, Iteration, PMInput
+from promptmaster.session_context import _label_trigger
 from promptmaster.summaries import generate_summary
 
 router = APIRouter(prefix="/api", tags=["conversation"])
@@ -185,6 +186,7 @@ async def api_apply_to_answer(
             system_text=system_text,
             model=model,
         )
+        trigger_source = "apply_conversation"
         iteration, suggestions = await _build_iteration_with_full_pipeline(
             client=client,
             model=model,
@@ -193,11 +195,11 @@ async def api_apply_to_answer(
             iteration_number=req.iteration_number,
             system_text=system_text,
             prompt_text=prompt_text,
-            trigger_source="apply_conversation",
+            trigger_source=trigger_source,
             active_iteration=req.active_iteration,
             chat_history=req.chat_history,
             iteration_history=req.iteration_history,
-            user_action_label="Applied chat to answer",
+            user_action_label=_label_trigger(trigger_source),
         )
         return IterationFromConversationResponse(iteration=iteration, suggestions=suggestions)
     except OpenRouterError as e:
@@ -224,6 +226,7 @@ async def api_save_as_new_version(
             system_text=system_text,
             model=model,
         )
+        trigger_source = "refined_from_conversation"
         iteration, suggestions = await _build_iteration_with_full_pipeline(
             client=client,
             model=model,
@@ -232,11 +235,11 @@ async def api_save_as_new_version(
             iteration_number=req.iteration_number,
             system_text=system_text,
             prompt_text=prompt_text,
-            trigger_source="refined_from_conversation",
+            trigger_source=trigger_source,
             active_iteration=req.active_iteration,
             chat_history=req.chat_history,
             iteration_history=req.iteration_history,
-            user_action_label="New version from chat",
+            user_action_label=_label_trigger(trigger_source),
         )
         return IterationFromConversationResponse(iteration=iteration, suggestions=suggestions)
     except OpenRouterError as e:
