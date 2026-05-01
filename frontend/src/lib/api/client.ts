@@ -7,6 +7,12 @@ import type {
   FlowTriggerType,
   FlowInspectType,
   FlowInspectResult,
+  ChatMessage,
+  ChatMessageRequest,
+  ChatMessageResponse,
+  ApplyToAnswerRequest,
+  SaveAsNewVersionRequest,
+  IterationFromConversationResponse,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -86,15 +92,22 @@ export const api = {
     });
   },
 
-  async conversationBridge(req: {
-    inputs: PMInput;
-    current_output: string;
-    user_message: string;
-    iteration_number: number;
-    iteration_history?: Iteration[];
-    model?: string;
-  }): Promise<{ iteration: Iteration; suggestions: string[] }> {
-    return apiFetch('/api/conversation-bridge', {
+  async chatMessage(req: ChatMessageRequest): Promise<ChatMessageResponse> {
+    return apiFetch('/api/chat-message', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async applyToAnswer(req: ApplyToAnswerRequest): Promise<IterationFromConversationResponse> {
+    return apiFetch('/api/apply-to-answer', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async saveAsNewVersion(req: SaveAsNewVersionRequest): Promise<IterationFromConversationResponse> {
+    return apiFetch('/api/save-as-new-version', {
       method: 'POST',
       body: JSON.stringify(req),
     });
@@ -151,3 +164,5 @@ export const api = {
     return apiFetch('/api/modes');
   },
 };
+
+export type { ChatMessage };
