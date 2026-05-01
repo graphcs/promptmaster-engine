@@ -55,14 +55,14 @@ export function TopNav({ onMenuToggle }: TopNavProps) {
           ))}
         </nav>
 
-        {/* Chat toggle — visible only on Output phase, desktop */}
+        {/* Chat toggle — visible on Output phase across all viewports */}
         {phase === 'output' && (
           <button
             type="button"
             onClick={toggleChatPanel}
             title={chatPanelOpen ? 'Close chat' : 'Open chat'}
             aria-label={chatPanelOpen ? 'Close chat' : 'Open chat'}
-            className="hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <span
               className="material-symbols-outlined text-[20px]"

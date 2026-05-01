@@ -79,6 +79,19 @@ export function ChatPanel() {
     });
   }, [sessionId, loadAllChatMessages]);
 
+  // Lock body scroll on mobile while chat drawer is open.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!chatPanelOpen) return;
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+    if (!isMobile) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [chatPanelOpen]);
+
   if (phase !== 'output' || !chatPanelOpen) return null;
 
   const activeIteration: Iteration | undefined =
@@ -192,48 +205,67 @@ export function ChatPanel() {
   }
 
   return (
-    <aside className="hidden md:flex fixed top-16 right-0 bottom-0 w-[380px] bg-white shadow-ambient border-l border-[var(--outline-variant)]/20 flex-col z-20">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--outline-variant)]/30 bg-[var(--surface-container-low)]">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[18px] text-[var(--on-surface-variant)]">chat_bubble</span>
-          <span className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">Chat</span>
+    <>
+      {/* Mobile backdrop — only visible below md, locks background tap */}
+      <div
+        onClick={() => setChatPanelOpen(false)}
+        aria-hidden="true"
+        className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[45]"
+      />
+      <aside
+        role="dialog"
+        aria-label="Chat"
+        className="
+          fixed z-[50] bg-white shadow-ambient flex flex-col
+          inset-x-0 bottom-0 top-14 rounded-t-2xl
+          md:inset-auto md:top-16 md:right-0 md:bottom-0 md:w-[380px]
+          md:rounded-none md:border-l md:border-[var(--outline-variant)]/20
+        "
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--outline-variant)]/30 bg-[var(--surface-container-low)] md:rounded-none rounded-t-2xl">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-[var(--on-surface-variant)]">chat_bubble</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">Chat</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setChatPanelOpen(false)}
+            aria-label="Close chat"
+            className="p-1 -m-1 text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setChatPanelOpen(false)}
-          aria-label="Close chat"
-          className="text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors"
-        >
-          <span className="material-symbols-outlined text-[18px]">close</span>
-        </button>
-      </div>
 
-      {/* Version selector */}
-      <div className="px-4 py-2 border-b border-[var(--outline-variant)]/20">
-        <VersionSelector
-          versions={iterations}
-          activeNumber={activeIterationNumber}
-          onSelect={(n) => setActiveIteration(n)}
+        {/* Version selector */}
+        <div className="px-4 py-2 border-b border-[var(--outline-variant)]/20">
+          <VersionSelector
+            versions={iterations}
+            activeNumber={activeIterationNumber}
+            onSelect={(n) => setActiveIteration(n)}
+          />
+        </div>
+
+        {/* Messages */}
+        <ChatMessageList messages={messages} loading={chatLoading === 'send'} />
+
+        {/* Actions */}
+        <ChatActionBar
+          onApplyToAnswer={handleApply}
+          onSaveAsNewVersion={handleSaveAsNew}
+          disabled={chatLoading !== null || messages.length === 0}
+          loading={chatLoading === 'apply' ? 'apply' : chatLoading === 'save' ? 'save' : null}
         />
-      </div>
 
-      {/* Messages */}
-      <ChatMessageList messages={messages} loading={chatLoading === 'send'} />
-
-      {/* Actions */}
-      <ChatActionBar
-        onApplyToAnswer={handleApply}
-        onSaveAsNewVersion={handleSaveAsNew}
-        disabled={chatLoading !== null || messages.length === 0}
-        loading={chatLoading === 'apply' ? 'apply' : chatLoading === 'save' ? 'save' : null}
-      />
-
-      {/* Input */}
-      <ChatInput
-        disabled={chatLoading !== null}
-        onSend={handleSend}
-      />
-    </aside>
+        {/* Input — extra bottom padding on mobile for safe-area / iOS home bar */}
+        <div className="pb-[env(safe-area-inset-bottom)]">
+          <ChatInput
+            disabled={chatLoading !== null}
+            onSend={handleSend}
+          />
+        </div>
+      </aside>
+    </>
   );
 }
