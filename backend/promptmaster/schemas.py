@@ -66,6 +66,10 @@ class Iteration(BaseModel):
         default=None,
         description="User's explicit rating of this iteration — 'positive' (strong) or 'negative' (poor), or None if unrated.",
     )
+    summary: str | None = Field(
+        default=None,
+        description="Brief LLM-generated summary of what changed from the previous version. None for the first iteration.",
+    )
 
 
 class PromptTemplate(BaseModel):
@@ -96,3 +100,12 @@ class Session(BaseModel):
     model: str = ""
     iterations: list[Iteration] = Field(default_factory=list)
     finalized: bool = False
+
+
+class ChatMessage(BaseModel):
+    """A single message in a per-iteration chat thread."""
+    id: str = Field(..., description="UUID")
+    iteration_number: int = Field(..., ge=1, description="Which iteration this chat belongs to")
+    role: Literal["user", "assistant"] = Field(...)
+    content: str = Field(...)
+    created_at: str = Field(..., description="ISO 8601 timestamp")

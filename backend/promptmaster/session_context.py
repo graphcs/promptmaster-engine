@@ -24,6 +24,8 @@ _TRIGGER_LABELS = {
     "refine_cautious": "Refine: More cautious",
     "ask_questions": "Ask Questions follow-up",
     "conversation": "Conversation follow-up",
+    "apply_conversation": "Applied chat to answer",
+    "refined_from_conversation": "New version from chat",
 }
 
 
