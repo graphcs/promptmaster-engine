@@ -15,7 +15,6 @@ from promptmaster.schemas import (
     DimensionScore,
     EvaluationResult,
     Iteration,
-    PMInput,
 )
 
 
