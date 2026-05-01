@@ -17,6 +17,8 @@ interface TopNavProps {
 
 export function TopNav({ onMenuToggle }: TopNavProps) {
   const phase = useSessionStore((s) => s.phase);
+  const chatPanelOpen = useSessionStore((s) => s.chatPanelOpen);
+  const toggleChatPanel = useSessionStore((s) => s.toggleChatPanel);
 
   return (
     <header className="fixed top-0 left-0 md:left-[260px] right-0 h-14 bg-white/80 backdrop-blur-md z-40 border-b border-slate-200/50 flex items-center">
@@ -52,6 +54,24 @@ export function TopNav({ onMenuToggle }: TopNavProps) {
             </span>
           ))}
         </nav>
+
+        {/* Chat toggle — visible only on Output phase, desktop */}
+        {phase === 'output' && (
+          <button
+            type="button"
+            onClick={toggleChatPanel}
+            title={chatPanelOpen ? 'Close chat' : 'Open chat'}
+            aria-label={chatPanelOpen ? 'Close chat' : 'Open chat'}
+            className="hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <span
+              className="material-symbols-outlined text-[20px]"
+              style={chatPanelOpen ? { fontVariationSettings: "'FILL' 1" } : undefined}
+            >
+              chat_bubble
+            </span>
+          </button>
+        )}
       </div>
     </header>
   );
