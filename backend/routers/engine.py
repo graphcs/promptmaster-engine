@@ -16,6 +16,8 @@ from promptmaster.evaluator import evaluate_output
 from promptmaster.schemas import Iteration
 from promptmaster.realigner import build_realignment_prompt
 from promptmaster.guidance import generate_suggestions
+from promptmaster.summaries import generate_summary
+from promptmaster.session_context import _label_trigger
 from promptmaster.flow_triggers import (
     build_flow_trigger_prompt,
     build_conversation_prompt,
@@ -129,7 +131,7 @@ async def api_run_iteration(
     req: RunIterationRequest,
     client: OpenRouterClient = Depends(get_client),
 ) -> RunIterationResponse:
-    """Run one generate-evaluate cycle. Generate first, then evaluate + suggestions in parallel."""
+    """Run one generate-evaluate cycle. Generate first, then evaluate + suggestions + summary in parallel."""
     try:
         model = req.model or None
         history = req.iteration_history
@@ -142,7 +144,18 @@ async def api_run_iteration(
             model=model,
         )
 
-        # Step 2: Run evaluation and suggestions in parallel
+        # Build iteration draft (used for summary input)
+        iteration_draft = Iteration(
+            iteration_number=req.iteration_number,
+            prompt_sent=req.prompt_text,
+            system_prompt_used=req.system_text,
+            output=output,
+            mode=req.inputs.mode,
+            evaluation=None,
+            trigger_source=req.source,
+        )
+
+        # Step 2: Run evaluation, suggestions, and (if applicable) summary in parallel
         eval_task = evaluate_output(client, req.inputs, output, iterations=history, model=model)
         suggestions_task = generate_suggestions(
             client=client,
@@ -151,7 +164,24 @@ async def api_run_iteration(
             iterations=history,
             model=model,
         )
-        evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
+
+        if history and len(history) > 0:
+            prev = history[-1]
+            summary_task = generate_summary(
+                client=client,
+                model=model,
+                inputs=req.inputs,
+                prev_iter=prev,
+                new_iter=iteration_draft,
+                chat_history=[],
+                user_action=_label_trigger(req.source),
+            )
+            evaluation, suggestions, summary = await asyncio.gather(
+                eval_task, suggestions_task, summary_task
+            )
+        else:
+            evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
+            summary = None
 
         iteration = Iteration(
             iteration_number=req.iteration_number,
@@ -161,6 +191,7 @@ async def api_run_iteration(
             mode=req.inputs.mode,
             evaluation=evaluation,
             trigger_source=req.source,
+            summary=summary,
         )
 
         return RunIterationResponse(iteration=iteration, suggestions=suggestions)
@@ -176,7 +207,7 @@ async def api_flow_trigger(
     """Run a one-click flow trigger (Challenge, Self-Audit, Drift Alert, Refine).
 
     Builds a pre-configured prompt from the book's Ch1 S13-S14 techniques,
-    then runs the full pipeline: generate -> (evaluate || suggestions).
+    then runs the full pipeline: generate -> (evaluate || suggestions || summary).
     """
     try:
         model = req.model or None
@@ -216,7 +247,17 @@ async def api_flow_trigger(
             )
             return RunIterationResponse(iteration=iteration, suggestions=[])
 
-        # Evaluate + suggestions in parallel
+        # Non-diagnostic: full eval + suggestions + summary in parallel
+        iteration_draft = Iteration(
+            iteration_number=req.iteration_number,
+            prompt_sent=prompt_text,
+            system_prompt_used=system_text,
+            output=output,
+            mode=req.inputs.mode,
+            evaluation=None,
+            trigger_source=req.trigger,
+        )
+
         eval_task = evaluate_output(client, req.inputs, output, iterations=history, model=model)
         suggestions_task = generate_suggestions(
             client=client,
@@ -225,7 +266,24 @@ async def api_flow_trigger(
             iterations=history,
             model=model,
         )
-        evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
+
+        if history and len(history) > 0:
+            prev = history[-1]
+            summary_task = generate_summary(
+                client=client,
+                model=model,
+                inputs=req.inputs,
+                prev_iter=prev,
+                new_iter=iteration_draft,
+                chat_history=[],
+                user_action=_label_trigger(req.trigger),
+            )
+            evaluation, suggestions, summary = await asyncio.gather(
+                eval_task, suggestions_task, summary_task
+            )
+        else:
+            evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
+            summary = None
 
         iteration = Iteration(
             iteration_number=req.iteration_number,
@@ -235,6 +293,7 @@ async def api_flow_trigger(
             mode=req.inputs.mode,
             evaluation=evaluation,
             trigger_source=req.trigger,
+            summary=summary,
         )
 
         return RunIterationResponse(iteration=iteration, suggestions=suggestions)
