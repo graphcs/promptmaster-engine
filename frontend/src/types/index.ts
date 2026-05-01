@@ -42,6 +42,7 @@ export interface Iteration {
   evaluation: EvaluationResult | null;
   trigger_source?: string | null;
   user_rating?: UserRating | null;
+  summary?: string | null;
 }
 
 export interface PromptTemplate {
@@ -117,3 +118,51 @@ export type FlowInspectResult =
   | { kind: 'confirm_understanding'; text: string }
   | { kind: 'analyze_pattern'; text: string }
   | { kind: 'ask_questions'; questions: string[] };
+
+// --- Chat / conversation types ---
+
+export type ChatRole = 'user' | 'assistant';
+
+export interface ChatMessage {
+  id: string;
+  iteration_number: number;
+  role: ChatRole;
+  content: string;
+  created_at: string;
+}
+
+export interface ChatMessageRequest {
+  inputs: PMInput;
+  active_iteration: Iteration;
+  chat_history: ChatMessage[];
+  user_message: string;
+  iteration_history?: Iteration[];
+  model?: string;
+}
+
+export interface ChatMessageResponse {
+  assistant_message: ChatMessage;
+}
+
+export interface ApplyToAnswerRequest {
+  inputs: PMInput;
+  active_iteration: Iteration;
+  chat_history: ChatMessage[];
+  iteration_number: number;
+  iteration_history?: Iteration[];
+  model?: string;
+}
+
+export interface SaveAsNewVersionRequest {
+  inputs: PMInput;
+  active_iteration: Iteration;
+  chat_history: ChatMessage[];
+  iteration_number: number;
+  iteration_history?: Iteration[];
+  model?: string;
+}
+
+export interface IterationFromConversationResponse {
+  iteration: Iteration;
+  suggestions: string[];
+}
