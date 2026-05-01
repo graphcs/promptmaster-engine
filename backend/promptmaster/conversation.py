@@ -7,7 +7,6 @@ instruction and what they put in the user message.
 
 from __future__ import annotations
 
-from .modes import MODES
 from .prompt_builder import build_prompt
 from .schemas import ChatMessage, Iteration, PMInput
 from .session_context import format_session_history
@@ -33,7 +32,7 @@ def _format_chat_thread(chat_history: list[ChatMessage]) -> str:
 def _shared_system(inputs: PMInput, iterations: list[Iteration], extra: str) -> str:
     """Build the shared system prompt: PromptMaster context + mode + history + extra."""
     base = build_prompt(inputs)
-    history = format_session_history(iterations) if iterations else ""
+    history = format_session_history(iterations)
     return (
         f"{_PROMPTMASTER_CONTEXT}\n\n"
         f"{base.system_prompt}\n\n"
