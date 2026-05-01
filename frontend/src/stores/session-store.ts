@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating } from '@/types';
+import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage } from '@/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
 
 interface SessionState {
@@ -53,6 +53,12 @@ interface SessionState {
   customConstraintPresets: string[];
   customFormatPresets: string[];
 
+  // Chat panel state
+  activeIterationNumber: number | null;
+  chatMessages: Record<number, ChatMessage[]>;
+  chatPanelOpen: boolean;
+  chatLoading: 'send' | 'apply' | 'save' | null;
+
   // Actions
   setPhase: (phase: Phase) => void;
   setObjective: (objective: string) => void;
@@ -86,6 +92,13 @@ interface SessionState {
   removeCustomConstraintPreset: (label: string) => void;
   addCustomFormatPreset: (label: string) => void;
   removeCustomFormatPreset: (label: string) => void;
+  setActiveIteration: (n: number | null) => void;
+  appendChatMessage: (iteration: number, message: ChatMessage) => void;
+  setChatMessages: (iteration: number, messages: ChatMessage[]) => void;
+  loadAllChatMessages: (byIteration: Record<number, ChatMessage[]>) => void;
+  setChatLoading: (state: 'send' | 'apply' | 'save' | null) => void;
+  setChatPanelOpen: (open: boolean) => void;
+  toggleChatPanel: () => void;
   finalize: () => void;
   resetSession: () => void;
   carryLessonsForward: (objective: string, constraints: string) => void;
@@ -124,6 +137,10 @@ const initialState = {
   activeStackId: null as string | null,
   customConstraintPresets: [] as string[],
   customFormatPresets: [] as string[],
+  activeIterationNumber: null as number | null,
+  chatMessages: {} as Record<number, ChatMessage[]>,
+  chatPanelOpen: false,
+  chatLoading: null as 'send' | 'apply' | 'save' | null,
 };
 
 export const useSessionStore = create<SessionState>()(
@@ -149,6 +166,11 @@ export const useSessionStore = create<SessionState>()(
           currentOutput: iteration.output,
           currentEval: iteration.evaluation,
           suggestions,
+          activeIterationNumber: iteration.iteration_number,
+          chatMessages: {
+            ...state.chatMessages,
+            [iteration.iteration_number]: state.chatMessages[iteration.iteration_number] || [],
+          },
         })),
       setIterationRating: (iterationNumber, rating) =>
         set((state) => ({
@@ -198,6 +220,43 @@ export const useSessionStore = create<SessionState>()(
           customFormatPresets: state.customFormatPresets.filter((p) => p !== label),
           formatPresets: state.formatPresets.filter((p) => p !== label),
         })),
+      setActiveIteration: (n) => set((state) => {
+        if (n === null) return { activeIterationNumber: null };
+        const iter = state.iterations.find((it) => it.iteration_number === n);
+        if (!iter) return {};
+        return {
+          activeIterationNumber: n,
+          currentOutput: iter.output,
+          currentEval: iter.evaluation,
+        };
+      }),
+      appendChatMessage: (iteration, message) =>
+        set((state) => ({
+          chatMessages: {
+            ...state.chatMessages,
+            [iteration]: [...(state.chatMessages[iteration] || []), message],
+          },
+        })),
+      setChatMessages: (iteration, messages) =>
+        set((state) => ({
+          chatMessages: { ...state.chatMessages, [iteration]: messages },
+        })),
+      loadAllChatMessages: (byIteration) =>
+        set({ chatMessages: byIteration }),
+      setChatLoading: (chatLoading) => set({ chatLoading }),
+      setChatPanelOpen: (chatPanelOpen) => {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('pm-chat-panel-open', chatPanelOpen ? '1' : '0');
+        }
+        set({ chatPanelOpen });
+      },
+      toggleChatPanel: () => set((state) => {
+        const next = !state.chatPanelOpen;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('pm-chat-panel-open', next ? '1' : '0');
+        }
+        return { chatPanelOpen: next };
+      }),
       finalize: () => set({ finalized: true, phase: 'summary' }),
       resetSession: () => set({ ...initialState }),
       carryLessonsForward: (objective, constraints) =>
@@ -216,6 +275,8 @@ export const useSessionStore = create<SessionState>()(
           currentEval: session.iterations.length > 0 ? session.iterations[session.iterations.length - 1].evaluation : null,
           phase: session.finalized ? 'summary' : 'output',
           sessionSaved: true,
+          activeIterationNumber: session.iterations.length > 0 ? session.iterations[session.iterations.length - 1].iteration_number : null,
+          chatMessages: {},
         }),
     }),
     {
