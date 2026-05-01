@@ -50,9 +50,9 @@ def basic_iteration(basic_inputs: PMInput, good_evaluation: EvaluationResult) ->
 
 @pytest.fixture
 def mock_client() -> AsyncMock:
-    """Mock OpenRouterClient. Default: chat() returns a deterministic string."""
+    """Mock OpenRouterClient. Default: generate() returns ('MOCK_LLM_REPLY', {})."""
     client = AsyncMock()
-    client.chat = AsyncMock(return_value="MOCK_LLM_REPLY")
+    client.generate = AsyncMock(return_value=("MOCK_LLM_REPLY", {}))
     return client
 
 
