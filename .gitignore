@@ -33,3 +33,5 @@ uv.lock
 
 # Playwright
 .playwright-mcp/
+temp_auto_push.bat
+temp_interactive_push.bat

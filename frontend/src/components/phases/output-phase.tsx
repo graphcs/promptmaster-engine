@@ -841,6 +841,18 @@ export function OutputPhase() {
                             </span>
                           );
                         })}
+                      {iter.evaluation?.completeness && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${
+                            iter.evaluation.completeness.status === 'complete'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                          title={iter.evaluation.completeness.reason || undefined}
+                        >
+                          {iter.evaluation.completeness.status === 'complete' ? 'Complete' : 'Incomplete'}
+                        </span>
+                      )}
                     </div>
                   </div>
 
