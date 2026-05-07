@@ -1,0 +1,95 @@
+"""Tests for OpenRouterClient.generate_with_meta()."""
+
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+from promptmaster.llm_client import OpenRouterClient
+
+
+@pytest.mark.asyncio
+async def test_generate_with_meta_returns_finish_reason():
+    """generate_with_meta returns (content, usage, finish_reason) tuple."""
+    client = OpenRouterClient(api_key="test-key")
+    fake_response_data = {
+        "choices": [
+            {
+                "message": {"content": "Hello world"},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+    }
+
+    fake_response = AsyncMock()
+    fake_response.status_code = 200
+    fake_response.json = lambda: fake_response_data
+    fake_response.raise_for_status = lambda: None
+
+    with patch.object(client._client, "post", return_value=fake_response):
+        content, usage, finish_reason = await client.generate_with_meta(
+            prompt="hi", system="you are helpful"
+        )
+
+    assert content == "Hello world"
+    assert usage["tokens_in"] == 10
+    assert usage["tokens_out"] == 5
+    assert finish_reason == "stop"
+
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_generate_with_meta_propagates_length_finish_reason():
+    """When the LLM hits max_tokens, finish_reason='length' must surface."""
+    client = OpenRouterClient(api_key="test-key")
+    fake_response_data = {
+        "choices": [
+            {
+                "message": {"content": "Partial response that was cut..."},
+                "finish_reason": "length",
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 16384},
+    }
+
+    fake_response = AsyncMock()
+    fake_response.status_code = 200
+    fake_response.json = lambda: fake_response_data
+    fake_response.raise_for_status = lambda: None
+
+    with patch.object(client._client, "post", return_value=fake_response):
+        content, usage, finish_reason = await client.generate_with_meta(prompt="hi")
+
+    assert finish_reason == "length"
+
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_existing_generate_still_returns_two_tuple():
+    """Existing generate() must keep its (content, usage) signature unchanged."""
+    client = OpenRouterClient(api_key="test-key")
+    fake_response_data = {
+        "choices": [
+            {
+                "message": {"content": "Hello"},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 5, "completion_tokens": 2},
+    }
+    fake_response = AsyncMock()
+    fake_response.status_code = 200
+    fake_response.json = lambda: fake_response_data
+    fake_response.raise_for_status = lambda: None
+
+    with patch.object(client._client, "post", return_value=fake_response):
+        result = await client.generate(prompt="hi")
+
+    assert isinstance(result, tuple)
+    assert len(result) == 2  # Must still be 2-tuple
+    content, usage = result
+    assert content == "Hello"
+
+    await client.close()

@@ -90,8 +90,64 @@ class OpenRouterClient:
 
         for attempt in range(1, _RETRY_MAX_ATTEMPTS + 1):
             try:
-                content, usage_stats = await self._single_request(payload, headers, attempt)
+                content, usage_stats, _finish_reason = await self._single_request(payload, headers, attempt)
                 return content, usage_stats
+            except OpenRouterError as e:
+                if not self._is_retryable(e) or attempt == _RETRY_MAX_ATTEMPTS:
+                    if attempt == _RETRY_MAX_ATTEMPTS:
+                        last_error = e
+                        break
+                    raise
+                last_error = e
+                delay = _RETRY_BASE_DELAY * (2 ** (attempt - 1))
+                logger.warning(f"Retryable error (attempt {attempt}/{_RETRY_MAX_ATTEMPTS}), retrying in {delay:.1f}s: {e}")
+                await asyncio.sleep(delay)
+
+        raise last_error or OpenRouterError("All retry attempts failed")
+
+    async def generate_with_meta(
+        self,
+        prompt: str,
+        system: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 16384,
+        json_mode: bool = False,
+        model: str | None = None,
+    ) -> tuple[str, dict[str, int], str]:
+        """Like generate(), but also returns the OpenRouter finish_reason.
+
+        Returns:
+            Tuple of (response_content, usage_stats, finish_reason).
+            finish_reason is one of: "stop", "length", "content_filter", "tool_calls", "unknown".
+        """
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        payload: dict[str, Any] = {
+            "model": model or self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/graphcs/promptmaster-engine",
+            "X-Title": "PromptMaster Engine",
+        }
+
+        last_error: Exception | None = None
+
+        for attempt in range(1, _RETRY_MAX_ATTEMPTS + 1):
+            try:
+                content, usage_stats, finish_reason = await self._single_request(payload, headers, attempt)
+                return content, usage_stats, finish_reason
             except OpenRouterError as e:
                 if not self._is_retryable(e) or attempt == _RETRY_MAX_ATTEMPTS:
                     if attempt == _RETRY_MAX_ATTEMPTS:
@@ -167,7 +223,7 @@ class OpenRouterClient:
         payload: dict[str, Any],
         headers: dict[str, str],
         attempt: int,
-    ) -> tuple[str, dict[str, int]]:
+    ) -> tuple[str, dict[str, int], str]:
         """Execute a single HTTP request."""
         t0 = time.monotonic()
 
@@ -205,7 +261,7 @@ class OpenRouterClient:
             elapsed = time.monotonic() - t0
             logger.info(f"LLM response: {usage_stats['tokens_in']:,} in / {usage_stats['tokens_out']:,} out ({elapsed:.1f}s)")
 
-            return content, usage_stats
+            return content, usage_stats, finish_reason
 
         except httpx.TimeoutException as e:
             raise OpenRouterError(f"Request timed out after {self.timeout}s") from e
