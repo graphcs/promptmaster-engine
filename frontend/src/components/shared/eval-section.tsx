@@ -55,6 +55,41 @@ export function EvalSection({ evaluation }: EvalSectionProps) {
           Drift measures whether the output stayed focused on your objective. Low = focused. High = wandered off-topic.
         </p>
       </div>
+
+      {/* Completeness — only when present (optional field for backward compat) */}
+      {evaluation.completeness && (
+        <div className="pt-8 border-t border-slate-100">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">
+            Completeness
+          </h3>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${
+                  evaluation.completeness.status === 'complete'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {evaluation.completeness.status === 'complete' ? 'Complete' : 'Incomplete'}
+              </span>
+              <span className="text-sm font-semibold text-[var(--on-surface)]">
+                {evaluation.completeness.status === 'complete' ? 'Output is complete' : 'Output is incomplete'}
+              </span>
+            </div>
+            {evaluation.completeness.reason && (
+              <p className="text-xs text-[var(--on-surface-variant)] leading-relaxed">
+                {evaluation.completeness.reason}
+              </p>
+            )}
+          </div>
+          {evaluation.completeness.status === 'incomplete' && (
+            <p className="text-[11px] text-[var(--on-surface-variant)] italic mt-3">
+              Click <span className="font-semibold">Continue Document</span> above to pick up exactly where it stopped.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
