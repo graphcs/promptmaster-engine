@@ -61,6 +61,9 @@ export function OutputPhase() {
   const customTone = useSessionStore((s) => s.customTone);
   const sessionFacts = useSessionStore((s) => s.sessionFacts);
 
+  const continuationLoading = useSessionStore((s) => s.continuationLoading);
+  const setContinuationLoading = useSessionStore((s) => s.setContinuationLoading);
+
   const setPhase = useSessionStore((s) => s.setPhase);
   const setError = useSessionStore((s) => s.setError);
   const setMode = useSessionStore((s) => s.setMode);
@@ -249,6 +252,26 @@ export function OutputPhase() {
     }
   }
 
+  async function handleContinueDocument() {
+    if (!currentIteration) return;
+    setError(null);
+    setContinuationLoading(true);
+    try {
+      const result = await api.continueDocument({
+        inputs: buildInputs(),
+        incomplete_iteration: currentIteration,
+        iteration_number: iterations.length + 1,
+        iteration_history: iterations,
+        model,
+      });
+      appendIteration(result.iteration, result.suggestions);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Continue document failed.');
+    } finally {
+      setContinuationLoading(false);
+    }
+  }
+
   async function handleRefinePrompt() {
     setError(null);
     setRefineLoading(true);
@@ -279,7 +302,7 @@ export function OutputPhase() {
     setExpandedIterations((prev) => ({ ...prev, [num]: !prev[num] }));
   }
 
-  const anyLoading = realignLoading || refineLoading || flowLoading !== null;
+  const anyLoading = realignLoading || refineLoading || flowLoading !== null || continuationLoading;
 
   return (
     <div className="space-y-10">
@@ -367,6 +390,40 @@ export function OutputPhase() {
           <p className="text-sm text-[var(--on-surface-variant)] italic">No output available.</p>
         )}
       </div>
+
+      {/* Continue Document card — only when output is incomplete */}
+      {currentIteration?.evaluation?.completeness?.status === 'incomplete' && (
+        <div className="bg-white rounded-xl shadow-ambient p-6 space-y-3 border-l-4 border-amber-400">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
+              Continue Document
+            </span>
+            {currentIteration.evaluation.completeness.reason && (
+              <p className="text-sm italic text-[var(--on-surface-variant)] mt-1">
+                {currentIteration.evaluation.completeness.reason}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleContinueDocument}
+            disabled={anyLoading}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[var(--pm-primary)] text-white text-xs font-bold rounded-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {continuationLoading ? (
+              <>
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Continuing…
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                Continue Document
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Mode switch for next iteration */}
       <div className="bg-white rounded-xl shadow-ambient p-6">
