@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from promptmaster.schemas import PMInput, AssembledPrompt, EvaluationResult
 from promptmaster.prompt_builder import build_prompt
 from promptmaster.engine import (
-    generate,
     format_session_summary,
     export_session_json,
     generate_hard_reset_lessons,
@@ -28,6 +27,7 @@ from promptmaster.flow_triggers import (
     FlowInspectType,
 )
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
+from routers._pipeline import force_incomplete_on_length
 from deps import get_client
 
 router = APIRouter(prefix="/api", tags=["engine"])
@@ -126,15 +126,13 @@ async def api_run_iteration(
         model = req.model or None
         history = req.iteration_history
 
-        # Step 1: Generate output (must complete first)
-        output = await generate(
-            client=client,
-            prompt_text=req.prompt_text,
-            system_text=req.system_text,
+        # Step 1: Generate output (must complete first) — capture finish_reason for completeness pre-filter
+        output, _usage, finish_reason = await client.generate_with_meta(
+            prompt=req.prompt_text,
+            system=req.system_text,
             model=model,
         )
 
-        # Build iteration draft (used for summary input)
         iteration_draft = Iteration(
             iteration_number=req.iteration_number,
             prompt_sent=req.prompt_text,
@@ -145,7 +143,6 @@ async def api_run_iteration(
             trigger_source=req.source,
         )
 
-        # Step 2: Run evaluation, suggestions, and (if applicable) summary in parallel
         eval_task = evaluate_output(client, req.inputs, output, iterations=history, model=model)
         suggestions_task = generate_suggestions(
             client=client,
@@ -172,6 +169,9 @@ async def api_run_iteration(
         else:
             evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
             summary = None
+
+        # Pre-filter: force incomplete if model hit max_tokens
+        evaluation = force_incomplete_on_length(evaluation, finish_reason)
 
         iteration = Iteration(
             iteration_number=req.iteration_number,
@@ -203,7 +203,6 @@ async def api_flow_trigger(
         model = req.model or None
         history = req.iteration_history
 
-        # Build the flow trigger prompt (with session history context)
         system_text, prompt_text = build_flow_trigger_prompt(
             inputs=req.inputs,
             current_output=req.current_output,
@@ -212,17 +211,12 @@ async def api_flow_trigger(
             iterations=history,
         )
 
-        # Generate
-        output = await generate(
-            client=client,
-            prompt_text=prompt_text,
-            system_text=system_text,
+        output, _usage, finish_reason = await client.generate_with_meta(
+            prompt=prompt_text,
+            system=system_text,
             model=model,
         )
 
-        # Diagnostic triggers (challenge, self_audit, reframe) produce critiques
-        # or meta-analyses, not candidate answers. Scoring them against the
-        # original objective yields misleading Low scores, so skip the eval pipeline.
         is_diagnostic = req.trigger in ("challenge", "self_audit", "reframe")
 
         if is_diagnostic:
@@ -237,7 +231,6 @@ async def api_flow_trigger(
             )
             return RunIterationResponse(iteration=iteration, suggestions=[])
 
-        # Non-diagnostic: full eval + suggestions + summary in parallel
         iteration_draft = Iteration(
             iteration_number=req.iteration_number,
             prompt_sent=prompt_text,
@@ -274,6 +267,9 @@ async def api_flow_trigger(
         else:
             evaluation, suggestions = await asyncio.gather(eval_task, suggestions_task)
             summary = None
+
+        # Pre-filter: force incomplete if model hit max_tokens
+        evaluation = force_incomplete_on_length(evaluation, finish_reason)
 
         iteration = Iteration(
             iteration_number=req.iteration_number,
