@@ -13,6 +13,7 @@ import type {
   ApplyToAnswerRequest,
   SaveAsNewVersionRequest,
   IterationFromConversationResponse,
+  ContinueDocumentRequest,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -108,6 +109,13 @@ export const api = {
 
   async saveAsNewVersion(req: SaveAsNewVersionRequest): Promise<IterationFromConversationResponse> {
     return apiFetch('/api/save-as-new-version', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async continueDocument(req: ContinueDocumentRequest): Promise<IterationFromConversationResponse> {
+    return apiFetch('/api/continue-document', {
       method: 'POST',
       body: JSON.stringify(req),
     });
