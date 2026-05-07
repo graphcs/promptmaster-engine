@@ -7,7 +7,7 @@ Returns qualitative scores (Low/Medium/High) with one-sentence explanations.
 """
 
 import logging
-from .schemas import PMInput, EvaluationResult, DimensionScore, Iteration
+from .schemas import PMInput, EvaluationResult, DimensionScore, Iteration, CompletenessResult
 from .llm_client import OpenRouterClient
 from .session_context import format_session_history
 
@@ -50,7 +50,7 @@ MODE USED: {mode}
 {output}
 --- END CURRENT OUTPUT ---
 
-Evaluate along three dimensions. For each, assign "Low", "Medium", or "High" and provide exactly one sentence of explanation.
+Evaluate along four dimensions. For the first three, assign "Low", "Medium", or "High" and provide exactly one sentence of explanation.
 
 SCORING GUIDELINES (be consistent — do not change a score unless the output genuinely changed):
 - "High" = strong, well-targeted output that clearly meets the bar. Award it confidently when earned. If the output addresses the objective, is well-structured, and stays on scope, it deserves "High."
@@ -71,11 +71,17 @@ IMPORTANT: Do not penalize stylistic variation. Focus on substance, not style.
    - Consider the mode's expected output style: {mode} mode has specific structural expectations.
    - "High" = clear, well-organized, easy to follow. "Medium" = understandable but could be tighter. "Low" = confusing, vague, or incomplete.
 
+4. COMPLETENESS: Does the output appear structurally complete given the objective?
+   - "complete" = the answer covers what the objective required, with appropriate depth across all expected sections/topics. The output reads as a finished response.
+   - "incomplete" = the answer stops mid-section, runs out of room, covers only some expected sections, skips depth on later sections, or leaves obvious gaps. If the user asked for a 15-section BRD and only 5 sections appear, mark INCOMPLETE.
+   - If INCOMPLETE, name in one short sentence WHERE it stops or what's missing (e.g., "Stopped mid-Section 7: Risk Analysis." or "Only covers Sections 1-5 of an expected 15-section BRD.").
+
 Return JSON in exactly this format:
 {{
     "alignment": {{"score": "Low|Medium|High", "explanation": "one sentence"}},
     "drift": {{"score": "Low|Medium|High", "explanation": "one sentence"}},
-    "clarity": {{"score": "Low|Medium|High", "explanation": "one sentence"}}
+    "clarity": {{"score": "Low|Medium|High", "explanation": "one sentence"}},
+    "completeness": {{"status": "complete|incomplete", "reason": "one short sentence (empty string if complete)"}}
 }}"""
 
 
@@ -117,10 +123,21 @@ async def evaluate_output(
             model=model,
         )
 
+        # Parse completeness defensively — accept missing or malformed values gracefully.
+        completeness: CompletenessResult | None = None
+        comp_raw = result_dict.get("completeness")
+        if isinstance(comp_raw, dict):
+            try:
+                completeness = CompletenessResult(**comp_raw)
+            except Exception as comp_err:
+                logger.warning(f"Invalid completeness in eval response, dropping: {comp_err}")
+                completeness = None
+
         return EvaluationResult(
             alignment=DimensionScore(**result_dict.get("alignment", {"score": "Medium", "explanation": "Unable to evaluate"})),
             drift=DimensionScore(**result_dict.get("drift", {"score": "Medium", "explanation": "Unable to evaluate"})),
             clarity=DimensionScore(**result_dict.get("clarity", {"score": "Medium", "explanation": "Unable to evaluate"})),
+            completeness=completeness,
         )
     except Exception as e:
         logger.error(f"Evaluation failed: {e}")
@@ -128,4 +145,5 @@ async def evaluate_output(
             alignment=DimensionScore(score="Medium", explanation=f"Evaluation error: {e}"),
             drift=DimensionScore(score="Medium", explanation=f"Evaluation error: {e}"),
             clarity=DimensionScore(score="Medium", explanation=f"Evaluation error: {e}"),
+            completeness=None,
         )
