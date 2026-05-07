@@ -25,13 +25,26 @@ export interface DimensionScore {
   explanation: string;
 }
 
+export interface CompletenessResult {
+  status: 'complete' | 'incomplete';
+  reason: string;
+}
+
 export interface EvaluationResult {
   alignment: DimensionScore;
   drift: DimensionScore;
   clarity: DimensionScore;
+  completeness?: CompletenessResult | null;
 }
 
 export type UserRating = 'positive' | 'negative';
+
+export interface ContinuitySnapshot {
+  completed_topics: string[];
+  current_topic: string | null;
+  key_definitions: string[];
+  next_topic_hint: string | null;
+}
 
 export interface Iteration {
   iteration_number: number;
@@ -43,6 +56,7 @@ export interface Iteration {
   trigger_source?: string | null;
   user_rating?: UserRating | null;
   summary?: string | null;
+  continuity_snapshot?: ContinuitySnapshot | null;
 }
 
 export interface PromptTemplate {
@@ -165,4 +179,12 @@ export interface SaveAsNewVersionRequest {
 export interface IterationFromConversationResponse {
   iteration: Iteration;
   suggestions: string[];
+}
+
+export interface ContinueDocumentRequest {
+  inputs: PMInput;
+  incomplete_iteration: Iteration;
+  iteration_number: number;
+  iteration_history?: Iteration[];
+  model?: string;
 }
