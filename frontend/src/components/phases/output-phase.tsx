@@ -63,6 +63,7 @@ export function OutputPhase() {
 
   const continuationLoading = useSessionStore((s) => s.continuationLoading);
   const setContinuationLoading = useSessionStore((s) => s.setContinuationLoading);
+  const chatLoading = useSessionStore((s) => s.chatLoading);
 
   const setPhase = useSessionStore((s) => s.setPhase);
   const setError = useSessionStore((s) => s.setError);
@@ -302,7 +303,7 @@ export function OutputPhase() {
     setExpandedIterations((prev) => ({ ...prev, [num]: !prev[num] }));
   }
 
-  const anyLoading = realignLoading || refineLoading || flowLoading !== null || continuationLoading;
+  const anyLoading = realignLoading || refineLoading || flowLoading !== null || continuationLoading || chatLoading !== null;
 
   return (
     <div className="space-y-10">
