@@ -58,6 +58,7 @@ interface SessionState {
   chatMessages: Record<number, ChatMessage[]>;
   chatPanelOpen: boolean;
   chatLoading: 'send' | 'apply' | 'save' | null;
+  continuationLoading: boolean;
 
   // Session ID — generated on first iteration, used for Supabase chat persistence
   sessionId: string | null;
@@ -100,6 +101,7 @@ interface SessionState {
   setChatMessages: (iteration: number, messages: ChatMessage[]) => void;
   loadAllChatMessages: (byIteration: Record<number, ChatMessage[]>) => void;
   setChatLoading: (state: 'send' | 'apply' | 'save' | null) => void;
+  setContinuationLoading: (b: boolean) => void;
   setChatPanelOpen: (open: boolean) => void;
   toggleChatPanel: () => void;
   finalize: () => void;
@@ -144,6 +146,7 @@ const initialState = {
   chatMessages: {} as Record<number, ChatMessage[]>,
   chatPanelOpen: false,
   chatLoading: null as 'send' | 'apply' | 'save' | null,
+  continuationLoading: false,
   sessionId: null as string | null,
 };
 
@@ -256,6 +259,7 @@ export const useSessionStore = create<SessionState>()(
       loadAllChatMessages: (byIteration) =>
         set({ chatMessages: byIteration }),
       setChatLoading: (chatLoading) => set({ chatLoading }),
+      setContinuationLoading: (continuationLoading) => set({ continuationLoading }),
       setChatPanelOpen: (chatPanelOpen) => {
         if (typeof window !== 'undefined') {
           localStorage.setItem('pm-chat-panel-open', chatPanelOpen ? '1' : '0');
