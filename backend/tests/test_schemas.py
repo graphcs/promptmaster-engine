@@ -51,3 +51,74 @@ def test_chat_message_rejects_invalid_role():
             content="...",
             created_at="2026-05-01T10:00:00Z",
         )
+
+
+from promptmaster.schemas import CompletenessResult, ContinuitySnapshot, EvaluationResult, DimensionScore
+
+
+def test_completeness_result_round_trip():
+    cr = CompletenessResult(status="incomplete", reason="Stopped mid-Section 7.")
+    payload = cr.model_dump()
+    restored = CompletenessResult(**payload)
+    assert restored.status == "incomplete"
+    assert restored.reason == "Stopped mid-Section 7."
+
+
+def test_completeness_result_rejects_invalid_status():
+    with pytest.raises(Exception):
+        CompletenessResult(status="partial", reason="x")  # type: ignore[arg-type]
+
+
+def test_continuity_snapshot_defaults_are_empty():
+    snap = ContinuitySnapshot()
+    assert snap.completed_topics == []
+    assert snap.current_topic is None
+    assert snap.key_definitions == []
+    assert snap.next_topic_hint is None
+
+
+def test_continuity_snapshot_round_trips_full():
+    snap = ContinuitySnapshot(
+        completed_topics=["Executive Summary", "Goals"],
+        current_topic="Risk Analysis",
+        key_definitions=["MVP defined as Phase-1 launch"],
+        next_topic_hint="Continue Risk Analysis",
+    )
+    payload = snap.model_dump()
+    restored = ContinuitySnapshot(**payload)
+    assert restored.completed_topics == ["Executive Summary", "Goals"]
+    assert restored.current_topic == "Risk Analysis"
+
+
+def test_evaluation_result_completeness_optional_for_back_compat():
+    # Old saved sessions have eval JSON without completeness — must still parse
+    legacy_payload = {
+        "alignment": {"score": "High", "explanation": "."},
+        "drift": {"score": "Low", "explanation": "."},
+        "clarity": {"score": "High", "explanation": "."},
+    }
+    er = EvaluationResult(**legacy_payload)
+    assert er.completeness is None
+
+
+def test_evaluation_result_with_completeness():
+    er = EvaluationResult(
+        alignment=DimensionScore(score="High", explanation="."),
+        drift=DimensionScore(score="Low", explanation="."),
+        clarity=DimensionScore(score="High", explanation="."),
+        completeness=CompletenessResult(status="complete", reason=""),
+    )
+    assert er.completeness is not None
+    assert er.completeness.status == "complete"
+
+
+def test_iteration_continuity_snapshot_defaults_none():
+    from promptmaster.schemas import Iteration
+    iter_ = Iteration(
+        iteration_number=1,
+        prompt_sent="x",
+        system_prompt_used="y",
+        output="z",
+        mode="architect",
+    )
+    assert iter_.continuity_snapshot is None

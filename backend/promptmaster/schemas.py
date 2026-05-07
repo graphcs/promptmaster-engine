@@ -38,11 +38,21 @@ class DimensionScore(BaseModel):
     explanation: str = Field(default="", description="One-sentence explanation")
 
 
+class CompletenessResult(BaseModel):
+    """Structural completeness judgment for an iteration's output."""
+    status: Literal["complete", "incomplete"]
+    reason: str = Field(default="", description="Short explanation when incomplete.")
+
+
 class EvaluationResult(BaseModel):
     """Result from the evaluator LLM call."""
     alignment: DimensionScore = Field(..., description="Does output match the stated objective?")
     drift: DimensionScore = Field(..., description="Does output introduce irrelevant content?")
     clarity: DimensionScore = Field(..., description="Is the output structured and unambiguous?")
+    completeness: CompletenessResult | None = Field(
+        default=None,
+        description="Structural completeness — set by extended eval call. Optional for backward compat with old saved sessions.",
+    )
 
     @property
     def needs_realignment(self) -> bool:
@@ -69,6 +79,10 @@ class Iteration(BaseModel):
     summary: str | None = Field(
         default=None,
         description="Brief LLM-generated summary of what changed from the previous version. None for the first iteration.",
+    )
+    continuity_snapshot: "ContinuitySnapshot | None" = Field(
+        default=None,
+        description="Snapshot used to build this iteration's continuation prompt. Set on continuation iterations only.",
     )
 
 
@@ -109,3 +123,19 @@ class ChatMessage(BaseModel):
     role: Literal["user", "assistant"] = Field(...)
     content: str = Field(...)
     created_at: str = Field(..., description="ISO 8601 timestamp")
+
+
+class ContinuitySnapshot(BaseModel):
+    """Snapshot of progress used to build a continuation prompt.
+
+    Generated lazily when the user clicks Continue Document.
+    Stored on the resulting continuation iteration for inspection.
+    """
+    completed_topics: list[str] = Field(default_factory=list, description="Short phrases naming each section/topic already covered.")
+    current_topic: str | None = Field(default=None, description="Where the previous output trails off, if mid-section.")
+    key_definitions: list[str] = Field(default_factory=list, description="Terms or constraints established earlier that the continuation must respect.")
+    next_topic_hint: str | None = Field(default=None, description="What to write next, if the structure makes it obvious.")
+
+
+# Resolve forward reference for Iteration.continuity_snapshot
+Iteration.model_rebuild()
