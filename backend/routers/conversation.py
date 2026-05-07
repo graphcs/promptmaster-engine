@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import datetime, timezone
 
@@ -16,12 +15,10 @@ from promptmaster.conversation import (
     build_save_as_new_version_prompt,
 )
 from promptmaster.engine import generate
-from promptmaster.evaluator import evaluate_output
-from promptmaster.guidance import generate_suggestions
 from promptmaster.llm_client import OpenRouterClient, OpenRouterError
 from promptmaster.schemas import ChatMessage, Iteration, PMInput
 from promptmaster.session_context import _label_trigger
-from promptmaster.summaries import generate_summary
+from routers._pipeline import build_iteration_with_full_pipeline
 
 router = APIRouter(prefix="/api", tags=["conversation"])
 
@@ -68,67 +65,6 @@ class IterationFromConversationResponse(BaseModel):
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-async def _build_iteration_with_full_pipeline(
-    *,
-    client: OpenRouterClient,
-    model: str | None,
-    inputs: PMInput,
-    output: str,
-    iteration_number: int,
-    system_text: str,
-    prompt_text: str,
-    trigger_source: str,
-    active_iteration: Iteration,
-    chat_history: list[ChatMessage],
-    iteration_history: list[Iteration],
-    user_action_label: str,
-) -> tuple[Iteration, list[str]]:
-    """Run eval + suggestions + summary in parallel, then assemble the iteration."""
-    iteration_draft = Iteration(
-        iteration_number=iteration_number,
-        prompt_sent=prompt_text,
-        system_prompt_used=system_text,
-        output=output,
-        mode=inputs.mode,
-        evaluation=None,
-        trigger_source=trigger_source,
-    )
-
-    eval_task = evaluate_output(client, inputs, output, iterations=iteration_history, model=model)
-    suggestions_task = generate_suggestions(
-        client=client,
-        inputs=inputs,
-        output=output,
-        iterations=iteration_history,
-        model=model,
-    )
-    summary_task = generate_summary(
-        client=client,
-        model=model,
-        inputs=inputs,
-        prev_iter=active_iteration,
-        new_iter=iteration_draft,
-        chat_history=chat_history,
-        user_action=user_action_label,
-    )
-
-    evaluation, suggestions, summary = await asyncio.gather(
-        eval_task, suggestions_task, summary_task
-    )
-
-    iteration = Iteration(
-        iteration_number=iteration_number,
-        prompt_sent=prompt_text,
-        system_prompt_used=system_text,
-        output=output,
-        mode=inputs.mode,
-        evaluation=evaluation,
-        trigger_source=trigger_source,
-        summary=summary,
-    )
-    return iteration, suggestions
 
 
 # --- Endpoints ---
@@ -180,14 +116,13 @@ async def api_apply_to_answer(
             chat_history=req.chat_history,
             iterations=req.iteration_history,
         )
-        output = await generate(
-            client=client,
-            prompt_text=prompt_text,
-            system_text=system_text,
+        output, _usage, finish_reason = await client.generate_with_meta(
+            prompt=prompt_text,
+            system=system_text,
             model=model,
         )
         trigger_source = "apply_conversation"
-        iteration, suggestions = await _build_iteration_with_full_pipeline(
+        iteration, suggestions = await build_iteration_with_full_pipeline(
             client=client,
             model=model,
             inputs=req.inputs,
@@ -200,6 +135,7 @@ async def api_apply_to_answer(
             chat_history=req.chat_history,
             iteration_history=req.iteration_history,
             user_action_label=_label_trigger(trigger_source),
+            finish_reason=finish_reason,
         )
         return IterationFromConversationResponse(iteration=iteration, suggestions=suggestions)
     except OpenRouterError as e:
@@ -220,14 +156,13 @@ async def api_save_as_new_version(
             chat_history=req.chat_history,
             iterations=req.iteration_history,
         )
-        output = await generate(
-            client=client,
-            prompt_text=prompt_text,
-            system_text=system_text,
+        output, _usage, finish_reason = await client.generate_with_meta(
+            prompt=prompt_text,
+            system=system_text,
             model=model,
         )
         trigger_source = "refined_from_conversation"
-        iteration, suggestions = await _build_iteration_with_full_pipeline(
+        iteration, suggestions = await build_iteration_with_full_pipeline(
             client=client,
             model=model,
             inputs=req.inputs,
@@ -240,6 +175,7 @@ async def api_save_as_new_version(
             chat_history=req.chat_history,
             iteration_history=req.iteration_history,
             user_action_label=_label_trigger(trigger_source),
+            finish_reason=finish_reason,
         )
         return IterationFromConversationResponse(iteration=iteration, suggestions=suggestions)
     except OpenRouterError as e:
