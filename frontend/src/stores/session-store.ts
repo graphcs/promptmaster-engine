@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage } from '@/types';
+import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage, SetupSuggestion } from '@/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
 
 interface SessionState {
@@ -60,6 +60,11 @@ interface SessionState {
   chatLoading: 'send' | 'apply' | 'save' | null;
   continuationLoading: boolean;
 
+  // Smart Setup
+  setupSuggestion: SetupSuggestion | null;
+  setupLoading: boolean;
+  setupError: string | null;
+
   // Session ID — generated on first iteration, used for Supabase chat persistence
   sessionId: string | null;
 
@@ -102,6 +107,10 @@ interface SessionState {
   loadAllChatMessages: (byIteration: Record<number, ChatMessage[]>) => void;
   setChatLoading: (state: 'send' | 'apply' | 'save' | null) => void;
   setContinuationLoading: (b: boolean) => void;
+  setSetupSuggestion: (s: SetupSuggestion | null) => void;
+  setSetupLoading: (b: boolean) => void;
+  setSetupError: (e: string | null) => void;
+  applySetupSuggestion: (s: SetupSuggestion) => void;
   setChatPanelOpen: (open: boolean) => void;
   toggleChatPanel: () => void;
   finalize: () => void;
@@ -147,6 +156,9 @@ const initialState = {
   chatPanelOpen: false,
   chatLoading: null as 'send' | 'apply' | 'save' | null,
   continuationLoading: false,
+  setupSuggestion: null as SetupSuggestion | null,
+  setupLoading: false,
+  setupError: null as string | null,
   sessionId: null as string | null,
 };
 
@@ -260,6 +272,17 @@ export const useSessionStore = create<SessionState>()(
         set({ chatMessages: byIteration }),
       setChatLoading: (chatLoading) => set({ chatLoading }),
       setContinuationLoading: (continuationLoading) => set({ continuationLoading }),
+      setSetupSuggestion: (setupSuggestion) => set({ setupSuggestion }),
+      setSetupLoading: (setupLoading) => set({ setupLoading }),
+      setSetupError: (setupError) => set({ setupError }),
+      applySetupSuggestion: (s) =>
+        set({
+          setupSuggestion: s,
+          mode: s.mode,
+          audience: s.audience,
+          constraints: s.constraints,
+          outputFormat: s.output_format,
+        }),
       setChatPanelOpen: (chatPanelOpen) => {
         if (typeof window !== 'undefined') {
           localStorage.setItem('pm-chat-panel-open', chatPanelOpen ? '1' : '0');
