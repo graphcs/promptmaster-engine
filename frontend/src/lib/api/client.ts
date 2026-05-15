@@ -14,6 +14,8 @@ import type {
   SaveAsNewVersionRequest,
   IterationFromConversationResponse,
   ContinueDocumentRequest,
+  GenerateSetupRequest,
+  GenerateSetupResponse,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -116,6 +118,13 @@ export const api = {
 
   async continueDocument(req: ContinueDocumentRequest): Promise<IterationFromConversationResponse> {
     return apiFetch('/api/continue-document', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async generateSetup(req: GenerateSetupRequest): Promise<GenerateSetupResponse> {
+    return apiFetch('/api/generate-setup', {
       method: 'POST',
       body: JSON.stringify(req),
     });
