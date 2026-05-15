@@ -17,9 +17,49 @@ const MODES: Array<{ key: ModeType; icon: string; name: string; desc: string }> 
 interface ModeGridProps {
   selectedMode: ModeType;
   onSelect: (mode: ModeType) => void;
+  variant?: 'grid' | 'list';
 }
 
-export function ModeGrid({ selectedMode, onSelect }: ModeGridProps) {
+export function ModeGrid({ selectedMode, onSelect, variant = 'grid' }: ModeGridProps) {
+  if (variant === 'list') {
+    return (
+      <div className="flex flex-col gap-1.5 max-h-[60vh] overflow-y-auto">
+        {MODES.map((mode) => {
+          const isSelected = mode.key === selectedMode;
+          return (
+            <button
+              key={mode.key}
+              type="button"
+              onClick={() => onSelect(mode.key)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all ${
+                isSelected
+                  ? 'bg-[var(--pm-primary)]/10 ring-1 ring-[var(--pm-primary)]'
+                  : 'bg-[var(--surface-container-low)] hover:bg-[var(--surface-container)]'
+              }`}
+            >
+              <span
+                className={`material-symbols-outlined text-[20px] flex-shrink-0 ${
+                  isSelected ? 'text-[var(--pm-primary)]' : 'text-[var(--outline)]'
+                }`}
+              >
+                {mode.icon}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-[var(--on-surface)]">{mode.name}</div>
+                <div className="text-[11px] text-[var(--on-surface-variant)] leading-tight">{mode.desc}</div>
+              </div>
+              {isSelected && (
+                <span className="material-symbols-outlined text-[18px] text-[var(--pm-primary)] flex-shrink-0">
+                  check
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   const selected = MODES.find((m) => m.key === selectedMode);
   const modeInfo = MODE_DISPLAY[selectedMode];
 

@@ -57,6 +57,7 @@ export function SetupSummaryBar({ suggestion }: SetupSummaryBarProps) {
           <ModeGrid
             selectedMode={mode}
             onSelect={(v: ModeType) => { setMode(v); setExpanded(null); }}
+            variant="list"
           />
         </SetupChip>
 
