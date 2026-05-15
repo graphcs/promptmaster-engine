@@ -1,4 +1,4 @@
--- Custom Modes table — user-scoped persona library for Project E.
+-- Custom Modes table — user-scoped persona library.
 -- Mirrors the templates table pattern: RLS-protected, indexed for the
 -- common "list a user's items newest first" query.
 
@@ -24,7 +24,9 @@ create policy "custom_modes_owner_insert" on custom_modes
   for insert with check (auth.uid() = user_id);
 
 create policy "custom_modes_owner_update" on custom_modes
-  for update using (auth.uid() = user_id);
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 create policy "custom_modes_owner_delete" on custom_modes
   for delete using (auth.uid() = user_id);
