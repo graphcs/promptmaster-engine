@@ -63,6 +63,14 @@ export function InputPhase() {
     setConstraints(stack.initial.constraints);
     setOutputFormat(stack.initial.output_format);
     setActiveStack(stack.id);
+    // Show the summary bar with empty rationales so user can see and refine the pre-fill
+    applySetupSuggestion({
+      mode: stack.initial.mode,
+      audience,
+      constraints: stack.initial.constraints,
+      output_format: stack.initial.output_format,
+      rationale: { mode: '', audience: '', constraints: '', output_format: '' },
+    });
   }
 
   async function handleAssemble() {
