@@ -50,12 +50,14 @@ export function PersonaModal({ open, onClose }: PersonaModalProps) {
         setCustomModes(list);
         setLoadedOnce(true);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('listCustomModes failed:', err);
         if (cancelled) return;
         setListError("Couldn't load your personas. Try again.");
+        setLoadedOnce(true);
       })
       .finally(() => {
-        if (!cancelled) setCustomModesLoading(false);
+        setCustomModesLoading(false);
       });
     return () => {
       cancelled = true;
