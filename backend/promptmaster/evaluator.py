@@ -7,7 +7,7 @@ Returns qualitative scores (Low/Medium/High) with one-sentence explanations.
 """
 
 import logging
-from .schemas import PMInput, EvaluationResult, DimensionScore, Iteration, CompletenessResult
+from .schemas import PMInput, EvaluationResult, DimensionScore, Iteration, CompletenessResult, WhyThisWorks
 from .llm_client import OpenRouterClient
 from .session_context import format_session_history
 
@@ -50,7 +50,7 @@ MODE USED: {mode}
 {output}
 --- END CURRENT OUTPUT ---
 
-Evaluate along four dimensions. For the first three, assign "Low", "Medium", or "High" and provide exactly one sentence of explanation.
+Evaluate along five dimensions. For the first three, assign "Low", "Medium", or "High" and provide exactly one sentence of explanation.
 
 SCORING GUIDELINES (be consistent — do not change a score unless the output genuinely changed):
 - "High" = strong, well-targeted output that clearly meets the bar. Award it confidently when earned. If the output addresses the objective, is well-structured, and stays on scope, it deserves "High."
@@ -74,14 +74,27 @@ IMPORTANT: Do not penalize stylistic variation. Focus on substance, not style.
 4. COMPLETENESS: Does the output appear structurally complete given the objective?
    - "complete" = the answer covers what the objective required, with appropriate depth across all expected sections/topics. The output reads as a finished response.
    - "incomplete" = the answer stops mid-section, runs out of room, covers only some expected sections, skips depth on later sections, or leaves obvious gaps. If the user asked for a 15-section BRD and only 5 sections appear, mark INCOMPLETE.
-   - If INCOMPLETE, name in one short sentence WHERE it stops or what's missing (e.g., "Stopped mid-Section 7: Risk Analysis." or "Only covers Sections 1-5 of an expected 15-section BRD.").
+   - If INCOMPLETE, name in one short sentence WHERE it stops or what's missing.
+
+5. INTERPRETATION: In 3-4 short bullets, plain English (no technical jargon), explain why this output succeeds OR what to improve.
+   - Use the label "Why this works" when the output is strong overall (alignment High, drift Low, clarity High).
+   - Use the label "What to improve" when there's a clear weakness in any dimension.
+   - bullets[0]: one short sentence (≤10 words) about the goal/alignment.
+   - bullets[1]: one short sentence about structure/clarity.
+   - bullets[2]: one short sentence about focus/drift.
+   - bullets[3] (optional): one short sentence about completeness or another standout property.
+   - Each bullet should be self-contained — readable without the others.
 
 Return JSON in exactly this format:
 {{
     "alignment": {{"score": "Low|Medium|High", "explanation": "one sentence"}},
     "drift": {{"score": "Low|Medium|High", "explanation": "one sentence"}},
     "clarity": {{"score": "Low|Medium|High", "explanation": "one sentence"}},
-    "completeness": {{"status": "complete|incomplete", "reason": "one short sentence (empty string if complete)"}}
+    "completeness": {{"status": "complete|incomplete", "reason": "one short sentence (empty string if complete)"}},
+    "interpretation": {{
+        "label": "Why this works|What to improve",
+        "bullets": ["...", "...", "..."]
+    }}
 }}"""
 
 
@@ -119,11 +132,11 @@ async def evaluate_output(
             prompt=prompt,
             system=EVALUATOR_SYSTEM,
             temperature=0.15,
-            max_tokens=512,
+            max_tokens=768,
             model=model,
         )
 
-        # Parse completeness defensively — accept missing or malformed values gracefully.
+        # Parse completeness defensively
         completeness: CompletenessResult | None = None
         comp_raw = result_dict.get("completeness")
         if isinstance(comp_raw, dict):
@@ -131,13 +144,22 @@ async def evaluate_output(
                 completeness = CompletenessResult(**comp_raw)
             except Exception as comp_err:
                 logger.warning(f"Invalid completeness in eval response, dropping: {comp_err}")
-                completeness = None
+
+        # Parse interpretation defensively
+        interpretation: WhyThisWorks | None = None
+        interp_raw = result_dict.get("interpretation")
+        if isinstance(interp_raw, dict):
+            try:
+                interpretation = WhyThisWorks(**interp_raw)
+            except Exception as interp_err:
+                logger.warning(f"Invalid interpretation in eval response, dropping: {interp_err}")
 
         return EvaluationResult(
             alignment=DimensionScore(**result_dict.get("alignment", {"score": "Medium", "explanation": "Unable to evaluate"})),
             drift=DimensionScore(**result_dict.get("drift", {"score": "Medium", "explanation": "Unable to evaluate"})),
             clarity=DimensionScore(**result_dict.get("clarity", {"score": "Medium", "explanation": "Unable to evaluate"})),
             completeness=completeness,
+            interpretation=interpretation,
         )
     except Exception as e:
         logger.error(f"Evaluation failed: {e}")
@@ -146,4 +168,5 @@ async def evaluate_output(
             drift=DimensionScore(score="Medium", explanation=f"Evaluation error: {e}"),
             clarity=DimensionScore(score="Medium", explanation=f"Evaluation error: {e}"),
             completeness=None,
+            interpretation=None,
         )
