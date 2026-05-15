@@ -1,60 +1,79 @@
 import type { TutorialStep } from './tutorial-overlay';
+import { useSessionStore } from '@/stores/session-store';
+
+function expandDetailsElement(selector: string) {
+  if (typeof document === 'undefined') return;
+  const el = document.querySelector(selector);
+  if (!el) return;
+  let cur: HTMLElement | null = el as HTMLElement;
+  while (cur) {
+    if (cur.tagName.toLowerCase() === 'details') {
+      (cur as HTMLDetailsElement).open = true;
+      break;
+    }
+    cur = cur.parentElement;
+  }
+}
+
+function openChatPanel() {
+  useSessionStore.getState().setChatPanelOpen(true);
+}
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    target: '[data-tutorial="mode-grid"]',
-    title: 'Choose Your Mode',
-    description:
-      'Start by selecting a mode. Each mode sets a different AI persona — Architect for structure, Critic for finding flaws, Clarity for simplification, and more. Click a card to see what it does.',
+    target: '[data-tutorial="hero-objective"]',
+    title: 'Start with your goal',
+    description: 'Describe what you want to do or figure out. The system builds the rest from here.',
     position: 'bottom',
   },
   {
-    target: '[data-tutorial="objective"]',
-    title: 'Define Your Objective',
-    description:
-      'Describe what you want the AI to produce. Be specific — the more detail you provide, the more aligned the output will be. This is the most important field.',
+    target: '[data-tutorial="generate-setup"]',
+    title: 'Let the system suggest',
+    description: 'Click Generate Setup and the system recommends a mode, audience, constraints, and format from your objective.',
     position: 'bottom',
   },
   {
-    target: '[data-tutorial="audience"]',
-    title: 'Set Your Audience',
-    description:
-      'Choose who the output is for. The AI adjusts its tone, complexity, and terminology based on the audience — Technical, Executive, Student, etc.',
+    target: '[data-tutorial="recommended-approach"]',
+    title: 'Refine if you want',
+    description: 'Click any chip to refine. Each shows what was picked and why. After Generate Setup runs, this card appears above the input.',
     position: 'bottom',
   },
   {
-    target: '[data-tutorial="constraint-presets"]',
-    title: 'Add Constraints',
-    description:
-      'Click preset constraint chips to apply common rules like "Keep it under 300 words" or "No jargon." You can also type custom constraints in the text field below.',
-    position: 'bottom',
+    target: '[data-tutorial="advanced-section"]',
+    title: 'Full controls live here',
+    description: 'Open Advanced any time for direct control over mode, constraints, format, and more.',
+    position: 'top',
+    expandTarget: () => expandDetailsElement('[data-tutorial="advanced-section"]'),
   },
   {
-    target: '[data-tutorial="format-presets"]',
-    title: 'Choose Output Format',
-    description:
-      'Select how you want the output structured — bullet points, numbered list, executive summary, etc. This helps the AI organize its response.',
+    target: '[data-tutorial="continue-review"]',
+    title: 'Continue to Review',
+    description: 'Once you are happy with the setup, continue to review the assembled prompt before running it.',
     position: 'top',
   },
   {
-    target: '[data-tutorial="assemble-btn"]',
-    title: 'Assemble Your Prompt',
-    description:
-      'Click this to build an optimized prompt from your inputs. PromptMaster structures the request using roles, constraints, and refinement techniques behind the scenes.',
+    target: '[data-tutorial="output-card"]',
+    title: 'Your generated answer',
+    description: 'This is the structured output. Use the buttons below to iterate, chat, or apply fixes.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tutorial="chat-panel"]',
+    title: 'Chat about it',
+    description: 'The chat panel lets you ask follow-ups without affecting your version. Apply or Save as new version when you have something useful.',
+    position: 'left',
+    expandTarget: openChatPanel,
+  },
+  {
+    target: '[data-tutorial="why-this-works"]',
+    title: 'Why this works',
+    description: 'This card translates the technical eval into plain language — a quick read on what is strong or weak.',
     position: 'top',
   },
   {
-    target: '[data-tutorial="phase-tabs"]',
-    title: 'Track Your Progress',
-    description:
-      'The top bar shows which phase you\'re in. After assembling, you\'ll Review the prompt, then Execute to generate output with evaluation scores.',
-    position: 'bottom',
-  },
-  {
-    target: '',
-    title: 'You\'re All Set!',
-    description:
-      'You now know the essentials. Use "New Session" in the sidebar to start fresh anytime. Your sessions are saved automatically if you\'re signed in. Go ahead — build your first prompt!',
-    position: 'bottom',
+    target: '[data-tutorial="self-audit"]',
+    title: 'Self-Audit → Apply',
+    description: 'Click Self-Audit and the system surfaces specific fixes you can apply directly.',
+    position: 'top',
   },
 ];

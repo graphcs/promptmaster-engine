@@ -11,6 +11,8 @@ export interface TutorialStep {
   description: string;
   /** Position of the tooltip relative to the target */
   position: 'top' | 'bottom' | 'left' | 'right';
+  /** Optional side effect to run before locating the anchor — e.g. open a collapsed <details> or panel. */
+  expandTarget?: () => void;
 }
 
 interface TutorialOverlayProps {
@@ -47,21 +49,28 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
     }
   }, [step]);
 
-  // Scroll target into view on step change, then re-measure after scroll settles
+  // Scroll target into view on step change, then re-measure after scroll settles.
+  // If the step provides expandTarget, run it first so collapsed UI opens before we look for the anchor.
   useEffect(() => {
     if (!step || !step.target) {
       setSpotlightRect(null);
       return;
     }
-    const el = document.querySelector(step.target);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Re-measure after scroll animation completes
-      const timer = setTimeout(measureTarget, 450);
-      return () => clearTimeout(timer);
-    } else {
-      setSpotlightRect(null);
-    }
+    step.expandTarget?.();
+    const expandDelay = step.expandTarget ? 200 : 0;
+    const expandTimer = setTimeout(() => {
+      const el = document.querySelector(step.target);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        setSpotlightRect(null);
+      }
+    }, expandDelay);
+    const measureTimer = setTimeout(measureTarget, expandDelay + 450);
+    return () => {
+      clearTimeout(expandTimer);
+      clearTimeout(measureTimer);
+    };
   }, [step, measureTarget]);
 
   // Recalculate on resize/scroll
