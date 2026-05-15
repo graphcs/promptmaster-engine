@@ -49,7 +49,8 @@ export function InputPhase() {
       const { suggestion } = await api.generateSetup({ objective, model });
       applySetupSuggestion(suggestion);
     } catch (err) {
-      setSetupError(err instanceof Error ? err.message : 'Could not generate a setup.');
+      console.error('Generate setup failed:', err);
+      setSetupError("Couldn't generate a setup.");
     } finally {
       setSetupLoading(false);
     }
@@ -122,7 +123,7 @@ export function InputPhase() {
       {/* Error banner if Generate Setup failed */}
       {setupError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800">
-          {setupError} Open Advanced below to set it up manually.
+          Couldn&apos;t generate a setup. Open Advanced below to set it up manually.
         </div>
       )}
 
