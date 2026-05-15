@@ -72,10 +72,10 @@ export function SetupChip({
 
       {expanded && (
         <div
-          className="absolute z-30 left-0 right-0 mt-2 rounded-xl bg-white ring-2 ring-[var(--pm-primary)]/60 overflow-hidden"
+          className="absolute z-30 left-0 right-0 mt-2 rounded-xl bg-white border-2 border-[var(--pm-primary)]/60 p-6 space-y-4"
           style={{ boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)' }}
         >
-          <div className="flex items-center justify-between px-6 pt-5 pb-3">
+          <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
               {label}
             </span>
@@ -88,7 +88,7 @@ export function SetupChip({
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
-          <div className="px-6 pb-6">{children}</div>
+          <div>{children}</div>
         </div>
       )}
     </div>

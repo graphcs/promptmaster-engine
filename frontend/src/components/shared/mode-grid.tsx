@@ -23,7 +23,7 @@ interface ModeGridProps {
 export function ModeGrid({ selectedMode, onSelect, variant = 'grid' }: ModeGridProps) {
   if (variant === 'list') {
     return (
-      <div className="flex flex-col gap-1.5 max-h-[60vh] overflow-y-auto">
+      <div className="flex flex-col gap-1.5 max-h-[60vh] overflow-y-auto p-1">
         {MODES.map((mode) => {
           const isSelected = mode.key === selectedMode;
           return (

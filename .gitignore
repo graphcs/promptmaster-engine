@@ -11,7 +11,6 @@ build/
 venv/
 
 # Environment variables
-.env
 
 # Claude Code
 .claude/
@@ -29,9 +28,10 @@ Thumbs.db
 # uv
 uv.lock
 
-.env.local
 
 # Playwright
 .playwright-mcp/
 temp_auto_push.bat
 temp_interactive_push.bat
+config.bat
+node_modules
