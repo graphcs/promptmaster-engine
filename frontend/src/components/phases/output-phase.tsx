@@ -11,6 +11,8 @@ import type { ModeType, ScoreLevel, FlowTriggerType, PMInput } from '@/types';
 import { MarkdownOutput } from '@/components/shared/markdown-output';
 import { CustomSelect } from '@/components/shared/custom-select';
 import { InlineToast } from '@/components/shared/inline-toast';
+import { WhyThisWorksCard } from '@/components/output/why-this-works-card';
+import { AuditFindingsPanel } from '@/components/output/audit-findings-panel';
 
 type InspectionState =
   | { kind: 'none' }
@@ -64,6 +66,13 @@ export function OutputPhase() {
   const continuationLoading = useSessionStore((s) => s.continuationLoading);
   const setContinuationLoading = useSessionStore((s) => s.setContinuationLoading);
   const chatLoading = useSessionStore((s) => s.chatLoading);
+
+  const auditFindings = useSessionStore((s) => s.auditFindings);
+  const auditLoading = useSessionStore((s) => s.auditLoading);
+  const applyAuditLoading = useSessionStore((s) => s.applyAuditLoading);
+  const setAuditFindings = useSessionStore((s) => s.setAuditFindings);
+  const setAuditLoading = useSessionStore((s) => s.setAuditLoading);
+  const setApplyAuditLoading = useSessionStore((s) => s.setApplyAuditLoading);
 
   const setPhase = useSessionStore((s) => s.setPhase);
   const setError = useSessionStore((s) => s.setError);
@@ -303,7 +312,56 @@ export function OutputPhase() {
     setExpandedIterations((prev) => ({ ...prev, [num]: !prev[num] }));
   }
 
-  const anyLoading = realignLoading || refineLoading || flowLoading !== null || continuationLoading || chatLoading !== null;
+  const anyLoading =
+    realignLoading ||
+    refineLoading ||
+    flowLoading !== null ||
+    continuationLoading ||
+    chatLoading !== null ||
+    auditLoading ||
+    applyAuditLoading;
+
+  async function handleAuditFindings() {
+    if (!currentOutput) return;
+    setError(null);
+    setAuditLoading(true);
+    try {
+      const res = await api.auditFindings({
+        inputs: buildInputs(),
+        current_output: currentOutput,
+        iteration_history: iterations,
+        model,
+      });
+      setAuditFindings(res.findings);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Audit failed.');
+    } finally {
+      setAuditLoading(false);
+    }
+  }
+
+  async function handleApplyAudit(selectedIds: string[]) {
+    if (!currentIteration || !auditFindings) return;
+    setError(null);
+    setApplyAuditLoading(true);
+    try {
+      const selected = auditFindings.filter((f) => selectedIds.includes(f.id));
+      const res = await api.applyAudit({
+        inputs: buildInputs(),
+        source_iteration: currentIteration,
+        findings: selected,
+        iteration_number: iterations.length + 1,
+        iteration_history: iterations,
+        model,
+      });
+      appendIteration(res.iteration, res.suggestions);
+      setAuditFindings(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Apply audit failed.');
+    } finally {
+      setApplyAuditLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-10">
@@ -316,7 +374,7 @@ export function OutputPhase() {
       </div>
 
       {/* AI Output card */}
-      <div className="bg-white rounded-xl shadow-ambient p-8">
+      <div data-tutorial="output-card" className="bg-white rounded-xl shadow-ambient p-8">
         <div className="flex items-center justify-between mb-6 gap-3">
           <span className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
             Generated Output
@@ -426,6 +484,16 @@ export function OutputPhase() {
         </div>
       )}
 
+      {/* Audit findings panel — appears after Self-Audit button is clicked */}
+      {auditFindings && (
+        <AuditFindingsPanel
+          findings={auditFindings}
+          loading={applyAuditLoading ? 'apply' : null}
+          onApply={(ids) => handleApplyAudit(ids)}
+          onDismiss={() => setAuditFindings(null)}
+        />
+      )}
+
       {/* Mode switch for next iteration */}
       <div className="bg-white rounded-xl shadow-ambient p-6">
         <label className="block text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)] mb-3">
@@ -442,6 +510,11 @@ export function OutputPhase() {
           )}
         />
       </div>
+
+      {/* Why this works / What to improve — plain-language interpretation of eval */}
+      {currentIteration?.evaluation?.interpretation && (
+        <WhyThisWorksCard interpretation={currentIteration.evaluation.interpretation} />
+      )}
 
       {/* Evaluation section */}
       {currentEval && <EvalSection evaluation={currentEval} />}
@@ -483,15 +556,16 @@ export function OutputPhase() {
             Challenge This
           </button>
 
-          {/* Self-Audit */}
+          {/* Self-Audit — produces structured findings the user can apply */}
           <button
             type="button"
-            onClick={() => handleFlowTrigger('self_audit')}
+            onClick={handleAuditFindings}
             disabled={anyLoading || !currentOutput}
-            title="Ask the AI to audit its own response and fix gaps"
+            data-tutorial="self-audit"
+            title="Audit this answer and surface fixes you can apply"
             className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-container-low)] border border-[var(--outline-variant)]/30 text-xs font-semibold text-[var(--on-surface)] rounded-lg hover:bg-[var(--surface-container)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {flowLoading === 'self_audit' ? (
+            {auditLoading ? (
               <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--on-surface)] border-t-transparent" />
             ) : (
               <span className="material-symbols-outlined text-[16px]">fact_check</span>
