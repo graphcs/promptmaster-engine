@@ -14,6 +14,8 @@ export function InputPhase() {
   const audience = useSessionStore((s) => s.audience);
   const constraints = useSessionStore((s) => s.constraints);
   const outputFormat = useSessionStore((s) => s.outputFormat);
+  const constraintPresets = useSessionStore((s) => s.constraintPresets);
+  const formatPresets = useSessionStore((s) => s.formatPresets);
   const mode = useSessionStore((s) => s.mode);
   const customName = useSessionStore((s) => s.customName);
   const customPreamble = useSessionStore((s) => s.customPreamble);
@@ -68,11 +70,19 @@ export function InputPhase() {
     setError(null);
     setAssembling(true);
     try {
+      const parts = [...constraintPresets];
+      if (constraints.trim()) parts.push(constraints.trim());
+      const finalConstraints = parts.join('. ');
+
+      const fmtParts = [...formatPresets];
+      if (outputFormat.trim()) fmtParts.push(outputFormat.trim());
+      const finalFormat = fmtParts.join(', ');
+
       const inputs = {
         objective,
         audience,
-        constraints,
-        output_format: outputFormat,
+        constraints: finalConstraints,
+        output_format: finalFormat,
         mode,
         session_facts: sessionFacts,
         ...(mode === 'custom' ? {
