@@ -122,3 +122,53 @@ def test_iteration_continuity_snapshot_defaults_none():
         mode="architect",
     )
     assert iter_.continuity_snapshot is None
+
+
+from promptmaster.schemas import SetupRationale, SetupSuggestion
+
+
+def test_setup_rationale_defaults_to_empty_strings():
+    r = SetupRationale()
+    assert r.mode == ""
+    assert r.audience == ""
+    assert r.constraints == ""
+    assert r.output_format == ""
+
+
+def test_setup_suggestion_round_trip():
+    s = SetupSuggestion(
+        mode="architect",
+        audience="Engineering Leads",
+        constraints="Two-week timeline",
+        output_format="Numbered list",
+        rationale=SetupRationale(
+            mode="Best fit for structured plans",
+            audience="Matches the problem framing",
+            constraints="Adds a deadline anchor",
+            output_format="Clear and scannable",
+        ),
+    )
+    payload = s.model_dump()
+    restored = SetupSuggestion(**payload)
+    assert restored.mode == "architect"
+    assert restored.rationale.mode == "Best fit for structured plans"
+
+
+def test_setup_suggestion_rejects_unknown_mode():
+    with pytest.raises(Exception):
+        SetupSuggestion(
+            mode="nonsense",  # type: ignore[arg-type]
+            audience="General",
+            constraints="",
+            output_format="",
+        )
+
+
+def test_setup_suggestion_rationale_defaults_to_empty():
+    s = SetupSuggestion(
+        mode="architect",
+        audience="General",
+        constraints="",
+        output_format="",
+    )
+    assert s.rationale.mode == ""

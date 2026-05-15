@@ -139,3 +139,20 @@ class ContinuitySnapshot(BaseModel):
 
 # Resolve forward reference for Iteration.continuity_snapshot
 Iteration.model_rebuild()
+
+
+class SetupRationale(BaseModel):
+    """One-line 'why this' explanations for each suggested field."""
+    mode: str = Field(default="")
+    audience: str = Field(default="")
+    constraints: str = Field(default="")
+    output_format: str = Field(default="")
+
+
+class SetupSuggestion(BaseModel):
+    """Suggested PMInput fields produced by the Smart Setup LLM call."""
+    mode: ModeType
+    audience: str
+    constraints: str
+    output_format: str
+    rationale: SetupRationale = Field(default_factory=SetupRationale)
