@@ -249,3 +249,21 @@ export interface ApplyAuditRequest {
   iteration_history?: Iteration[];
   model?: string;
 }
+
+// --- Custom Modes ---
+
+export interface CustomMode {
+  id: string;
+  user_id?: string;
+  name: string;
+  preamble: string;
+  tone: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomModeInput {
+  name: string;
+  preamble: string;
+  tone: string;
+}
