@@ -16,6 +16,9 @@ import type {
   ContinueDocumentRequest,
   GenerateSetupRequest,
   GenerateSetupResponse,
+  AuditFindingsRequest,
+  AuditFindingsResponse,
+  ApplyAuditRequest,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -125,6 +128,20 @@ export const api = {
 
   async generateSetup(req: GenerateSetupRequest): Promise<GenerateSetupResponse> {
     return apiFetch('/api/generate-setup', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async auditFindings(req: AuditFindingsRequest): Promise<AuditFindingsResponse> {
+    return apiFetch('/api/audit-findings', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async applyAudit(req: ApplyAuditRequest): Promise<IterationFromConversationResponse> {
+    return apiFetch('/api/apply-audit', {
       method: 'POST',
       body: JSON.stringify(req),
     });

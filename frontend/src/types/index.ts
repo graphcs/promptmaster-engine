@@ -35,6 +35,7 @@ export interface EvaluationResult {
   drift: DimensionScore;
   clarity: DimensionScore;
   completeness?: CompletenessResult | null;
+  interpretation?: WhyThisWorks | null;
 }
 
 export type UserRating = 'positive' | 'negative';
@@ -213,4 +214,38 @@ export interface GenerateSetupRequest {
 
 export interface GenerateSetupResponse {
   suggestion: SetupSuggestion;
+}
+
+// --- Output Polish types ---
+
+export interface WhyThisWorks {
+  label: 'Why this works' | 'What to improve';
+  bullets: string[];
+}
+
+export interface AuditFinding {
+  id: string;
+  category: string;
+  summary: string;
+  suggested_change: string;
+}
+
+export interface AuditFindingsRequest {
+  inputs: PMInput;
+  current_output: string;
+  iteration_history?: Iteration[];
+  model?: string;
+}
+
+export interface AuditFindingsResponse {
+  findings: AuditFinding[];
+}
+
+export interface ApplyAuditRequest {
+  inputs: PMInput;
+  source_iteration: Iteration;
+  findings: AuditFinding[];
+  iteration_number: number;
+  iteration_history?: Iteration[];
+  model?: string;
 }

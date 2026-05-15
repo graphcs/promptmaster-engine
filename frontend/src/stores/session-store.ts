@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage, SetupSuggestion } from '@/types';
+import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage, SetupSuggestion, AuditFinding } from '@/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
 
 interface SessionState {
@@ -65,6 +65,11 @@ interface SessionState {
   setupLoading: boolean;
   setupError: string | null;
 
+  // Audit → Action
+  auditFindings: AuditFinding[] | null;
+  auditLoading: boolean;
+  applyAuditLoading: boolean;
+
   // Session ID — generated on first iteration, used for Supabase chat persistence
   sessionId: string | null;
 
@@ -111,6 +116,9 @@ interface SessionState {
   setSetupLoading: (b: boolean) => void;
   setSetupError: (e: string | null) => void;
   applySetupSuggestion: (s: SetupSuggestion) => void;
+  setAuditFindings: (f: AuditFinding[] | null) => void;
+  setAuditLoading: (b: boolean) => void;
+  setApplyAuditLoading: (b: boolean) => void;
   setChatPanelOpen: (open: boolean) => void;
   toggleChatPanel: () => void;
   finalize: () => void;
@@ -159,6 +167,9 @@ const initialState = {
   setupSuggestion: null as SetupSuggestion | null,
   setupLoading: false,
   setupError: null as string | null,
+  auditFindings: null as AuditFinding[] | null,
+  auditLoading: false,
+  applyAuditLoading: false,
   sessionId: null as string | null,
 };
 
@@ -275,6 +286,9 @@ export const useSessionStore = create<SessionState>()(
       setSetupSuggestion: (setupSuggestion) => set({ setupSuggestion }),
       setSetupLoading: (setupLoading) => set({ setupLoading }),
       setSetupError: (setupError) => set({ setupError }),
+      setAuditFindings: (auditFindings) => set({ auditFindings }),
+      setAuditLoading: (auditLoading) => set({ auditLoading }),
+      setApplyAuditLoading: (applyAuditLoading) => set({ applyAuditLoading }),
       applySetupSuggestion: (s) =>
         set({
           setupSuggestion: s,
