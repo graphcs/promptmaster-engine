@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface SetupChipProps {
   label: string;
@@ -8,7 +8,7 @@ interface SetupChipProps {
   rationale?: string;
   expanded: boolean;
   onToggleExpand: () => void;
-  children: ReactNode; // editor rendered when expanded
+  children: ReactNode; // editor rendered as popover when expanded
 }
 
 export function SetupChip({
@@ -19,53 +19,78 @@ export function SetupChip({
   onToggleExpand,
   children,
 }: SetupChipProps) {
-  if (expanded) {
-    return (
-      <div className="rounded-xl border border-[var(--outline-variant)]/30 bg-white p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    function onPointerDown(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        onToggleExpand();
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onToggleExpand();
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [expanded, onToggleExpand]);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        onClick={onToggleExpand}
+        className={`w-full text-left rounded-xl transition-colors p-4 flex items-start justify-between gap-3 ${
+          expanded
+            ? 'bg-[var(--surface-container)] ring-1 ring-[var(--pm-primary)]/40'
+            : 'bg-[var(--surface-container-low)] hover:bg-[var(--surface-container)]'
+        }`}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
               {label}
             </span>
+            <span className="text-sm font-semibold text-[var(--on-surface)] truncate">
+              {value || '(none)'}
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            aria-label="Collapse"
-            className="text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors"
-          >
-            <span className="material-symbols-outlined text-[18px]">expand_less</span>
-          </button>
+          {rationale && (
+            <p className="text-[11px] italic text-[var(--on-surface-variant)] mt-1">
+              {rationale}
+            </p>
+          )}
         </div>
-        <div>{children}</div>
-      </div>
-    );
-  }
+        <span className="material-symbols-outlined text-[18px] text-[var(--on-surface-variant)] flex-shrink-0">
+          {expanded ? 'expand_less' : 'expand_more'}
+        </span>
+      </button>
 
-  return (
-    <button
-      type="button"
-      onClick={onToggleExpand}
-      className="w-full text-left rounded-xl bg-[var(--surface-container-low)] hover:bg-[var(--surface-container)] transition-colors p-4 flex items-start justify-between gap-3"
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
-            {label}
-          </span>
-          <span className="text-sm font-semibold text-[var(--on-surface)] truncate">
-            {value || '(none)'}
-          </span>
+      {expanded && (
+        <div
+          className="absolute z-30 left-0 right-0 mt-2 rounded-xl bg-white shadow-ambient p-4 space-y-3"
+          style={{ boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)' }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
+              {label}
+            </span>
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              aria-label="Close"
+              className="text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+          <div>{children}</div>
         </div>
-        {rationale && (
-          <p className="text-[11px] italic text-[var(--on-surface-variant)] mt-1">
-            {rationale}
-          </p>
-        )}
-      </div>
-      <span className="material-symbols-outlined text-[18px] text-[var(--on-surface-variant)] flex-shrink-0">
-        expand_more
-      </span>
-    </button>
+      )}
+    </div>
   );
 }

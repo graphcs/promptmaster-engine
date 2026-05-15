@@ -1,6 +1,7 @@
 'use client';
 
 import type { AuditFinding } from '@/types';
+import { CustomCheckbox } from '@/components/shared/custom-checkbox';
 
 interface AuditFindingRowProps {
   finding: AuditFinding;
@@ -10,17 +11,27 @@ interface AuditFindingRowProps {
 
 export function AuditFindingRow({ finding, checked, onToggle }: AuditFindingRowProps) {
   return (
-    <label
+    <div
+      onClick={onToggle}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
       className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
         checked ? 'bg-white' : 'bg-[var(--surface-container-low)] opacity-60'
       }`}
     >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onToggle}
-        className="mt-1 h-4 w-4 rounded border-[var(--outline-variant)] text-[var(--pm-primary)] focus:ring-[var(--pm-primary)]/40 flex-shrink-0"
-      />
+      <div className="mt-0.5">
+        <CustomCheckbox
+          checked={checked}
+          onChange={onToggle}
+          ariaLabel={`Toggle finding: ${finding.summary}`}
+        />
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-[var(--pm-primary-container)]/20 text-[var(--pm-primary)]">
@@ -34,6 +45,6 @@ export function AuditFindingRow({ finding, checked, onToggle }: AuditFindingRowP
           {finding.suggested_change}
         </p>
       </div>
-    </label>
+    </div>
   );
 }
