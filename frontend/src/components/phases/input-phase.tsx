@@ -139,6 +139,7 @@ export function InputPhase() {
       {/* Continue to Review */}
       <div className="flex justify-end pt-2">
         <button
+          data-tutorial="continue-review"
           type="button"
           onClick={handleAssemble}
           disabled={assembling || !objective.trim()}

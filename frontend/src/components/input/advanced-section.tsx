@@ -113,7 +113,7 @@ export function AdvancedSection() {
   }
 
   return (
-    <details className="bg-white rounded-2xl shadow-ambient overflow-hidden group">
+    <details data-tutorial="advanced-section" className="bg-white rounded-2xl shadow-ambient overflow-hidden group">
       <summary className="cursor-pointer px-6 py-4 text-sm font-bold uppercase tracking-widest text-[var(--on-surface-variant)] select-none hover:bg-[var(--surface-container-low)] transition-colors flex items-center justify-between">
         <span>Advanced</span>
         <span className="material-symbols-outlined text-[18px] group-open:rotate-180 transition-transform">expand_more</span>

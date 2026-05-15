@@ -34,7 +34,7 @@ export function SetupSummaryBar({ suggestion }: SetupSummaryBarProps) {
   const modeLabel = MODE_DISPLAY[mode]?.display_name ?? mode;
 
   return (
-    <div className="bg-white rounded-2xl shadow-ambient p-6 space-y-4 border-l-4 border-[var(--pm-primary)]">
+    <div data-tutorial="recommended-approach" className="bg-white rounded-2xl shadow-ambient p-6 space-y-4 border-l-4 border-[var(--pm-primary)]">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">

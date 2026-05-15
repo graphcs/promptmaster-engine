@@ -27,6 +27,7 @@ export function HeroZone({
       </div>
 
       <textarea
+        data-tutorial="hero-objective"
         value={objective}
         onChange={(e) => onObjectiveChange(e.target.value)}
         rows={3}
@@ -37,6 +38,7 @@ export function HeroZone({
 
       <div className="flex items-center gap-3">
         <button
+          data-tutorial="generate-setup"
           type="button"
           onClick={onGenerateSetup}
           disabled={disabled}

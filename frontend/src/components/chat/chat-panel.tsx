@@ -213,6 +213,7 @@ export function ChatPanel() {
         className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[45]"
       />
       <aside
+        data-tutorial="chat-panel"
         role="dialog"
         aria-label="Chat"
         className="
