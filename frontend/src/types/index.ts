@@ -188,3 +188,29 @@ export interface ContinueDocumentRequest {
   iteration_history?: Iteration[];
   model?: string;
 }
+
+// --- Smart Setup types ---
+
+export interface SetupRationale {
+  mode: string;
+  audience: string;
+  constraints: string;
+  output_format: string;
+}
+
+export interface SetupSuggestion {
+  mode: ModeType;
+  audience: string;
+  constraints: string;
+  output_format: string;
+  rationale: SetupRationale;
+}
+
+export interface GenerateSetupRequest {
+  objective: string;
+  model?: string;
+}
+
+export interface GenerateSetupResponse {
+  suggestion: SetupSuggestion;
+}
