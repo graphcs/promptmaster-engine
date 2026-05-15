@@ -88,6 +88,7 @@ async def generate_audit_findings(
     for raw in raw_list:
         if not isinstance(raw, dict):
             continue
+        raw = dict(raw)
         # Ensure ID is present — fall back to a generated one if the LLM omitted it
         if not raw.get("id"):
             raw["id"] = f"f{uuid.uuid4().hex[:6]}"

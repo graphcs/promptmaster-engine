@@ -42,26 +42,14 @@ def test_audit_findings_system_uses_cold_critic_framing():
     assert any(word in lower for word in ("rigor", "blunt", "critic", "specific"))
 
 
-def test_audit_findings_prompt_caps_count():
+def test_audit_findings_prompt_caps_count(basic_inputs):
     """LLM must be told to surface only the 3-7 most impactful findings."""
     _, user = build_audit_findings_prompt(
-        inputs=PMInput_from_fixture(),
+        inputs=basic_inputs,
         current_output="x",
         iterations=[],
     )
     assert "7" in user or "seven" in user.lower()
-
-
-def PMInput_from_fixture():
-    """Helper to avoid pytest fixture in helper test."""
-    from promptmaster.schemas import PMInput
-    return PMInput(
-        objective="Plan a launch",
-        audience="General",
-        constraints="",
-        output_format="",
-        mode="architect",
-    )
 
 
 # --- generate audit findings ---
