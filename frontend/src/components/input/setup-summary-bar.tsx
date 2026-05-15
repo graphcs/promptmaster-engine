@@ -21,6 +21,7 @@ export function SetupSummaryBar({ suggestion }: SetupSummaryBarProps) {
   const audience = useSessionStore((s) => s.audience);
   const constraints = useSessionStore((s) => s.constraints);
   const outputFormat = useSessionStore((s) => s.outputFormat);
+  const customName = useSessionStore((s) => s.customName);
 
   const setMode = useSessionStore((s) => s.setMode);
   const setAudience = useSessionStore((s) => s.setAudience);
@@ -31,7 +32,10 @@ export function SetupSummaryBar({ suggestion }: SetupSummaryBarProps) {
     setExpanded(expanded === key ? null : key);
   }
 
-  const modeLabel = MODE_DISPLAY[mode]?.display_name ?? mode;
+  const modeLabel =
+    mode === 'custom' && customName
+      ? customName
+      : MODE_DISPLAY[mode]?.display_name ?? mode;
 
   return (
     <div data-tutorial="recommended-approach" className="bg-white rounded-2xl shadow-ambient p-6 space-y-4 border-l-4 border-[var(--pm-primary)]">
