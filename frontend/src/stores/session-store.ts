@@ -191,7 +191,12 @@ export const useSessionStore = create<SessionState>()(
       setAudience: (audience) => set({ audience }),
       setConstraints: (constraints) => set({ constraints }),
       setOutputFormat: (outputFormat) => set({ outputFormat }),
-      setMode: (mode) => set({ mode }),
+      setMode: (mode) =>
+        set(
+          mode === 'custom'
+            ? { mode }
+            : { mode, customName: '', customPreamble: '', customTone: '' }
+        ),
       setCustomMode: (customName, customPreamble, customTone) =>
         set({ customName, customPreamble, customTone }),
       setAssembled: (assembled) =>
