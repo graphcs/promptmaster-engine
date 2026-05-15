@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage, SetupSuggestion, AuditFinding } from '@/types';
+import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage, SetupSuggestion, AuditFinding, CustomMode } from '@/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
 
 interface SessionState {
@@ -70,6 +70,10 @@ interface SessionState {
   auditLoading: boolean;
   applyAuditLoading: boolean;
 
+  // Custom Modes library
+  customModes: CustomMode[];
+  customModesLoading: boolean;
+
   // Session ID — generated on first iteration, used for Supabase chat persistence
   sessionId: string | null;
 
@@ -119,6 +123,8 @@ interface SessionState {
   setAuditFindings: (f: AuditFinding[] | null) => void;
   setAuditLoading: (b: boolean) => void;
   setApplyAuditLoading: (b: boolean) => void;
+  setCustomModes: (m: CustomMode[]) => void;
+  setCustomModesLoading: (b: boolean) => void;
   setChatPanelOpen: (open: boolean) => void;
   toggleChatPanel: () => void;
   finalize: () => void;
@@ -170,6 +176,8 @@ const initialState = {
   auditFindings: null as AuditFinding[] | null,
   auditLoading: false,
   applyAuditLoading: false,
+  customModes: [] as CustomMode[],
+  customModesLoading: false,
   sessionId: null as string | null,
 };
 
@@ -289,6 +297,8 @@ export const useSessionStore = create<SessionState>()(
       setAuditFindings: (auditFindings) => set({ auditFindings }),
       setAuditLoading: (auditLoading) => set({ auditLoading }),
       setApplyAuditLoading: (applyAuditLoading) => set({ applyAuditLoading }),
+      setCustomModes: (customModes) => set({ customModes }),
+      setCustomModesLoading: (customModesLoading) => set({ customModesLoading }),
       applySetupSuggestion: (s) =>
         set({
           setupSuggestion: s,
