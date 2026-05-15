@@ -172,3 +172,70 @@ def test_setup_suggestion_rationale_defaults_to_empty():
         output_format="",
     )
     assert s.rationale.mode == ""
+
+
+from promptmaster.schemas import WhyThisWorks, AuditFinding
+
+
+def test_why_this_works_round_trip_positive():
+    w = WhyThisWorks(label="Why this works", bullets=["Matches your goal", "Clear structure", "Stayed focused"])
+    payload = w.model_dump()
+    restored = WhyThisWorks(**payload)
+    assert restored.label == "Why this works"
+    assert len(restored.bullets) == 3
+
+
+def test_why_this_works_round_trip_negative():
+    w = WhyThisWorks(label="What to improve", bullets=["Misses one section", "Vague in places"])
+    assert w.label == "What to improve"
+    assert restored_via_dump_then_parse(w).bullets == w.bullets
+
+
+def restored_via_dump_then_parse(w: WhyThisWorks) -> WhyThisWorks:
+    return WhyThisWorks(**w.model_dump())
+
+
+def test_why_this_works_rejects_invalid_label():
+    with pytest.raises(Exception):
+        WhyThisWorks(label="Maybe works", bullets=[])  # type: ignore[arg-type]
+
+
+def test_why_this_works_bullets_default_empty():
+    w = WhyThisWorks(label="Why this works")
+    assert w.bullets == []
+
+
+def test_evaluation_result_interpretation_optional_for_back_compat():
+    from promptmaster.schemas import EvaluationResult
+    legacy_payload = {
+        "alignment": {"score": "High", "explanation": "."},
+        "drift": {"score": "Low", "explanation": "."},
+        "clarity": {"score": "High", "explanation": "."},
+    }
+    er = EvaluationResult(**legacy_payload)
+    assert er.interpretation is None
+
+
+def test_evaluation_result_with_interpretation():
+    from promptmaster.schemas import EvaluationResult, DimensionScore
+    er = EvaluationResult(
+        alignment=DimensionScore(score="High", explanation="."),
+        drift=DimensionScore(score="Low", explanation="."),
+        clarity=DimensionScore(score="High", explanation="."),
+        interpretation=WhyThisWorks(label="Why this works", bullets=["a", "b"]),
+    )
+    assert er.interpretation is not None
+    assert er.interpretation.label == "Why this works"
+
+
+def test_audit_finding_round_trip():
+    f = AuditFinding(
+        id="f1",
+        category="Coverage",
+        summary="Missing a mitigation plan",
+        suggested_change="Add a section on risk mitigation",
+    )
+    payload = f.model_dump()
+    restored = AuditFinding(**payload)
+    assert restored.id == "f1"
+    assert restored.category == "Coverage"

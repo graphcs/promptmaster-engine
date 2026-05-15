@@ -27,6 +27,7 @@ _TRIGGER_LABELS = {
     "apply_conversation": "Applied chat to answer",
     "refined_from_conversation": "New version from chat",
     "continuation": "Continued document",
+    "applied_audit": "Applied audit findings",
 }
 
 

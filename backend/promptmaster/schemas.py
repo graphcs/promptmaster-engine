@@ -44,6 +44,24 @@ class CompletenessResult(BaseModel):
     reason: str = Field(default="", description="Short explanation when incomplete.")
 
 
+class WhyThisWorks(BaseModel):
+    """Plain-language interpretation of an output's eval.
+
+    Label flips between 'Why this works' (positive framing) and
+    'What to improve' (negative framing) based on the LLM's overall judgment.
+    """
+    label: Literal["Why this works", "What to improve"]
+    bullets: list[str] = Field(default_factory=list, description="3-4 short bullets in plain English.")
+
+
+class AuditFinding(BaseModel):
+    """One actionable audit finding produced by /api/audit-findings."""
+    id: str = Field(..., description="Unique within a findings list.")
+    category: str = Field(..., description="Short tag, e.g., 'Coverage', 'Clarity', 'Tone'.")
+    summary: str = Field(..., description="One line — what's wrong.")
+    suggested_change: str = Field(..., description="One line — what to do about it.")
+
+
 class EvaluationResult(BaseModel):
     """Result from the evaluator LLM call."""
     alignment: DimensionScore = Field(..., description="Does output match the stated objective?")
@@ -51,7 +69,11 @@ class EvaluationResult(BaseModel):
     clarity: DimensionScore = Field(..., description="Is the output structured and unambiguous?")
     completeness: CompletenessResult | None = Field(
         default=None,
-        description="Structural completeness — set by extended eval call. Optional for backward compat with old saved sessions.",
+        description="Structural completeness — set by extended eval call. Optional for backward compat.",
+    )
+    interpretation: WhyThisWorks | None = Field(
+        default=None,
+        description="Plain-language 3-4 bullet summary of why the output works or what to improve.",
     )
 
     @property
