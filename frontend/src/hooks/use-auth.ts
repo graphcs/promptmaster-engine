@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useSessionStore } from '@/stores/session-store';
 import type { User } from '@supabase/supabase-js';
 
 export function useAuth() {
@@ -17,9 +18,15 @@ export function useAuth() {
     };
     getUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       setUser(session?.user ?? null);
       setLoading(false);
+      if (event === 'SIGNED_OUT') {
+        useSessionStore.getState().resetSession();
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('pm-session');
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -53,6 +60,10 @@ export function useAuth() {
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
+    useSessionStore.getState().resetSession();
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('pm-session');
+    }
   }, [supabase]);
 
   return { user, loading, signIn, signUp, signInWithGoogle, signOut };
