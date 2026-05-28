@@ -52,6 +52,7 @@ from routers.conversation import router as conversation_router
 from routers.continuation import router as continuation_router
 from routers.setup import router as setup_router
 from routers.audit import router as audit_router
+from routers.long_form import router as long_form_router
 
 app.include_router(meta_router)
 app.include_router(engine_router)
@@ -59,3 +60,4 @@ app.include_router(conversation_router)
 app.include_router(continuation_router)
 app.include_router(setup_router)
 app.include_router(audit_router)
+app.include_router(long_form_router)
