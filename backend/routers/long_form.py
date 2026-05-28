@@ -75,6 +75,9 @@ async def api_detect_long_form(
     req: DetectRequest,
     client: OpenRouterClient = Depends(get_client),
 ):
+    # Defensive try/except matches the sibling-router pattern (e.g. continuation.py).
+    # detect_long_form currently swallows all exceptions and returns a safe default,
+    # so this never fires today — kept for consistency and future-proofing.
     try:
         return await detect_long_form(client=client, model=req.model or None, inputs=req.inputs)
     except OpenRouterError as e:
@@ -103,6 +106,11 @@ async def api_generate_section(
     req: GenerateSectionRequest,
     client: OpenRouterClient = Depends(get_client),
 ):
+    """Generate one section + regenerate the rolling continuity snapshot.
+
+    Only OpenRouterError is expected; anything else is a programmer error
+    and propagates as a 500.
+    """
     if req.section_index < 0 or req.section_index >= len(req.outline):
         raise HTTPException(status_code=400, detail=f"section_index {req.section_index} out of range")
     try:
