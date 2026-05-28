@@ -27,6 +27,7 @@ export function ReviewPhase() {
   const appendIteration = useSessionStore((s) => s.appendIteration);
   const setPhase = useSessionStore((s) => s.setPhase);
   const setError = useSessionStore((s) => s.setError);
+  const setPendingLongFormProposal = useSessionStore((s) => s.setPendingLongFormProposal);
 
   const [loading, setLoading] = useState(false);
 
@@ -48,6 +49,24 @@ export function ReviewPhase() {
           custom_tone: customTone,
         } : {}),
       };
+
+      // Detect long-form intent BEFORE generating. If positive, route to the
+      // Output phase with a proposal card instead of auto-running the iteration.
+      // Failure to detect is non-fatal — fall through to today's flow.
+      if (iterations.length === 0) {
+        try {
+          const detect = await api.detectLongForm({ inputs, model });
+          if (detect.is_long_form) {
+            setPendingLongFormProposal({
+              suggestedSectionCount: detect.suggested_section_count,
+            });
+            setPhase('output');
+            return;
+          }
+        } catch {
+          // ignore — proceed with normal iteration flow
+        }
+      }
 
       const result = await api.runIteration({
         inputs,

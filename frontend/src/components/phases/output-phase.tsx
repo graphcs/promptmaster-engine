@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSessionStore } from '@/stores/session-store';
 import { api } from '@/lib/api/client';
+import { recordUsage } from '@/lib/supabase/usage';
 import { needsRealignment, downloadFile } from '@/lib/utils';
 import { EvalSection } from '@/components/shared/eval-section';
 import { SuggestionsList } from '@/components/shared/suggestions-list';
@@ -112,13 +113,11 @@ export function OutputPhase() {
   const [ratingToast, setRatingToast] = useState<string | null>(null);
   const refineMenuRef = useRef<HTMLDivElement>(null);
 
-  // Long-form proposal state
-  const [proposalShown, setProposalShown] = useState<{ shown: boolean; suggestedCount: number }>({
-    shown: false,
-    suggestedCount: 0,
-  });
-  const [proposalSkipped, setProposalSkipped] = useState(false);
-  const detectCalledRef = useRef(false);
+  // Long-form proposal state — comes from the store (set by Review phase Execute).
+  const pendingLongFormProposal = useSessionStore((s) => s.pendingLongFormProposal);
+  const setPendingLongFormProposal = useSessionStore((s) => s.setPendingLongFormProposal);
+  const promptEdited = useSessionStore((s) => s.promptEdited);
+  const systemPrompt = useSessionStore((s) => s.systemPrompt);
 
   function handleRate(rating: 'positive' | 'negative') {
     if (!currentIteration) return;
@@ -152,35 +151,9 @@ export function OutputPhase() {
     };
   }, [refineMenuOpen]);
 
-  // Detect long-form once on mount (only when no iterations exist yet)
-  useEffect(() => {
-    if (detectCalledRef.current) return;
-    if (longForm || iterations.length > 0 || proposalShown.shown || proposalSkipped) return;
-    detectCalledRef.current = true;
-
-    let cancelled = false;
-    const pmInputs = buildInputs();
-    (async () => {
-      try {
-        const r = await api.detectLongForm({ inputs: pmInputs, model });
-        if (cancelled) return;
-        if (r.is_long_form) {
-          setProposalShown({ shown: true, suggestedCount: r.suggested_section_count });
-        } else {
-          setProposalSkipped(true);
-        }
-      } catch {
-        if (!cancelled) setProposalSkipped(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  // buildInputs is stable (reads from closed-over store vars); run once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handlePlanItOut = async () => {
+    if (!pendingLongFormProposal) return;
+    const suggestedCount = pendingLongFormProposal.suggestedSectionCount;
     setLongFormLoading(true);
     const initialLongForm: LongFormState = {
       state: 'outlining',
@@ -191,25 +164,44 @@ export function OutputPhase() {
       completed_at: null,
     };
     setLongForm(initialLongForm);
+    setPendingLongFormProposal(null);
 
     try {
       const r = await api.generateOutline({
         inputs: buildInputs(),
-        suggested_section_count: proposalShown.suggestedCount,
+        suggested_section_count: suggestedCount,
         model,
       });
       updateOutline(r.outline);
       setLongFormStateName('review_outline');
     } catch {
       setLongForm(null);
-      setProposalSkipped(true);
     } finally {
       setLongFormLoading(false);
     }
   };
 
-  const handleJustGenerate = () => {
-    setProposalSkipped(true);
+  const handleJustGenerate = async () => {
+    setPendingLongFormProposal(null);
+    setError(null);
+    setLongFormLoading(true);
+    try {
+      const result = await api.runIteration({
+        inputs: buildInputs(),
+        prompt_text: promptEdited,
+        system_text: systemPrompt,
+        iteration_number: iterations.length + 1,
+        iteration_history: iterations,
+        source: iterations.length === 0 ? 'initial' : 'refine',
+        model,
+      });
+      appendIteration(result.iteration, result.suggestions);
+      recordUsage('iteration').catch(() => {});
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to run iteration.');
+    } finally {
+      setLongFormLoading(false);
+    }
   };
 
   const shouldRealign = currentEval ? needsRealignment(currentEval) : false;
@@ -453,9 +445,9 @@ export function OutputPhase() {
 
       {longForm ? (
         <LongFormView />
-      ) : proposalShown.shown && !proposalSkipped ? (
+      ) : pendingLongFormProposal ? (
         <LongFormProposal
-          suggestedSectionCount={proposalShown.suggestedCount}
+          suggestedSectionCount={pendingLongFormProposal.suggestedSectionCount}
           onPlanItOut={handlePlanItOut}
           onJustGenerate={handleJustGenerate}
           disabled={longFormLoading}

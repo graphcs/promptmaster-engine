@@ -80,6 +80,7 @@ interface SessionState {
   // Long-Form Document Orchestration
   longForm: LongFormState | null;
   longFormLoading: boolean;
+  pendingLongFormProposal: { suggestedSectionCount: number } | null;
 
   // Actions
   setPhase: (phase: Phase) => void;
@@ -145,6 +146,7 @@ interface SessionState {
   setContinuitySnapshot: (snapshot: LongFormState['continuity_snapshot']) => void;
   clearLongForm: () => void;
   setLongFormLoading: (loading: boolean) => void;
+  setPendingLongFormProposal: (p: { suggestedSectionCount: number } | null) => void;
 }
 
 const initialState = {
@@ -195,6 +197,7 @@ const initialState = {
   sessionId: null as string | null,
   longForm: null as LongFormState | null,
   longFormLoading: false,
+  pendingLongFormProposal: null as { suggestedSectionCount: number } | null,
 };
 
 export const useSessionStore = create<SessionState>()(
@@ -389,6 +392,7 @@ export const useSessionStore = create<SessionState>()(
       })),
       clearLongForm: () => set({ longForm: null }),
       setLongFormLoading: (longFormLoading) => set({ longFormLoading }),
+      setPendingLongFormProposal: (pendingLongFormProposal) => set({ pendingLongFormProposal }),
       finalize: () => set({ finalized: true, phase: 'summary' }),
       resetSession: () => set({ ...initialState }),
       carryLessonsForward: (objective, constraints) =>
@@ -411,6 +415,7 @@ export const useSessionStore = create<SessionState>()(
           chatMessages: {},
           sessionId: session.session_id,
           longForm: session.long_form ?? null,
+          pendingLongFormProposal: null,
         }),
     }),
     {
