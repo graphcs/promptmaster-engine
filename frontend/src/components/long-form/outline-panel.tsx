@@ -40,10 +40,17 @@ export function OutlinePanel({
     onChange([...outline, newSection]);
   };
 
-  if (outline.length === 0) {
+  if (outline.length === 0 && !editable) {
     return (
       <div className="bg-white rounded-xl shadow-ambient p-8 text-center text-sm text-[var(--on-surface-variant)]">
         Building outline…
+      </div>
+    );
+  }
+  if (outline.length === 0 && editable) {
+    return (
+      <div className="bg-white rounded-xl shadow-ambient p-8 text-center text-sm text-[var(--on-surface-variant)]">
+        No sections yet. Add one to continue.
       </div>
     );
   }
