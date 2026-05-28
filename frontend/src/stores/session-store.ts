@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage, SetupSuggestion, AuditFinding, CustomMode } from '@/types';
+import type { Phase, ModeType, AssembledPrompt, Iteration, EvaluationResult, Session, UserRating, ChatMessage, SetupSuggestion, AuditFinding, CustomMode, LongFormState, OutlineSection } from '@/types';
 import { DEFAULT_MODEL } from '@/lib/constants';
 
 interface SessionState {
@@ -77,6 +77,10 @@ interface SessionState {
   // Session ID — generated on first iteration, used for Supabase chat persistence
   sessionId: string | null;
 
+  // Long-Form Document Orchestration
+  longForm: LongFormState | null;
+  longFormLoading: boolean;
+
   // Actions
   setPhase: (phase: Phase) => void;
   setObjective: (objective: string) => void;
@@ -131,6 +135,16 @@ interface SessionState {
   resetSession: () => void;
   carryLessonsForward: (objective: string, constraints: string) => void;
   loadSession: (session: Session) => void;
+  setLongForm: (state: LongFormState | null) => void;
+  setLongFormStateName: (name: LongFormState['state']) => void;
+  updateOutline: (outline: OutlineSection[]) => void;
+  setSectionContent: (index: number, content: string, finish_reason: string) => void;
+  setSectionStatus: (index: number, status: OutlineSection['status'], error?: string | null) => void;
+  setSectionRegenerated: (index: number, content: string, finish_reason: string) => void;
+  setCurrentSectionIndex: (i: number) => void;
+  setContinuitySnapshot: (snapshot: LongFormState['continuity_snapshot']) => void;
+  clearLongForm: () => void;
+  setLongFormLoading: (loading: boolean) => void;
 }
 
 const initialState = {
@@ -179,6 +193,8 @@ const initialState = {
   customModes: [] as CustomMode[],
   customModesLoading: false,
   sessionId: null as string | null,
+  longForm: null as LongFormState | null,
+  longFormLoading: false,
 };
 
 export const useSessionStore = create<SessionState>()(
@@ -325,6 +341,54 @@ export const useSessionStore = create<SessionState>()(
         }
         return { chatPanelOpen: next };
       }),
+      setLongForm: (state) => set({ longForm: state }),
+      setLongFormStateName: (name) => set((s) => ({
+        longForm: s.longForm ? { ...s.longForm, state: name } : s.longForm,
+      })),
+      updateOutline: (outline) => set((s) => ({
+        longForm: s.longForm ? { ...s.longForm, outline } : s.longForm,
+      })),
+      setSectionContent: (index, content, finish_reason) => set((s) => {
+        if (!s.longForm) return {};
+        const outline = s.longForm.outline.map((sec, i) =>
+          i === index
+            ? { ...sec, content, finish_reason, status: 'complete' as const, generated_at: new Date().toISOString() }
+            : sec
+        );
+        return { longForm: { ...s.longForm, outline } };
+      }),
+      setSectionStatus: (index, status, error = null) => set((s) => {
+        if (!s.longForm) return {};
+        const outline = s.longForm.outline.map((sec, i) =>
+          i === index ? { ...sec, status, error: error ?? sec.error } : sec
+        );
+        return { longForm: { ...s.longForm, outline } };
+      }),
+      setSectionRegenerated: (index, content, finish_reason) => set((s) => {
+        if (!s.longForm) return {};
+        const outline = s.longForm.outline.map((sec, i) =>
+          i === index
+            ? {
+                ...sec,
+                content,
+                finish_reason,
+                status: 'complete' as const,
+                revision: sec.revision + 1,
+                generated_at: new Date().toISOString(),
+                error: null,
+              }
+            : sec
+        );
+        return { longForm: { ...s.longForm, outline } };
+      }),
+      setCurrentSectionIndex: (i) => set((s) => ({
+        longForm: s.longForm ? { ...s.longForm, current_section_index: i } : s.longForm,
+      })),
+      setContinuitySnapshot: (snapshot) => set((s) => ({
+        longForm: s.longForm ? { ...s.longForm, continuity_snapshot: snapshot } : s.longForm,
+      })),
+      clearLongForm: () => set({ longForm: null }),
+      setLongFormLoading: (longFormLoading) => set({ longFormLoading }),
       finalize: () => set({ finalized: true, phase: 'summary' }),
       resetSession: () => set({ ...initialState }),
       carryLessonsForward: (objective, constraints) =>
