@@ -110,3 +110,52 @@ async def test_detect_falls_back_to_negative_on_llm_error(basic_inputs):
     result = await detect_long_form(client, model=None, inputs=basic_inputs)
     assert result.is_long_form is False
     assert result.suggested_section_count == 0
+
+
+# Outline generation tests
+from promptmaster.long_form import build_outline_prompt, generate_outline
+
+
+def test_build_outline_prompt_includes_section_count(basic_inputs):
+    system, user = build_outline_prompt(basic_inputs, suggested_section_count=8)
+    assert "8" in user
+    assert basic_inputs.objective in user
+
+
+async def test_generate_outline_parses_sections(basic_inputs):
+    client = AsyncMock()
+    client.generate_json = AsyncMock(return_value=(
+        {"outline": [
+            {"title": "Intro", "abstract": "Sets the stage."},
+            {"title": "Body", "abstract": "Develops the argument."},
+            {"title": "Conclusion", "abstract": "Wraps up."},
+        ]},
+        {},
+    ))
+    sections = await generate_outline(client, model=None, inputs=basic_inputs, suggested_section_count=3)
+    assert len(sections) == 3
+    assert sections[0].title == "Intro"
+    assert sections[0].status == "pending"
+    assert sections[0].content == ""
+    assert sections[0].revision == 0
+    assert sections[0].id  # auto-generated, non-empty
+
+
+async def test_generate_outline_assigns_unique_ids(basic_inputs):
+    client = AsyncMock()
+    client.generate_json = AsyncMock(return_value=(
+        {"outline": [
+            {"title": "A", "abstract": "a"},
+            {"title": "B", "abstract": "b"},
+        ]},
+        {},
+    ))
+    sections = await generate_outline(client, model=None, inputs=basic_inputs, suggested_section_count=2)
+    assert sections[0].id != sections[1].id
+
+
+async def test_generate_outline_handles_malformed_response(basic_inputs):
+    client = AsyncMock()
+    client.generate_json = AsyncMock(return_value=({"outline": "not a list"}, {}))
+    with pytest.raises(ValueError):
+        await generate_outline(client, model=None, inputs=basic_inputs, suggested_section_count=3)

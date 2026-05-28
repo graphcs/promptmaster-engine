@@ -7,6 +7,7 @@ Reuses promptmaster.continuity for snapshot regeneration.
 from __future__ import annotations
 
 import logging
+import uuid
 
 from .llm_client import OpenRouterClient
 from .schemas import (
@@ -65,3 +66,58 @@ async def detect_long_form(
         suggested_section_count=int(result.get("suggested_section_count", 0) or 0),
         reason=str(result.get("reason", "")),
     )
+
+
+_OUTLINE_SYSTEM = (
+    "You design clear, well-scoped outlines for long-form documents. "
+    "Each section title is concrete and non-overlapping. Each abstract is a "
+    "single sentence describing what that section covers. Return JSON only."
+)
+
+
+def build_outline_prompt(inputs: PMInput, suggested_section_count: int) -> tuple[str, str]:
+    """Build (system, user) prompts for outline generation."""
+    user = (
+        f"Objective: {inputs.objective}\n"
+        f"Audience: {inputs.audience}\n"
+        f"Constraints: {inputs.constraints or '(none)'}\n"
+        f"Output format: {inputs.output_format or '(none)'}\n"
+        f"Target section count: {suggested_section_count} (use this as a guide; "
+        "adjust if the objective genuinely needs more or fewer).\n\n"
+        "Return JSON with one field:\n"
+        '- outline: array of {"title": string, "abstract": string}\n\n'
+        "Each abstract must be ONE short sentence (≤20 words) describing what that "
+        "section will cover. Titles must be concrete and non-overlapping."
+    )
+    return _OUTLINE_SYSTEM, user
+
+
+async def generate_outline(
+    client: OpenRouterClient,
+    model: str | None,
+    inputs: PMInput,
+    suggested_section_count: int,
+) -> list[OutlineSection]:
+    """Generate an outline. Returns OutlineSection[] with auto-assigned ids and default fields."""
+    system, user = build_outline_prompt(inputs, suggested_section_count)
+    result, _usage = await client.generate_json(
+        prompt=user,
+        system=system,
+        temperature=0.4,
+        max_tokens=2048,
+        model=model,
+    )
+    raw_outline = result.get("outline")
+    if not isinstance(raw_outline, list):
+        raise ValueError(f"generate_outline expected list, got {type(raw_outline).__name__}")
+
+    sections: list[OutlineSection] = []
+    for raw in raw_outline:
+        if not isinstance(raw, dict):
+            continue
+        sections.append(OutlineSection(
+            id=str(uuid.uuid4()),
+            title=str(raw.get("title", "Untitled")),
+            abstract=str(raw.get("abstract", "")),
+        ))
+    return sections
