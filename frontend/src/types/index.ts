@@ -129,6 +129,7 @@ export interface Session {
   model: string;
   iterations: Iteration[];
   finalized: boolean;
+  long_form?: LongFormState | null;
 }
 
 export interface ModeConfig {

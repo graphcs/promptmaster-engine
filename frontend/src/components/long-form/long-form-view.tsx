@@ -85,6 +85,7 @@ export function LongFormView() {
       model: snapshot.model,
       iterations: snapshot.iterations,
       finalized: snapshot.finalized,
+      long_form: snapshot.longForm,
     };
 
     await saveSession(session, user.id);
@@ -150,11 +151,15 @@ export function LongFormView() {
 
           // If length, retry once (backend keeps same max_tokens; we just retry)
           if (result.finish_reason === 'length') {
+            // Re-read fresh state before retry — outline/snapshot may have changed
+            const lf2 = useSessionStore.getState().longForm;
+            // If the user paused between the initial call and now, honour it
+            if (!lf2 || lf2.state === 'paused' || lf2.state === 'complete') break;
             const retry = await api.generateSection({
               inputs,
-              outline: lf.outline,
+              outline: lf2.outline,
               section_index: nextIndex,
-              prior_snapshot: lf.continuity_snapshot,
+              prior_snapshot: lf2.continuity_snapshot,
               prev_section_content: priorContent,
               model,
             });

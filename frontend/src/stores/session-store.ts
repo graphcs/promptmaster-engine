@@ -410,6 +410,7 @@ export const useSessionStore = create<SessionState>()(
           activeIterationNumber: session.iterations.length > 0 ? session.iterations[session.iterations.length - 1].iteration_number : null,
           chatMessages: {},
           sessionId: session.session_id,
+          longForm: session.long_form ?? null,
         }),
     }),
     {
