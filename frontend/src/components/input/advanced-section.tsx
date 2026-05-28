@@ -139,7 +139,12 @@ export function AdvancedSection() {
               <button
                 key={stack.id}
                 type="button"
-                onClick={() => setActiveStack(stack.id)}
+                onClick={() => {
+                  setMode(stack.initial.mode);
+                  setConstraints(stack.initial.constraints);
+                  setOutputFormat(stack.initial.output_format);
+                  setActiveStack(stack.id);
+                }}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   activeStackId === stack.id
                     ? 'bg-[var(--pm-primary)] text-white'
