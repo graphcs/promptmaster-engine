@@ -159,6 +159,48 @@ class ContinuitySnapshot(BaseModel):
     next_topic_hint: str | None = Field(default=None, description="What to write next, if the structure makes it obvious.")
 
 
+class OutlineSection(BaseModel):
+    """One section in a document outline for long-form generation."""
+    id: str
+    title: str
+    abstract: str = Field(default="", description="One-sentence description of what this section covers.")
+    status: Literal["pending", "writing", "complete", "error"] = "pending"
+    content: str = ""
+    revision: int = 0
+    finish_reason: str | None = None
+    error: str | None = None
+    generated_at: str | None = None
+
+
+class LongFormState(BaseModel):
+    """Tracks progress through long-form document generation."""
+    state: Literal["outlining", "review_outline", "writing", "paused", "complete"]
+    current_section_index: int = -1
+    outline: list[OutlineSection] = Field(default_factory=list)
+    continuity_snapshot: ContinuitySnapshot | None = None
+    started_at: str
+    completed_at: str | None = None
+
+
+class DetectLongFormResponse(BaseModel):
+    """Response from long-form detection call."""
+    is_long_form: bool
+    suggested_section_count: int = 0
+    reason: str = ""
+
+
+class GenerateOutlineResponse(BaseModel):
+    """Response from outline generation call."""
+    outline: list[OutlineSection]
+
+
+class GenerateSectionResponse(BaseModel):
+    """Response from section content generation call."""
+    content: str
+    finish_reason: str
+    new_snapshot: ContinuitySnapshot
+
+
 # Resolve forward reference for Iteration.continuity_snapshot
 Iteration.model_rebuild()
 
