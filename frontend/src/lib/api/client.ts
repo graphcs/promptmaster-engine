@@ -19,6 +19,11 @@ import type {
   AuditFindingsRequest,
   AuditFindingsResponse,
   ApplyAuditRequest,
+  ContinuitySnapshot,
+  DetectLongFormResponse,
+  GenerateOutlineResponse,
+  GenerateSectionResponse,
+  OutlineSection,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -121,6 +126,52 @@ export const api = {
 
   async continueDocument(req: ContinueDocumentRequest): Promise<IterationFromConversationResponse> {
     return apiFetch('/api/continue-document', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async detectLongForm(req: { inputs: PMInput; model?: string }): Promise<DetectLongFormResponse> {
+    return apiFetch('/api/detect-long-form', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async generateOutline(req: {
+    inputs: PMInput;
+    suggested_section_count: number;
+    model?: string;
+  }): Promise<GenerateOutlineResponse> {
+    return apiFetch('/api/generate-outline', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async generateSection(req: {
+    inputs: PMInput;
+    outline: OutlineSection[];
+    section_index: number;
+    prior_snapshot: ContinuitySnapshot | null;
+    prev_section_content: string;
+    model?: string;
+  }): Promise<GenerateSectionResponse> {
+    return apiFetch('/api/generate-section', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  },
+
+  async finalizeLongForm(req: {
+    inputs: PMInput;
+    merged_content: string;
+    outline: OutlineSection[];
+    iteration_number: number;
+    iteration_history: Iteration[];
+    model?: string;
+  }): Promise<IterationFromConversationResponse> {
+    return apiFetch('/api/finalize-long-form', {
       method: 'POST',
       body: JSON.stringify(req),
     });
