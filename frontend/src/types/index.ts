@@ -47,6 +47,50 @@ export interface ContinuitySnapshot {
   next_topic_hint: string | null;
 }
 
+export interface OutlineSection {
+  id: string;
+  title: string;
+  abstract: string;
+  status: 'pending' | 'writing' | 'complete' | 'error';
+  content: string;
+  revision: number;
+  finish_reason: string | null;
+  error: string | null;
+  generated_at: string | null;
+}
+
+export type LongFormStateName =
+  | 'outlining'
+  | 'review_outline'
+  | 'writing'
+  | 'paused'
+  | 'complete';
+
+export interface LongFormState {
+  state: LongFormStateName;
+  current_section_index: number;
+  outline: OutlineSection[];
+  continuity_snapshot: ContinuitySnapshot | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface DetectLongFormResponse {
+  is_long_form: boolean;
+  suggested_section_count: number;
+  reason: string;
+}
+
+export interface GenerateOutlineResponse {
+  outline: OutlineSection[];
+}
+
+export interface GenerateSectionResponse {
+  content: string;
+  finish_reason: string;
+  new_snapshot: ContinuitySnapshot;
+}
+
 export interface Iteration {
   iteration_number: number;
   prompt_sent: string;
