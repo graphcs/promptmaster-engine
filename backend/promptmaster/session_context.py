@@ -28,6 +28,7 @@ _TRIGGER_LABELS = {
     "refined_from_conversation": "New version from chat",
     "continuation": "Continued document",
     "applied_audit": "Applied audit findings",
+    "long_form_finalize": "Long-form document finalized",
 }
 
 
