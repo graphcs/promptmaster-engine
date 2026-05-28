@@ -72,11 +72,31 @@ export function SetupSummaryBar({ suggestion }: SetupSummaryBarProps) {
           expanded={expanded === 'audience'}
           onToggleExpand={() => toggle('audience')}
         >
-          <CustomSelect
-            value={audience}
-            onChange={(v) => setAudience(v)}
-            options={AUDIENCE_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
-          />
+          {(() => {
+            const isCustomAudience = audience === 'Other' || !AUDIENCE_OPTIONS.includes(audience);
+            const dropdownValue = isCustomAudience ? 'Other' : audience;
+            return (
+              <div className="space-y-2">
+                <CustomSelect
+                  value={dropdownValue}
+                  onChange={(v) => setAudience(v)}
+                  options={AUDIENCE_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
+                />
+                {isCustomAudience && (
+                  <input
+                    type="text"
+                    value={audience === 'Other' ? '' : audience}
+                    onChange={(e) => {
+                      const typed = e.target.value;
+                      setAudience(typed === '' ? 'Other' : typed);
+                    }}
+                    placeholder="Describe your audience (e.g., Engineering and product leadership)"
+                    className="w-full bg-[var(--surface-container-low)] rounded-lg px-3 py-2 text-sm text-[var(--on-surface)] placeholder:text-[var(--outline)]/60 focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)]/40 transition-all"
+                  />
+                )}
+              </div>
+            );
+          })()}
         </SetupChip>
 
         <SetupChip
