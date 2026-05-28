@@ -159,3 +159,96 @@ async def test_generate_outline_handles_malformed_response(basic_inputs):
     client.generate_json = AsyncMock(return_value=({"outline": "not a list"}, {}))
     with pytest.raises(ValueError):
         await generate_outline(client, model=None, inputs=basic_inputs, suggested_section_count=3)
+
+
+# Section generation tests
+from promptmaster.long_form import build_section_prompt, generate_section
+from promptmaster.schemas import ContinuitySnapshot
+
+
+def test_build_section_prompt_includes_target_section(basic_inputs):
+    outline = [
+        OutlineSection(id="s1", title="Intro", abstract="Sets the stage."),
+        OutlineSection(id="s2", title="Body", abstract="Develops the argument."),
+        OutlineSection(id="s3", title="Conclusion", abstract="Wraps up."),
+    ]
+    system, user = build_section_prompt(
+        inputs=basic_inputs,
+        outline=outline,
+        section_index=1,
+        prior_snapshot=None,
+        prev_section_content="",
+    )
+    assert "Body" in user
+    assert "Develops the argument" in user
+    assert "Intro" in user  # full outline visible
+    assert "Conclusion" in user  # full outline visible
+
+
+def test_build_section_prompt_includes_prev_section_when_present(basic_inputs):
+    outline = [
+        OutlineSection(id="s1", title="Intro", abstract="Sets the stage."),
+        OutlineSection(id="s2", title="Body", abstract="Develops the argument."),
+    ]
+    system, user = build_section_prompt(
+        inputs=basic_inputs,
+        outline=outline,
+        section_index=1,
+        prior_snapshot=ContinuitySnapshot(
+            completed_topics=["Intro"],
+            current_topic=None,
+            key_definitions=["AI workflow"],
+            next_topic_hint="Body",
+        ),
+        prev_section_content="The previous section's prose here.",
+    )
+    assert "The previous section's prose here." in user
+    assert "AI workflow" in user
+    assert "Intro" in user
+
+
+async def test_generate_section_returns_content_and_snapshot(basic_inputs):
+    client = AsyncMock()
+    client.generate_with_meta = AsyncMock(return_value=("Generated body prose.", {}, "stop"))
+    # Mock the snapshot generation by patching the imported function
+    client.generate_json = AsyncMock(return_value=(
+        {"completed_topics": ["Intro", "Body"], "current_topic": None, "key_definitions": [], "next_topic_hint": "Conclusion"},
+        {},
+    ))
+
+    outline = [
+        OutlineSection(id="s1", title="Intro", abstract="x", status="complete", content="Intro prose."),
+        OutlineSection(id="s2", title="Body", abstract="y"),
+    ]
+    result = await generate_section(
+        client=client,
+        model=None,
+        inputs=basic_inputs,
+        outline=outline,
+        section_index=1,
+        prior_snapshot=None,
+        prev_section_content="Intro prose.",
+    )
+    assert result.content == "Generated body prose."
+    assert result.finish_reason == "stop"
+    assert result.new_snapshot.next_topic_hint == "Conclusion"
+
+
+async def test_generate_section_propagates_length_finish_reason(basic_inputs):
+    client = AsyncMock()
+    client.generate_with_meta = AsyncMock(return_value=("Truncated...", {}, "length"))
+    client.generate_json = AsyncMock(return_value=(
+        {"completed_topics": [], "current_topic": "Body", "key_definitions": [], "next_topic_hint": None},
+        {},
+    ))
+    outline = [OutlineSection(id="s1", title="Body", abstract="y")]
+    result = await generate_section(
+        client=client,
+        model=None,
+        inputs=basic_inputs,
+        outline=outline,
+        section_index=0,
+        prior_snapshot=None,
+        prev_section_content="",
+    )
+    assert result.finish_reason == "length"
