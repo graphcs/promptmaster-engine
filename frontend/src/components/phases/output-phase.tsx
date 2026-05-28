@@ -7,12 +7,14 @@ import { needsRealignment, downloadFile } from '@/lib/utils';
 import { EvalSection } from '@/components/shared/eval-section';
 import { SuggestionsList } from '@/components/shared/suggestions-list';
 import { MODE_DISPLAY } from '@/lib/constants';
-import type { ModeType, ScoreLevel, FlowTriggerType, PMInput } from '@/types';
+import type { ModeType, ScoreLevel, FlowTriggerType, PMInput, LongFormState } from '@/types';
 import { MarkdownOutput } from '@/components/shared/markdown-output';
 import { CustomSelect } from '@/components/shared/custom-select';
 import { InlineToast } from '@/components/shared/inline-toast';
 import { WhyThisWorksCard } from '@/components/output/why-this-works-card';
 import { AuditFindingsPanel } from '@/components/output/audit-findings-panel';
+import { LongFormView } from '@/components/long-form/long-form-view';
+import { LongFormProposal } from '@/components/long-form/long-form-proposal';
 
 type InspectionState =
   | { kind: 'none' }
@@ -63,6 +65,14 @@ export function OutputPhase() {
   const customTone = useSessionStore((s) => s.customTone);
   const sessionFacts = useSessionStore((s) => s.sessionFacts);
 
+  // Long-form state
+  const longForm = useSessionStore((s) => s.longForm);
+  const longFormLoading = useSessionStore((s) => s.longFormLoading);
+  const setLongForm = useSessionStore((s) => s.setLongForm);
+  const setLongFormStateName = useSessionStore((s) => s.setLongFormStateName);
+  const updateOutline = useSessionStore((s) => s.updateOutline);
+  const setLongFormLoading = useSessionStore((s) => s.setLongFormLoading);
+
   const continuationLoading = useSessionStore((s) => s.continuationLoading);
   const setContinuationLoading = useSessionStore((s) => s.setContinuationLoading);
   const chatLoading = useSessionStore((s) => s.chatLoading);
@@ -102,6 +112,14 @@ export function OutputPhase() {
   const [ratingToast, setRatingToast] = useState<string | null>(null);
   const refineMenuRef = useRef<HTMLDivElement>(null);
 
+  // Long-form proposal state
+  const [proposalShown, setProposalShown] = useState<{ shown: boolean; suggestedCount: number }>({
+    shown: false,
+    suggestedCount: 0,
+  });
+  const [proposalSkipped, setProposalSkipped] = useState(false);
+  const detectCalledRef = useRef(false);
+
   function handleRate(rating: 'positive' | 'negative') {
     if (!currentIteration) return;
     const next = currentRating === rating ? null : rating;
@@ -133,6 +151,66 @@ export function OutputPhase() {
       document.removeEventListener('keydown', onKey);
     };
   }, [refineMenuOpen]);
+
+  // Detect long-form once on mount (only when no iterations exist yet)
+  useEffect(() => {
+    if (detectCalledRef.current) return;
+    if (longForm || iterations.length > 0 || proposalShown.shown || proposalSkipped) return;
+    detectCalledRef.current = true;
+
+    let cancelled = false;
+    const pmInputs = buildInputs();
+    (async () => {
+      try {
+        const r = await api.detectLongForm({ inputs: pmInputs, model });
+        if (cancelled) return;
+        if (r.is_long_form) {
+          setProposalShown({ shown: true, suggestedCount: r.suggested_section_count });
+        } else {
+          setProposalSkipped(true);
+        }
+      } catch {
+        if (!cancelled) setProposalSkipped(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  // buildInputs is stable (reads from closed-over store vars); run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handlePlanItOut = async () => {
+    setLongFormLoading(true);
+    const initialLongForm: LongFormState = {
+      state: 'outlining',
+      current_section_index: -1,
+      outline: [],
+      continuity_snapshot: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+    };
+    setLongForm(initialLongForm);
+
+    try {
+      const r = await api.generateOutline({
+        inputs: buildInputs(),
+        suggested_section_count: proposalShown.suggestedCount,
+        model,
+      });
+      updateOutline(r.outline);
+      setLongFormStateName('review_outline');
+    } catch {
+      setLongForm(null);
+      setProposalSkipped(true);
+    } finally {
+      setLongFormLoading(false);
+    }
+  };
+
+  const handleJustGenerate = () => {
+    setProposalSkipped(true);
+  };
 
   const shouldRealign = currentEval ? needsRealignment(currentEval) : false;
   const driftDetected = currentEval && (currentEval.drift.score === 'High' || currentEval.drift.score === 'Medium');
@@ -373,6 +451,17 @@ export function OutputPhase() {
         </p>
       </div>
 
+      {longForm ? (
+        <LongFormView />
+      ) : proposalShown.shown && !proposalSkipped ? (
+        <LongFormProposal
+          suggestedSectionCount={proposalShown.suggestedCount}
+          onPlanItOut={handlePlanItOut}
+          onJustGenerate={handleJustGenerate}
+          disabled={longFormLoading}
+        />
+      ) : (
+      <>
       {/* AI Output card */}
       <div data-tutorial="output-card" className="bg-white rounded-xl shadow-ambient p-8">
         <div className="flex items-center justify-between mb-6 gap-3">
@@ -450,8 +539,8 @@ export function OutputPhase() {
         )}
       </div>
 
-      {/* Continue Document card — only when output is incomplete */}
-      {currentIteration?.evaluation?.completeness?.status === 'incomplete' && (
+      {/* Continue Document card — only when output is incomplete and not in long-form mode */}
+      {currentIteration?.evaluation?.completeness?.status === 'incomplete' && !longForm && (
         <div className="bg-white rounded-xl shadow-ambient p-6 space-y-3 border-l-4 border-amber-400">
           <div>
             <span className="text-xs font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
@@ -1022,6 +1111,8 @@ export function OutputPhase() {
             })}
           </div>
         </details>
+      )}
+      </>
       )}
     </div>
   );
